@@ -1,12 +1,20 @@
 import i18n, {
   DEFAULT_LANGUAGE,
   FALLBACK_LANGUAGE,
+  SUPPORTED_LANGUAGES,
   translate
 } from "../index";
 
 describe("web i18n", () => {
   it("defaults to zh-CN", () => {
     expect(i18n.language).toBe(DEFAULT_LANGUAGE);
+  });
+
+  it("uses the central supported language list", () => {
+    expect(i18n.options.supportedLngs).toEqual([
+      ...SUPPORTED_LANGUAGES,
+      "cimode"
+    ]);
   });
 
   it("translates bundled zh-CN resources", () => {

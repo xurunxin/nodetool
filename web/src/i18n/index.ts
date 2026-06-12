@@ -29,7 +29,7 @@ if (!i18n.isInitialized) {
   void i18n.use(initReactI18next).init({
     lng: DEFAULT_LANGUAGE,
     fallbackLng: FALLBACK_LANGUAGE,
-    supportedLngs: [DEFAULT_LANGUAGE, FALLBACK_LANGUAGE],
+    supportedLngs: [...SUPPORTED_LANGUAGES],
     ns: [...NAMESPACES],
     defaultNS: DEFAULT_NAMESPACE,
     fallbackNS: DEFAULT_NAMESPACE,
