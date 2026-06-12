@@ -4,6 +4,7 @@ import { css } from "@emotion/react";
 import React, { useCallback, useEffect, useRef, useState, memo } from "react";
 import BackspaceIcon from "@mui/icons-material/Backspace";
 import { Public as GlobalIcon, Folder as LocalIcon } from "@mui/icons-material";
+import { useTranslation } from "react-i18next";
 import { useKeyPressedStore } from "../../stores/KeyPressedStore";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 import { useAssetGridStore } from "../../stores/AssetGridStore";
@@ -152,6 +153,7 @@ const AssetSearchInput: React.FC<AssetSearchInputProps> = ({
   width
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("assets");
   const inputRef = useRef<HTMLInputElement>(null);
   const [localSearchTerm, setLocalSearchTerm] = useState("");
   const isControlOrMetaPressed = useKeyPressedStore(
@@ -387,8 +389,11 @@ const AssetSearchInput: React.FC<AssetSearchInputProps> = ({
 
   // Dynamic placeholder based on search mode
   const effectivePlaceholder = isGlobalSearchMode
-    ? "Search all assets..."
-    : "Search current folder...";
+    ? t("searchAllHint")
+    : t("searchCurrentFolderHint");
+  const searchAriaLabel = isGlobalSearchMode
+    ? t("searchAll")
+    : t("searchCurrentFolder");
 
   return (
     <div
@@ -407,8 +412,8 @@ const AssetSearchInput: React.FC<AssetSearchInputProps> = ({
       <Tooltip
         title={
           isGlobalSearchMode
-            ? "Switch to local search"
-            : "Switch to global search"
+            ? t("switchToLocalSearch")
+            : t("switchToGlobalSearch")
         }
       >
         <button
@@ -426,7 +431,7 @@ const AssetSearchInput: React.FC<AssetSearchInputProps> = ({
 
       <input
         id="asset-search-input"
-        aria-label={isGlobalSearchMode ? "Search all assets" : "Search current folder"}
+        aria-label={searchAriaLabel}
         className="search-input"
         ref={inputRef}
         type="text"
@@ -453,6 +458,7 @@ const AssetSearchInput: React.FC<AssetSearchInputProps> = ({
           }`}
           tabIndex={-1}
           onClick={clearSearch}
+          aria-label={t("clearSearch")}
           data-testid="asset-search-clear-btn"
         >
           <BackspaceIcon />

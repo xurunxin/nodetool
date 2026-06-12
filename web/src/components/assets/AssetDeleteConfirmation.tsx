@@ -4,6 +4,7 @@ import { css } from "@emotion/react";
 import React, { useState, useCallback, useEffect } from "react";
 import { InsertDriveFile } from "@mui/icons-material";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAssetGridStore } from "../../stores/AssetGridStore";
 import { useAssetDeletion } from "../../serverState/useAssetDeletion";
 import { useAssets } from "../../serverState/useAssets";
@@ -35,6 +36,7 @@ interface AssetDeleteConfirmationProps {
 const AssetDeleteConfirmation: React.FC<AssetDeleteConfirmationProps> = ({
   assets
 }) => {
+  const { t } = useTranslation(["assets", "common"]);
   const [isLoading, setIsLoading] = useState(false);
   const [totalAssets, setTotalAssets] = useState(0);
   const [folderCount, setFolderCount] = useState(0);
@@ -130,21 +132,22 @@ const AssetDeleteConfirmation: React.FC<AssetDeleteConfirmationProps> = ({
 
   const getDialogTitle = () => {
     if (isAssetTreeLoading && folderCount > 0) {
-      return "Preparing to delete...";
+      return t("assets:deletePreparing");
     } else if (showRootFolderWarning) {
-      return "Warning: The root folder cannot be deleted.";
+      return t("assets:rootFolderCannotDelete");
     } else if (folderCount === 1 && fileCount === 0) {
-      return `Delete folder containing ${totalAssets - 1} file${
-        totalAssets - 1 !== 1 ? "s" : ""
-      }?`;
+      return t("assets:deleteFolderContaining", {
+        count: Math.max(totalAssets - 1, 0)
+      });
     } else if (folderCount > 0) {
-      return `Delete ${folderCount} folder${
-        folderCount !== 1 ? "s" : ""
-      } and ${fileCount} file${
-        fileCount !== 1 ? "s" : ""
-      } containing ${totalAssets} item${totalAssets !== 1 ? "s" : ""}?`;
+      return t("assets:deleteFoldersAndFiles", {
+        count: folderCount,
+        folderCount,
+        fileCount,
+        itemCount: totalAssets
+      });
     } else {
-      return `Delete ${fileCount} file${fileCount !== 1 ? "s" : ""}?`;
+      return t("assets:deleteFiles", { count: fileCount });
     }
   };
 
@@ -162,7 +165,7 @@ const AssetDeleteConfirmation: React.FC<AssetDeleteConfirmationProps> = ({
           color="secondary"
           style={{ marginBottom: "1em" }}
         >
-          You can right click selected assets and download them before deleting.
+          {t("assets:deleteTip")}
         </Text>
         {isPreparingDelete ? (
           <LoadingSpinner size="small" />
@@ -198,8 +201,8 @@ const AssetDeleteConfirmation: React.FC<AssetDeleteConfirmationProps> = ({
       <DialogActionButtons
         onConfirm={executeDeletion}
         onCancel={handleClose}
-        confirmText="Delete"
-        cancelText="Cancel"
+        confirmText={t("common:delete")}
+        cancelText={t("common:cancel")}
         isLoading={isLoading}
         confirmDisabled={isAssetTreeLoading || showRootFolderWarning}
         destructive={true}
