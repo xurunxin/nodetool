@@ -1,5 +1,6 @@
 import React, { memo } from "react";
 import ViewInArOutlinedIcon from "@mui/icons-material/ViewInArOutlined";
+import { useTranslation } from "react-i18next";
 import ManagerPageLayout from "../../panels/ManagerPageLayout";
 import ModelListIndex from "./ModelListIndex";
 
@@ -7,17 +8,20 @@ import ModelListIndex from "./ModelListIndex";
  * Full-screen Model Manager page. Reachable from the logo menu; wraps the
  * model list in the shared manager chrome (header + back button).
  */
-const ModelsPage: React.FC = () => (
-  <ManagerPageLayout
-    icon={<ViewInArOutlinedIcon sx={{ fontSize: 22 }} />}
-    title="Model Manager"
-    subtitle="Browse, download, and manage local AI models."
-    docsUrl="https://docs.nodetool.ai/models.html"
-    padded={false}
-  >
-    <ModelListIndex />
-  </ManagerPageLayout>
-);
+const ModelsPage: React.FC = () => {
+  const { t } = useTranslation("models");
+  return (
+    <ManagerPageLayout
+      icon={<ViewInArOutlinedIcon sx={{ fontSize: 22 }} />}
+      title={t("managerTitle")}
+      subtitle={t("managerSubtitle")}
+      docsUrl="https://docs.nodetool.ai/models.html"
+      padded={false}
+    >
+      <ModelListIndex />
+    </ManagerPageLayout>
+  );
+};
 
 ModelsPage.displayName = "ModelsPage";
 

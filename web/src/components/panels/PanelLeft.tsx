@@ -5,6 +5,7 @@ import type { Theme } from "@mui/material/styles";
 import {
   useMediaQuery
 } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { ToolbarIconButton, FlexColumn, Box } from "../ui_primitives";
 import { useResizePanel } from "../../hooks/handlers/useResizePanel";
 import isEqual from "fast-deep-equal";
@@ -30,10 +31,7 @@ import {
 } from "../../stores/PanelStore";
 import { useWorkflowManager } from "../../contexts/WorkflowManagerContext";
 import { useWorkspaceTabsStore } from "../../stores/WorkspaceTabsStore";
-import {
-  LEFT_PANEL_TOP_LEVEL,
-  getTopLevelCategory
-} from "../../config/quickAccessCategories";
+import { LEFT_PANEL_TOP_LEVEL } from "../../config/quickAccessCategories";
 import { ContextMenuProvider } from "../../providers/ContextMenuProvider";
 import ContextMenus from "../context_menus/ContextMenus";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -65,6 +63,18 @@ const WORKFLOW_EDIT_ONLY_VIEWS: readonly LeftPanelView[] = [
 
 const isWorkflowEditOnlyView = (view: string): view is LeftPanelView =>
   (WORKFLOW_EDIT_ONLY_VIEWS as readonly string[]).includes(view);
+
+const PANEL_VIEW_LABEL_KEYS: Partial<Record<LeftPanelView, string>> = {
+  agent: "agent",
+  assets: "assets",
+  favorites: "favorites",
+  history: "history",
+  nodes: "nodes",
+  settings: "settings",
+  sketches: "sketches",
+  timelines: "timelines",
+  workflows: "workflows"
+};
 
 const styles = (
   theme: Theme,
@@ -203,6 +213,7 @@ const VerticalToolbar = memo(function VerticalToolbar({
   hiddenViews?: readonly LeftPanelView[];
 }) {
   const panelVisible = usePanelStore((state) => state.panel.isVisible);
+  const { t } = useTranslation("navigation");
 
   // Sidebar shows the view as "active" only when the panel is open and
   // that view is selected.
@@ -227,10 +238,10 @@ const VerticalToolbar = memo(function VerticalToolbar({
       <div style={{ flexGrow: 1 }} />
       <div className="toolbar-divider" aria-hidden />
       <ThemeToggle />
-      <Tooltip title="Toggle Panel" placement="right-start">
+      <Tooltip title={t("togglePanel")} placement="right-start">
         <ToolbarIconButton
           tabIndex={-1}
-          ariaLabel="Toggle panel"
+          ariaLabel={t("togglePanel")}
           onClick={handlePanelToggle}
           icon={<CodeIcon />}
         />
@@ -252,6 +263,7 @@ const PanelContent = memo(function PanelContent({
   handlePanelToggle: (view: LeftPanelView) => void;
   isMobile?: boolean;
 }) {
+  const { t } = useTranslation("navigation");
   const navigate = useNavigate();
   const path = useLocation().pathname;
   const currentWorkflow = useWorkflowManager((state) =>
@@ -293,7 +305,7 @@ const PanelContent = memo(function PanelContent({
             overflow: "hidden"
           }}
         >
-          {!isMobile && <PanelHeadline title="History" />}
+          {!isMobile && <PanelHeadline title={t("history")} />}
           <HistoryTilesPanel />
         </FlexColumn>
       )}
@@ -308,7 +320,7 @@ const PanelContent = memo(function PanelContent({
             flexDirection: "column"
           }}
         >
-          {!isMobile && <PanelHeadline title="Favorites" />}
+          {!isMobile && <PanelHeadline title={t("favorites")} />}
           <ScrollArea fullHeight>
             <FavoritesTiles showEmpty hideHeader />
           </ScrollArea>
@@ -327,9 +339,9 @@ const PanelContent = memo(function PanelContent({
         >
           {!isMobile && (
             <PanelHeadline
-              title="Assets"
+              title={t("assets")}
               actions={
-                <Tooltip title="Fullscreen" placement="right-start">
+                <Tooltip title={t("fullscreen")} placement="right-start">
                   <ToolbarIconButton
                     className={`${path === "/assets" ? "active" : ""}`}
                     onClick={handleFullscreenClick}
@@ -354,7 +366,7 @@ const PanelContent = memo(function PanelContent({
         >
           {!isMobile && (
             <PanelHeadline
-              title="Workflows"
+              title={t("workflows")}
               actions={<CreateWorkflowButton />}
             />
           )}
@@ -374,7 +386,7 @@ const PanelContent = memo(function PanelContent({
         >
           {!isMobile && (
             <PanelHeadline
-              title="Sketches"
+              title={t("sketches")}
               actions={<CreateSketchButton />}
             />
           )}
@@ -392,7 +404,7 @@ const PanelContent = memo(function PanelContent({
         >
           {!isMobile && (
             <PanelHeadline
-              title="Timelines"
+              title={t("timelines")}
               actions={<CreateTimelineButton />}
             />
           )}
@@ -408,7 +420,7 @@ const PanelContent = memo(function PanelContent({
             overflow: "auto"
           }}
         >
-          {!isMobile && <PanelHeadline title="Settings" />}
+          {!isMobile && <PanelHeadline title={t("settings")} />}
           <WorkflowForm workflow={currentWorkflow} onClose={closePanel} />
         </Box>
       )}
@@ -423,13 +435,13 @@ const PanelContent = memo(function PanelContent({
         >
           {!isMobile && (
             <PanelHeadline
-              title="Agent"
+              title={t("agent")}
               actions={
-                <Tooltip title="Open in full chat" placement="right-start">
+                <Tooltip title={t("openInFullChat")} placement="right-start">
                   <ToolbarIconButton
                     onClick={handleOpenChatRoute}
                     tabIndex={-1}
-                    ariaLabel="Open in full chat"
+                    ariaLabel={t("openInFullChat")}
                     icon={<OpenInFull />}
                   />
                 </Tooltip>
@@ -523,6 +535,7 @@ const MobilePanelLeft: React.FC<{
   handlePanelToggle
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("navigation");
 
   const handleSheetViewChange = useCallback(
     (view: LeftPanelView) => {
@@ -531,8 +544,7 @@ const MobilePanelLeft: React.FC<{
     [onViewChange]
   );
 
-  const launcherTitle =
-    getTopLevelCategory(activeView)?.label ?? "Workflows";
+  const launcherTitle = t(PANEL_VIEW_LABEL_KEYS[activeView] ?? "workflows");
 
   return (
     <>
@@ -540,7 +552,7 @@ const MobilePanelLeft: React.FC<{
         className={`panel-left-mobile-launcher ${isVisible ? "active" : ""}`}
         css={mobileLauncherStyles(theme, hasHeader)}
         onClick={isVisible ? onClose : onOpen}
-        ariaLabel={isVisible ? "Close panel" : "Open left panel"}
+        ariaLabel={isVisible ? t("closePanel") : t("openLeftPanel")}
         aria-expanded={isVisible}
         tabIndex={-1}
         icon={<MenuIcon />}
@@ -550,41 +562,41 @@ const MobilePanelLeft: React.FC<{
         open={isVisible}
         onClose={onClose}
         title={launcherTitle}
-        ariaLabel="Workflows, sketches, timelines, and assets panel"
+        ariaLabel={t("workflowsAssetsPanel")}
         headerExtras={
           <div css={mobileHeaderExtrasStyles(theme)}>
-            <Tooltip title="Workflows" placement="bottom" delay={TOOLTIP_ENTER_DELAY}>
+            <Tooltip title={t("workflows")} placement="bottom" delay={TOOLTIP_ENTER_DELAY}>
               <ToolbarIconButton
                 className={`tab-button ${activeView === "workflows" ? "active" : ""}`}
                 onClick={() => handleSheetViewChange("workflows")}
-                ariaLabel="Show workflows"
+                ariaLabel={t("showWorkflows")}
                 tabIndex={-1}
                 icon={<GridViewIcon />}
               />
             </Tooltip>
-            <Tooltip title="Sketches" placement="bottom" delay={TOOLTIP_ENTER_DELAY}>
+            <Tooltip title={t("sketches")} placement="bottom" delay={TOOLTIP_ENTER_DELAY}>
               <ToolbarIconButton
                 className={`tab-button ${activeView === "sketches" ? "active" : ""}`}
                 onClick={() => handleSheetViewChange("sketches")}
-                ariaLabel="Show sketches"
+                ariaLabel={t("showSketches")}
                 tabIndex={-1}
                 icon={<IconForType iconName="image" showTooltip={false} iconSize="small" />}
               />
             </Tooltip>
-            <Tooltip title="Timelines" placement="bottom" delay={TOOLTIP_ENTER_DELAY}>
+            <Tooltip title={t("timelines")} placement="bottom" delay={TOOLTIP_ENTER_DELAY}>
               <ToolbarIconButton
                 className={`tab-button ${activeView === "timelines" ? "active" : ""}`}
                 onClick={() => handleSheetViewChange("timelines")}
-                ariaLabel="Show timelines"
+                ariaLabel={t("showTimelines")}
                 tabIndex={-1}
                 icon={<IconForType iconName="video" showTooltip={false} iconSize="small" />}
               />
             </Tooltip>
-            <Tooltip title="Assets" placement="bottom" delay={TOOLTIP_ENTER_DELAY}>
+            <Tooltip title={t("assets")} placement="bottom" delay={TOOLTIP_ENTER_DELAY}>
               <ToolbarIconButton
                 className={`tab-button ${activeView === "assets" ? "active" : ""}`}
                 onClick={() => handleSheetViewChange("assets")}
-                ariaLabel="Show assets"
+                ariaLabel={t("showAssets")}
                 tabIndex={-1}
                 icon={<IconForType iconName="asset" showTooltip={false} iconSize="small" />}
               />
@@ -623,6 +635,7 @@ MobilePanelLeft.displayName = "MobilePanelLeft";
 
 const PanelLeft: React.FC = () => {
   const theme = useTheme();
+  const { t } = useTranslation("navigation");
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const location = useLocation();
   const activeWorkspaceTab = useWorkspaceTabsStore((state) => {
@@ -758,7 +771,7 @@ const PanelLeft: React.FC = () => {
             ref={panelRef}
             className={`drawer-content ${isDragging ? "dragging" : ""}`}
             role="region"
-            aria-label="Left panel"
+            aria-label={t("leftPanel")}
             style={{
               width: `${Math.max(panelSize - TOOLBAR_WIDTH, 250)}px`,
               minWidth: "250px"
@@ -780,7 +793,7 @@ const PanelLeft: React.FC = () => {
               className="panel-resize-handle"
               onMouseDown={handleMouseDown}
               role="slider"
-              aria-label="Resize panel"
+              aria-label={t("resizePanel")}
               aria-valuenow={panelSize}
               aria-valuemin={60}
               aria-valuemax={800}

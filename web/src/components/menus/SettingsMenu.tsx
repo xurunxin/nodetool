@@ -2,6 +2,7 @@
 // Full-page settings (formerly a Dialog).
 import React, { memo, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Tabs,
   Tab,
@@ -159,20 +160,21 @@ function SettingsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const session = useAuth((state) => state.session);
+  const { t } = useTranslation("settings");
 
   const tabSubtitle = (tab: number): string => {
     switch (tab) {
       case TAB_GENERAL:
-        return "Editor and workspace preferences.";
+        return t("generalSubtitle");
       case TAB_API_KEYS:
-        return "Provider API keys and credentials.";
+        return t("apiKeysSubtitle");
       case TAB_INTEGRATIONS:
-        return "Service endpoints, MCP servers, storage, and the Nodetool API.";
+        return t("integrationsSubtitle");
       default:
         if (tab === packagesTabIndex) {
-          return "Discover, trust, and install third-party node packs.";
+          return t("discoverPackagesSubtitle");
         }
-        return "Manage API keys, providers, and editor preferences.";
+        return t("defaultSubtitle");
     }
   };
 
@@ -304,10 +306,10 @@ function SettingsPage() {
       addNotification({
         type: "error",
         alert: true,
-        content: "Failed to save automatic update preference."
+        content: t("failedAutomaticUpdatePreference")
       });
     });
-  }, [addNotification, autoUpdatesEnabled, desktopUpdateSettingsApi, supportsDesktopUpdateSettings]);
+  }, [addNotification, autoUpdatesEnabled, desktopUpdateSettingsApi, supportsDesktopUpdateSettings, t]);
 
   const handleUpdateChannelChange = useCallback((value: string) => {
     if (!supportsDesktopUpdateSettings) {
@@ -324,10 +326,10 @@ function SettingsPage() {
         addNotification({
           type: "error",
           alert: true,
-          content: "Failed to save update channel preference."
+          content: t("failedUpdateChannelPreference")
         });
       });
-  }, [addNotification, desktopUpdateSettingsApi, supportsDesktopUpdateSettings, updateChannel]);
+  }, [addNotification, desktopUpdateSettingsApi, supportsDesktopUpdateSettings, t, updateChannel]);
 
   // Subscribe to secrets store changes to update sidebar when secrets are modified
   useEffect(() => {
@@ -414,14 +416,14 @@ function SettingsPage() {
         addNotification({
           type: "info",
           alert: true,
-          content: "Nodetool API Token copied to Clipboard!"
+          content: t("nodetoolApiTokenCopied")
         });
       } catch (error) {
         console.error("Failed to copy to clipboard:", error);
         addNotification({
           type: "error",
           alert: true,
-          content: "Failed to copy token to clipboard"
+          content: t("failedCopyToken")
         });
       }
     }
@@ -465,29 +467,29 @@ function SettingsPage() {
   // Tab 0: General sidebar folders — every section listed, in page order.
   const generalSidebarSections = [
     {
-      category: "Workspace",
+      category: t("workspace"),
       items: [
-        { id: "editor", label: "Editor" },
-        ...(isElectron ? [{ id: "updates", label: "Updates" }] : [])
+        { id: "editor", label: t("editor") },
+        ...(isElectron ? [{ id: "updates", label: t("updates") }] : [])
       ]
     },
     {
-      category: "Execution",
-      items: [{ id: "execution", label: "Execution" }]
+      category: t("execution"),
+      items: [{ id: "execution", label: t("execution") }]
     },
     {
-      category: "Canvas",
-      items: [{ id: "canvas-navigation", label: "Canvas & Navigation" }]
+      category: t("canvas"),
+      items: [{ id: "canvas-navigation", label: t("canvasNavigation") }]
     },
     {
-      category: "AI",
-      items: [{ id: "default-models", label: "Default Models" }]
+      category: t("ai"),
+      items: [{ id: "default-models", label: t("defaultModels") }]
     },
     {
-      category: "History",
+      category: t("history"),
       items: [
-        { id: "autosave", label: "Autosave" },
-        { id: "appearance", label: "Appearance" }
+        { id: "autosave", label: t("autosave") },
+        { id: "appearance", label: t("appearance") }
       ]
     }
   ];
@@ -502,9 +504,9 @@ function SettingsPage() {
   // generic settings panel renders, so the sidebar shows all items.
   const integrationsSidebarSections = useMemo(() => {
     const configItems = [
-      { id: "api-settings", label: "API Settings" },
+      { id: "api-settings", label: t("apiSettings") },
       { id: "huggingface-oauth", label: "HuggingFace" },
-      { id: "search-provider", label: "Search Provider" },
+      { id: "search-provider", label: t("searchProvider") },
       ...getDisplayedSettingGroups(remoteSettings ?? []).map((group) => ({
         id: settingGroupSlug(group),
         label: group
@@ -514,28 +516,28 @@ function SettingsPage() {
       ...(session?.access_token && !isLocalhost
         ? [
             {
-              category: "Credentials",
+              category: t("credentials"),
               items: [
-                { id: "nodetool-api-token", label: "Nodetool API Token" }
+                { id: "nodetool-api-token", label: t("nodetoolApiToken") }
               ]
             }
           ]
         : []),
-      { category: "Configuration", items: configItems },
+      { category: t("configuration"), items: configItems },
       ...(isLocalhost
         ? [
             {
-              category: "Servers",
+              category: t("servers"),
               items: [
-                { id: "mcp-integration", label: "MCP Servers" },
-                { id: "browser-extension", label: "Browser Extension" }
+                { id: "mcp-integration", label: t("mcpServers") },
+                { id: "browser-extension", label: t("browserExtension") }
               ]
             }
           ]
         : []),
-      { category: "Storage", items: [{ id: "folders", label: "Folders" }] }
+      { category: t("storage"), items: [{ id: "folders", label: t("folders") }] }
     ];
-  }, [remoteSettings, session?.access_token]);
+  }, [remoteSettings, session?.access_token, t]);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -556,15 +558,15 @@ function SettingsPage() {
             density="normal"
             onClick={handleClose}
             startIcon={<ArrowBackRoundedIcon sx={{ fontSize: 16 }} />}
-            aria-label="Go back"
+            aria-label={t("back")}
           >
-            Back
+            {t("back")}
           </EditorButton>
           <div className="settings-page-header__titles">
-            <h1 className="settings-page-header__title">Settings</h1>
+            <h1 className="settings-page-header__title">{t("title")}</h1>
             <p className="settings-page-header__subtitle">
               {settingsTab === aboutTabIndex
-                ? "About this application."
+                ? t("aboutApplication")
                 : tabSubtitle(settingsTab)}
             </p>
           </div>
@@ -576,13 +578,13 @@ function SettingsPage() {
                 value={settingsTab}
                 onChange={handleTabChange}
                 className="settings-tabs"
-                aria-label="settings tabs"
+                aria-label={t("settingsTabs")}
               >
-                <Tab label="General" id="settings-tab-0" />
-                <Tab label="API Keys" id="settings-tab-1" />
-                <Tab label="Integrations" id="settings-tab-2" />
-                <Tab label="About" id={`settings-tab-${aboutTabIndex}`} />
-                <Tab label="Packages" id={`settings-tab-${packagesTabIndex}`} />
+                <Tab label={t("general")} id="settings-tab-0" />
+                <Tab label={t("apiKeys")} id="settings-tab-1" />
+                <Tab label={t("integrations")} id="settings-tab-2" />
+                <Tab label={t("about")} id={`settings-tab-${aboutTabIndex}`} />
+                <Tab label={t("packages")} id={`settings-tab-${packagesTabIndex}`} />
               </Tabs>
             </div>
 
@@ -619,7 +621,7 @@ function SettingsPage() {
                 <TabPanel value={settingsTab} index={TAB_GENERAL}>
                   <div style={{ marginBottom: "1.5em" }}>
                     <SearchInput
-                      placeholder="Search settings..."
+                      placeholder={t("searchSettings")}
                       value={generalSearchTerm}
                       onChange={setGeneralSearchTerm}
                       size="small"
@@ -629,7 +631,7 @@ function SettingsPage() {
                   <div className="general-settings">
                     <div className="settings-section">
                       <Text size="big" id="editor" className="settings-heading">
-                        Editor
+                        {t("editor")}
                       </Text>
                       <SearchItem
                         search={generalSearch}
@@ -1038,7 +1040,7 @@ function SettingsPage() {
                 <TabPanel value={settingsTab} index={TAB_API_KEYS}>
                   <div style={{ marginBottom: "1.5em" }}>
                     <SearchInput
-                      placeholder="Search providers..."
+                      placeholder={t("searchProviders")}
                       value={apiSearchTerm}
                       onChange={setApiSearchTerm}
                       size="small"
@@ -1061,14 +1063,13 @@ function SettingsPage() {
                         id="nodetool-api-token"
                         className="settings-heading"
                       >
-                        Nodetool API
+                        {t("nodetoolApi")}
                       </Text>
                       <Text
                         className="explanation"
                         sx={{ margin: "0 0 1em 0" }}
                       >
-                        Use the Nodetool API to execute workflows
-                        programmatically.
+                        {t("nodetoolApiExplanation")}
                         <br />
                         <br />
                         <a
@@ -1076,7 +1077,7 @@ function SettingsPage() {
                           rel="noopener noreferrer"
                           href="https://github.com/nodetool-ai/nodetool#using-the-workflow-api-"
                         >
-                          API documentation on GitHub <br />
+                          {t("nodetoolApiDocumentation")} <br />
                         </a>
                       </Text>
                       <div
@@ -1094,12 +1095,11 @@ function SettingsPage() {
                             color: theme.palette.text.primary
                           }}
                         >
-                          Nodetool API Token
+                          {t("nodetoolApiToken")}
                         </Text>
                         <div className="description">
                           <Text>
-                            This token is used to authenticate your account
-                            with the Nodetool API.
+                            {t("nodetoolApiTokenDescription")}
                           </Text>
                           <div className="secrets">
                             <WarningIcon
@@ -1109,12 +1109,11 @@ function SettingsPage() {
                               }}
                             />
                             <Text component="span">
-                              Keep this token secure and do not share it
-                              publicly
+                              {t("nodetoolApiTokenWarning")}
                             </Text>
                           </div>
                         </div>
-                        <Tooltip title="Copy to clipboard">
+                        <Tooltip title={t("copyToClipboard")}>
                           <EditorButton
                             style={{ margin: ".5em 0" }}
                             size="small"
@@ -1122,7 +1121,7 @@ function SettingsPage() {
                             startIcon={<ContentCopyIcon />}
                             onClick={copyAuthToken}
                           >
-                            Copy Token
+                            {t("copyToken")}
                           </EditorButton>
                         </Tooltip>
                       </div>
@@ -1134,7 +1133,7 @@ function SettingsPage() {
                     id="api-settings"
                     className="settings-heading"
                   >
-                    API Settings
+                    {t("apiSettings")}
                   </Text>
                   <RemoteSettingsMenuComponent />
 
@@ -1145,7 +1144,7 @@ function SettingsPage() {
                         id="mcp-integration"
                         className="settings-heading"
                       >
-                        MCP Integration
+                        {t("mcpIntegration")}
                       </Text>
                       <MCPSettingsMenu />
 
@@ -1154,14 +1153,14 @@ function SettingsPage() {
                         id="browser-extension"
                         className="settings-heading"
                       >
-                        Browser Extension
+                        {t("browserExtension")}
                       </Text>
                       <BrowserExtensionSettingsMenu />
                     </>
                   )}
 
                   <Text size="big" id="folders" className="settings-heading">
-                    Folders
+                    {t("folders")}
                   </Text>
                   <FoldersSettings />
                   </div>

@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 
 import {
   useWorkspaceTabsStore,
@@ -239,6 +240,7 @@ const styles = (theme: Theme) =>
 
 const WorkspaceTabBar = React.memo(function WorkspaceTabBar() {
   const theme = useTheme();
+  const { t } = useTranslation("workspace");
   const tabBarStyles = useMemo(() => styles(theme), [theme]);
   const tabs = useWorkspaceTabsStore((state) => state.tabs);
   const activeTabId = useWorkspaceTabsStore((state) => state.activeTabId);
@@ -413,7 +415,7 @@ const WorkspaceTabBar = React.memo(function WorkspaceTabBar() {
         ref={newTabButtonRef}
         type="button"
         className="new-tab"
-        aria-label="Open or create a tab"
+        aria-label={t("openOrCreateTab")}
         aria-haspopup="menu"
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((v) => !v)}
@@ -421,7 +423,7 @@ const WorkspaceTabBar = React.memo(function WorkspaceTabBar() {
         <span className="new-tab-plus" aria-hidden>
           +
         </span>
-        New
+        {t("newTab")}
         <span className="new-tab-caret" aria-hidden>
           ▾
         </span>
@@ -464,14 +466,14 @@ const WorkspaceTabBar = React.memo(function WorkspaceTabBar() {
             className={activeTab.mode === "view" ? "on" : ""}
             onClick={() => setMode(activeTab.id, "view")}
           >
-            {activeTab.type === "workflow" ? "App" : "View"}
+            {activeTab.type === "workflow" ? t("appMode") : t("viewMode")}
           </button>
           <button
             type="button"
             className={activeTab.mode === "edit" ? "on" : ""}
             onClick={() => setMode(activeTab.id, "edit")}
           >
-            Edit
+            {t("editMode")}
           </button>
         </div>
       )}

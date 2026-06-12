@@ -4,6 +4,7 @@ import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import React, { memo, useCallback, useMemo } from "react";
 import { Toolbar } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { EditorButton } from "../editor_ui";
 import AutoAwesomeMosaicIcon from "@mui/icons-material/AutoAwesomeMosaic";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -106,6 +107,7 @@ const TemplatesButton = memo(function TemplatesButton({
   isActive: boolean;
 }) {
   const navigate = useNavigate();
+  const { t } = useTranslation("workflows");
 
   const handleClick = useCallback(() => {
     navigate("/templates");
@@ -113,7 +115,7 @@ const TemplatesButton = memo(function TemplatesButton({
 
   return (
     <Tooltip
-      title="Explore Templates"
+      title={t("exploreTemplates")}
       delay={TOOLTIP_ENTER_DELAY}
       placement="bottom"
     >
@@ -148,10 +150,10 @@ const TemplatesButton = memo(function TemplatesButton({
         onClick={handleClick}
         tabIndex={-1}
         aria-current={isActive ? "page" : undefined}
-        aria-label="Templates"
+        aria-label={t("templates")}
       >
         <AutoAwesomeMosaicIcon className="templates-icon" />
-        <span className="nav-button-text">Templates</span>
+        <span className="nav-button-text">{t("templates")}</span>
       </EditorButton>
     </Tooltip>
   );
@@ -159,9 +161,10 @@ const TemplatesButton = memo(function TemplatesButton({
 
 const HeaderWorkspaceSelector = memo(function HeaderWorkspaceSelector() {
   const { workspaceId, setWorkspaceId } = useCurrentWorkspace();
+  const { t } = useTranslation("navigation");
   return (
     <Tooltip
-      title="Current workspace"
+      title={t("currentWorkspace")}
       delay={TOOLTIP_ENTER_DELAY}
       placement="bottom"
     >
@@ -184,6 +187,7 @@ const HeaderWorkspaceSelector = memo(function HeaderWorkspaceSelector() {
 const ReturnToTimelinePill = memo(function ReturnToTimelinePill() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t } = useTranslation("navigation");
 
   // from=timeline:{sequenceId}:{clipId}
   // Require at least 3 colon-separated parts: "timeline", sequenceId, clipId.
@@ -198,12 +202,12 @@ const ReturnToTimelinePill = memo(function ReturnToTimelinePill() {
   if (!sequenceId) return null;
 
   return (
-    <Tooltip title="Return to Timeline" delay={TOOLTIP_ENTER_DELAY} placement="bottom">
+    <Tooltip title={t("returnToTimeline")} delay={TOOLTIP_ENTER_DELAY} placement="bottom">
       <EditorButton
         variant="outlined"
         size="small"
         onClick={handleReturn}
-        aria-label="Return to Timeline"
+        aria-label={t("returnToTimeline")}
         data-testid="return-to-timeline-pill"
         sx={{
           height: "1.75em",
@@ -218,7 +222,7 @@ const ReturnToTimelinePill = memo(function ReturnToTimelinePill() {
         }}
       >
         <ArrowBackIcon sx={{ fontSize: "var(--fontSizeNormal)" }} />
-        <span>Timeline</span>
+        <span>{t("timeline")}</span>
       </EditorButton>
     </Tooltip>
   );
@@ -232,6 +236,7 @@ const ReturnToTimelinePill = memo(function ReturnToTimelinePill() {
 const ReturnToSketchPill = memo(function ReturnToSketchPill() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t } = useTranslation("navigation");
 
   // from=sketch:{documentId}:{layerId}
   // Require at least 3 colon-separated parts: "sketch", documentId, layerId.
@@ -246,12 +251,12 @@ const ReturnToSketchPill = memo(function ReturnToSketchPill() {
   if (!documentId) return null;
 
   return (
-    <Tooltip title="Return to Image Editor" delay={TOOLTIP_ENTER_DELAY} placement="bottom">
+    <Tooltip title={t("returnToImageEditor")} delay={TOOLTIP_ENTER_DELAY} placement="bottom">
       <EditorButton
         variant="outlined"
         size="small"
         onClick={handleReturn}
-        aria-label="Return to Image Editor"
+        aria-label={t("returnToImageEditor")}
         data-testid="return-to-sketch-pill"
         sx={{
           height: "1.75em",
@@ -266,7 +271,7 @@ const ReturnToSketchPill = memo(function ReturnToSketchPill() {
         }}
       >
         <ArrowBackIcon sx={{ fontSize: "var(--fontSizeNormal)" }} />
-        <span>Image</span>
+        <span>{t("image")}</span>
       </EditorButton>
     </Tooltip>
   );
@@ -277,6 +282,7 @@ const AppHeader: React.FC = memo(function AppHeader() {
   const path = useLocation().pathname;
   const headerStyles = useMemo(() => styles(theme), [theme]);
   const navigate = useNavigate();
+  const { t } = useTranslation("navigation");
   const isEditorRoute = path.startsWith("/editor/");
   const sketchDocumentId = path.match(/^\/sketch\/([^/]+)/)?.[1];
 
@@ -289,7 +295,7 @@ const AppHeader: React.FC = memo(function AppHeader() {
       <Toolbar variant="dense" className="toolbar" tabIndex={-1} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <FlexRow className="navigate" gap={1} align="center">
           {/* Logo - clicks to Dashboard */}
-          <Tooltip title="Go to Dashboard" delay={TOOLTIP_ENTER_DELAY} placement="bottom">
+          <Tooltip title={t("goToDashboard")} delay={TOOLTIP_ENTER_DELAY} placement="bottom">
             <div
               className="logo-container"
               onClick={handleLogoClick}

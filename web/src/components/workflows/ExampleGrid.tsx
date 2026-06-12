@@ -7,6 +7,7 @@ import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ErrorOutlineRounded } from "@mui/icons-material";
 import { css } from "@emotion/react";
+import { useTranslation } from "react-i18next";
 import { useWorkflowSearch, searchWorkflowsWithFuse } from "../../utils/workflowSearch";
 import { findMatchingNodesInWorkflows } from "../../utils/findMatchingNodesInWorkflows";
 import { SearchResult as FrontendSearchResult } from "../../types/search";
@@ -185,6 +186,7 @@ const TemplateGrid = memo(function TemplateGrid() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { t } = useTranslation("workflows");
   const loadWorkflows = useWorkflowManager((state) => state.loadTemplates);
   const searchTemplates = useWorkflowManager((state) => state.searchTemplates);
   const createWorkflow = useWorkflowManager((state) => state.create);
@@ -531,8 +533,8 @@ const TemplateGrid = memo(function TemplateGrid() {
             <LoadingSpinner
               size="large"
               text={isFetchingSearchData && nodesOnlySearch
-                ? "Searching for Templates"
-                : "Loading Templates"}
+                ? t("searchingTemplates")
+                : t("loadingTemplates")}
             />
           </div>
         )}
@@ -613,7 +615,7 @@ const TemplateGrid = memo(function TemplateGrid() {
           <ScrollArea className="container" direction="vertical">
             <Box className="no-results">
               <Text sx={{ marginBottom: "1em" }}>
-                Nothing found for
+                {t("noResultsFor")}
                 <strong style={{ color: theme.vars.palette.primary.main }}>
                   {" "}
                   &quot;{searchQuery}&quot;
@@ -621,10 +623,10 @@ const TemplateGrid = memo(function TemplateGrid() {
               </Text>
 
               <Text size="big" sx={{ margin: "1em 0 0.5em 0" }}>
-                Help us improve the templates
+                {t("helpImproveTemplates")}
               </Text>
               <Text sx={{ marginBottom: "1em" }}>
-                Let us know what you&apos;re missing!
+                {t("letUsKnowMissing")}
               </Text>
               <ul
                 style={{
@@ -638,9 +640,9 @@ const TemplateGrid = memo(function TemplateGrid() {
                     href="https://discord.gg/WmQTWZRcYE"
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: "var(--palette-info-light)" }}
-                  >
-                    Join our Discord
+                  style={{ color: "var(--palette-info-light)" }}
+                >
+                    {t("joinDiscord")}
                   </a>
                 </li>
                 <li>
@@ -648,9 +650,9 @@ const TemplateGrid = memo(function TemplateGrid() {
                     href="https://forum.nodetool.ai"
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: "var(--palette-info-light)" }}
-                  >
-                    Join the Nodetool Forum
+                  style={{ color: "var(--palette-info-light)" }}
+                >
+                    {t("joinForum")}
                   </a>
                 </li>
               </ul>

@@ -8,6 +8,7 @@ import React, {
   memo
 } from "react";
 import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTranslation } from "react-i18next";
 import {
   AlertBanner,
   Text,
@@ -39,6 +40,7 @@ import { useShallow } from "zustand/react/shallow";
 const GlobalChat: React.FC = () => {
   const { thread_id } = useParams<{ thread_id?: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation(["chat", "common"]);
 
   const {
     status,
@@ -390,11 +392,11 @@ const GlobalChat: React.FC = () => {
   const getThreadPreview = useCallback(
     (threadId: string) => {
       if (!threads) {
-        return "Loading...";
+        return t("chat:threadPreviewLoading");
       }
       const thread = threads[threadId];
       if (!thread) {
-        return "Empty conversation";
+        return t("chat:emptyConversation");
       }
 
       // Use thread title if available
@@ -405,7 +407,7 @@ const GlobalChat: React.FC = () => {
       // Check if we have cached messages for this thread
       const threadMessages = messageCache[threadId];
       if (!threadMessages || threadMessages.length === 0) {
-        return "New conversation";
+        return t("chat:newConversation");
       }
 
       const firstUserMessage = threadMessages.find(
@@ -418,13 +420,13 @@ const GlobalChat: React.FC = () => {
             : Array.isArray(firstUserMessage.content) &&
               firstUserMessage.content[0]?.type === "text"
               ? (firstUserMessage.content[0] as MessageTextContent).text
-              : "[Media message]";
+              : t("chat:mediaMessage");
         return content?.substring(0, 50) + (content?.length > 50 ? "..." : "");
       }
 
-      return "New conversation";
+      return t("chat:newConversation");
     },
-    [threads, messageCache]
+    [threads, messageCache, t]
   );
 
   // Create ThreadInfo-compatible data for ThreadList
@@ -453,7 +455,7 @@ const GlobalChat: React.FC = () => {
         justify="center"
         sx={{ height: "100vh" }}
       >
-        <Text>Loading chat…</Text>
+        <Text>{t("chat:loadingChat")}</Text>
       </FlexRow>
     );
   }
@@ -467,7 +469,7 @@ const GlobalChat: React.FC = () => {
         sx={{ height: "100vh" }}
       >
         <AlertBanner severity="error">
-          Failed to load threads: {threadsError.message}
+          {t("chat:failedToLoadThreads", { message: threadsError.message })}
         </AlertBanner>
       </FlexRow>
     );
@@ -514,7 +516,7 @@ const GlobalChat: React.FC = () => {
           fontSize: "var(--fontSizeNormal)"
         }}
       >
-        Back to editor
+        {t("chat:backToEditor")}
       </EditorButton>
       {/* Main Chat Area */}
       <FlexColumn
@@ -550,7 +552,7 @@ const GlobalChat: React.FC = () => {
                 variant="outlined"
                 sx={{ ml: "auto", whiteSpace: "nowrap" }}
               >
-                Retry
+                {t("common:retry")}
               </EditorButton>
             </FlexRow>
           </AlertBanner>
@@ -585,7 +587,7 @@ const GlobalChat: React.FC = () => {
             <>
               <ToolbarIconButton
                 onClick={() => setMobileConversationsOpen(true)}
-                title="Open conversations"
+                title={t("chat:openConversations")}
                 tabIndex={-1}
                 sx={{
                   position: "absolute",
@@ -609,13 +611,13 @@ const GlobalChat: React.FC = () => {
               <MobileBottomSheet
                 open={mobileConversationsOpen}
                 onClose={() => setMobileConversationsOpen(false)}
-                title="Conversations"
-                ariaLabel="Conversations"
+                title={t("chat:conversations")}
+                ariaLabel={t("chat:conversations")}
                 headerExtras={
                   <FlexRow align="center" sx={{ px: 1.5 }}>
                     <ToolbarIconButton
                       onClick={handleMobileNewChat}
-                      title="New chat"
+                      title={t("chat:newChat")}
                       size="small"
                       tabIndex={-1}
                       sx={{
