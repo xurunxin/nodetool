@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { useCallback, memo } from "react";
+import { useTranslation } from "react-i18next";
 import { EditorButton, Text, Box } from "./ui_primitives";
 import GoogleAuthButton from "./buttons/GoogleAuthButton";
 import Logo from "./Logo";
@@ -94,6 +95,7 @@ LinkButton.displayName = "LinkButton";
 
 function Login() {
   const theme = useTheme();
+  const { t } = useTranslation("login");
   const linkItems = [
     { name: "Anthropic", url: "https://www.anthropic.com" },
     { name: "HuggingFace", url: "https://huggingface.co" },
@@ -115,10 +117,7 @@ function Login() {
           borderRadius="1.5em"
           small={false}
         />
-        <Text component="h3">
-          Node-based AI <br />
-          for text, image, audio & video.
-        </Text>
+        <Text component="h3">{t("tagline")}</Text>
       </div>
       <GoogleAuthButton />
       <div className="button-group">

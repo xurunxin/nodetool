@@ -1,5 +1,6 @@
 import React from "react";
 import AddIcon from "@mui/icons-material/Add";
+import { useTranslation } from "react-i18next";
 import { CreateFab, MOTION } from "../../ui_primitives";
 
 interface NewChatButtonProps {
@@ -9,13 +10,15 @@ interface NewChatButtonProps {
 export const NewChatButton: React.FC<NewChatButtonProps> = ({
   onNewThread
 }) => {
+  const { t } = useTranslation("chat");
+
   return (
     <div className="new-chat-section">
       <CreateFab
         className="new-chat-button"
         icon={<AddIcon sx={{ fontSize: "var(--fontSizeBig)" }} />}
-        label="New Chat"
-        tooltip="Start a new chat"
+        label={t("newChat")}
+        tooltip={t("startNewChat")}
         onClick={onNewThread}
         fabColor="default"
         nodrag={false}

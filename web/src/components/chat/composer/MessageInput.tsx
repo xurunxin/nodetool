@@ -1,4 +1,5 @@
 import React, { forwardRef, useEffect, useRef, useCallback, memo, useLayoutEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 interface MessageInputProps {
   value: string;
@@ -18,10 +19,12 @@ export const MessageInput = memo(forwardRef<HTMLTextAreaElement, MessageInputPro
       onChange,
       onKeyDown,
       disabled,
-      placeholder = "Type your message..."
+      placeholder
     },
     ref
   ) => {
+    const { t } = useTranslation("chat");
+    const effectivePlaceholder = placeholder ?? t("messageInput");
     const internalRef = useRef<HTMLTextAreaElement>(null);
     const textareaRef = (ref as React.RefObject<HTMLTextAreaElement>) || internalRef;
 
@@ -60,13 +63,13 @@ export const MessageInput = memo(forwardRef<HTMLTextAreaElement, MessageInputPro
       <textarea
         className="chat-input"
         id="chat-prompt"
-        aria-label={placeholder}
+        aria-label={effectivePlaceholder}
         ref={textareaRef}
         value={value}
         onChange={handleChange}
         onKeyDown={onKeyDown}
         disabled={disabled}
-        placeholder={placeholder}
+        placeholder={effectivePlaceholder}
         autoCorrect="off"
         autoCapitalize="none"
         spellCheck="false"

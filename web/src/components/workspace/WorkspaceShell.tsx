@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import React, { Suspense, useEffect, useMemo } from "react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 
 import { useWorkspaceTabsStore } from "../../stores/WorkspaceTabsStore";
 import { useWorkflowManager } from "../../contexts/WorkflowManagerContext";
@@ -95,6 +96,7 @@ const styles = (theme: Theme) =>
  */
 const WorkspaceShell = () => {
   const theme = useTheme();
+  const { t } = useTranslation("workspace");
   const shellStyles = useMemo(() => styles(theme), [theme]);
   const tabs = useWorkspaceTabsStore((state) => state.tabs);
   const activeTabId = useWorkspaceTabsStore((state) => state.activeTabId);
@@ -141,9 +143,7 @@ const WorkspaceShell = () => {
           <div className="workspace-content">
             {tabs.length === 0 && (
               <div className="workspace-empty">
-                <Caption color="secondary">
-                  No tabs open — use + to open or create a document.
-                </Caption>
+                <Caption color="secondary">{t("empty")}</Caption>
               </div>
             )}
             {tabs.map((tab) => {
