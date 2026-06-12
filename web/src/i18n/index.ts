@@ -5,7 +5,8 @@ import {
   DEFAULT_LANGUAGE,
   FALLBACK_LANGUAGE,
   DEFAULT_NAMESPACE,
-  NAMESPACES
+  NAMESPACES,
+  SUPPORTED_LANGUAGES
 } from "./languages";
 import { resources } from "./resources";
 import { isLocalhost } from "../lib/env";
@@ -14,7 +15,8 @@ export {
   DEFAULT_LANGUAGE,
   FALLBACK_LANGUAGE,
   DEFAULT_NAMESPACE,
-  NAMESPACES
+  NAMESPACES,
+  SUPPORTED_LANGUAGES
 } from "./languages";
 export type { SupportedLanguage, TranslationNamespace } from "./languages";
 
