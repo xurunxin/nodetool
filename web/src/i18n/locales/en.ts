@@ -49,10 +49,14 @@ export const en = {
   errors: {}
 } as const;
 
-type WidenStringLeaves<T> = {
-  readonly [Key in keyof T]: T[Key] extends string
-    ? string
-    : WidenStringLeaves<T[Key]>;
-};
+type EmptyLocaleObject = { readonly [Key in string]?: never };
+
+type WidenStringLeaves<T> = T extends string
+  ? string
+  : keyof T extends never
+    ? EmptyLocaleObject
+    : {
+        readonly [Key in keyof T]: WidenStringLeaves<T[Key]>;
+      };
 
 export type LocaleResource = WidenStringLeaves<typeof en>;
