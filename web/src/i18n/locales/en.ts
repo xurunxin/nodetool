@@ -30,10 +30,16 @@ export const en = {
     rootFolderCannotDelete: "Warning: The root folder cannot be deleted.",
     deleteFolderContaining_one: "Delete folder containing {{count}} file?",
     deleteFolderContaining_other: "Delete folder containing {{count}} files?",
+    folderLabel_one: "folder",
+    folderLabel_other: "folders",
+    fileLabel_one: "file",
+    fileLabel_other: "files",
+    itemLabel_one: "item",
+    itemLabel_other: "items",
     deleteFoldersAndFiles_one:
-      "Delete {{folderCount}} folder and {{fileCount}} file containing {{itemCount}} item?",
+      "Delete {{folderCount}} {{folderLabel}} and {{fileCount}} {{fileLabel}} containing {{itemCount}} {{itemLabel}}?",
     deleteFoldersAndFiles_other:
-      "Delete {{folderCount}} folders and {{fileCount}} files containing {{itemCount}} items?",
+      "Delete {{folderCount}} {{folderLabel}} and {{fileCount}} {{fileLabel}} containing {{itemCount}} {{itemLabel}}?",
     deleteFiles_one: "Delete {{count}} file?",
     deleteFiles_other: "Delete {{count}} files?",
     deleteTip:

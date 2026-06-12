@@ -1,8 +1,7 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { ThemeProvider } from "@mui/material/styles";
+import { screen, fireEvent } from "@testing-library/react";
 import AssetSearchInput from "../../../components/assets/AssetSearchInput";
-import mockTheme from "../../../__mocks__/themeMock";
+import { renderWithI18n } from "../../../i18n/__tests__/testUtils";
 
 // Simplify Tooltip to avoid theme.styleOverrides access during unit tests
 jest.mock("@mui/material", () => {
@@ -34,10 +33,6 @@ jest.mock("../../../serverState/useAssetSearch", () => ({
   })
 }));
 
-const renderWithTheme = (component: React.ReactElement) => {
-  return render(<ThemeProvider theme={mockTheme}>{component}</ThemeProvider>);
-};
-
 describe("AssetSearchInput - Basic Functionality", () => {
   const mockOnLocalSearchChange = jest.fn();
 
@@ -47,7 +42,7 @@ describe("AssetSearchInput - Basic Functionality", () => {
 
   it("should not crash when switching modes", async () => {
 
-    renderWithTheme(
+    renderWithI18n(
       <AssetSearchInput onLocalSearchChange={mockOnLocalSearchChange} />
     );
 
@@ -63,7 +58,7 @@ describe("AssetSearchInput - Basic Functionality", () => {
 
   it("should not crash with empty search input", async () => {
 
-    renderWithTheme(
+    renderWithI18n(
       <AssetSearchInput onLocalSearchChange={mockOnLocalSearchChange} />
     );
 
@@ -77,7 +72,7 @@ describe("AssetSearchInput - Basic Functionality", () => {
 
   it("should not break keyboard navigation", async () => {
 
-    renderWithTheme(
+    renderWithI18n(
       <AssetSearchInput onLocalSearchChange={mockOnLocalSearchChange} />
     );
 
@@ -93,7 +88,7 @@ describe("AssetSearchInput - Basic Functionality", () => {
 
   it("should handle rapid mode switching gracefully", async () => {
 
-    renderWithTheme(
+    renderWithI18n(
       <AssetSearchInput onLocalSearchChange={mockOnLocalSearchChange} />
     );
 

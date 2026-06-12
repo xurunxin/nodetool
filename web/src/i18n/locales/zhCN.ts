@@ -32,10 +32,16 @@ export const zhCN: LocaleResource = {
     rootFolderCannotDelete: "警告：根文件夹不能删除。",
     deleteFolderContaining_one: "删除包含 {{count}} 个文件的文件夹？",
     deleteFolderContaining_other: "删除包含 {{count}} 个文件的文件夹？",
+    folderLabel_one: "个文件夹",
+    folderLabel_other: "个文件夹",
+    fileLabel_one: "个文件",
+    fileLabel_other: "个文件",
+    itemLabel_one: "个项目",
+    itemLabel_other: "个项目",
     deleteFoldersAndFiles_one:
-      "删除 {{folderCount}} 个文件夹和 {{fileCount}} 个文件，其中包含 {{itemCount}} 个项目？",
+      "删除 {{folderCount}}{{folderLabel}}和 {{fileCount}}{{fileLabel}}，其中包含 {{itemCount}}{{itemLabel}}？",
     deleteFoldersAndFiles_other:
-      "删除 {{folderCount}} 个文件夹和 {{fileCount}} 个文件，其中包含 {{itemCount}} 个项目？",
+      "删除 {{folderCount}}{{folderLabel}}和 {{fileCount}}{{fileLabel}}，其中包含 {{itemCount}}{{itemLabel}}？",
     deleteFiles_one: "删除 {{count}} 个文件？",
     deleteFiles_other: "删除 {{count}} 个文件？",
     deleteTip: "删除前可以右键选中的资产 Asset 并下载备份。"

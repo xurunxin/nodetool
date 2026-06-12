@@ -140,11 +140,17 @@ const AssetDeleteConfirmation: React.FC<AssetDeleteConfirmationProps> = ({
         count: Math.max(totalAssets - 1, 0)
       });
     } else if (folderCount > 0) {
+      const folderLabel = t("assets:folderLabel", { count: folderCount });
+      const fileLabel = t("assets:fileLabel", { count: fileCount });
+      const itemLabel = t("assets:itemLabel", { count: totalAssets });
       return t("assets:deleteFoldersAndFiles", {
-        count: folderCount,
+        count: totalAssets,
         folderCount,
+        folderLabel,
         fileCount,
-        itemCount: totalAssets
+        fileLabel,
+        itemCount: totalAssets,
+        itemLabel
       });
     } else {
       return t("assets:deleteFiles", { count: fileCount });
