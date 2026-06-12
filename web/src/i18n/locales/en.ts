@@ -49,7 +49,7 @@ export const en = {
   errors: {}
 } as const;
 
-type EmptyLocaleObject = { readonly [Key in string]?: never };
+type EmptyLocaleObject = Readonly<Record<string, never>>;
 
 type WidenStringLeaves<T> = T extends string
   ? string
