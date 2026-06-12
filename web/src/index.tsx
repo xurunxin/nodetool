@@ -9,6 +9,7 @@ import type {} from "./window";
 import "./prismGlobal";
 
 import React, { Suspense, useEffect, useState } from "react";
+import { I18nextProvider, useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import ReactDOM from "react-dom/client";
 
@@ -20,6 +21,7 @@ import {
 } from "react-router-dom";
 
 import ErrorBoundary from "./ErrorBoundary";
+import i18n from "./i18n";
 
 // Lazy-load panel components to reduce initial bundle size
 const PanelLeft = React.lazy(() => import("./components/panels/PanelLeft"));
@@ -488,7 +490,8 @@ const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
 );
 
-const AppWrapper = () => {
+const AppContent = () => {
+  const { t } = useTranslation(["startup", "common"]);
   const [status, setStatus] = useState<string>("pending");
   const authState = useAuth((s) => s.state);
 
@@ -528,121 +531,127 @@ const AppWrapper = () => {
     isDevTestRoute || status === "success" || status === "logged_out";
 
   return (
-    <React.StrictMode>
-      <TRPCProvider>
-        <InitColorSchemeScript attribute="class" defaultMode="dark" />
-        <ThemeProvider theme={ThemeNodetool} defaultMode="dark">
-          <CssBaseline />
-          <MobileClassProvider>
-            <MenuProvider>
-              <WorkflowManagerProvider queryClient={queryClient}>
-                <KeyboardProvider active={true}>
-                  {status === "pending" && !isDevTestRoute && (
-                    <div
-                      role="status"
-                      aria-label="Loading NodeTool"
+    <TRPCProvider>
+      <InitColorSchemeScript attribute="class" defaultMode="dark" />
+      <ThemeProvider theme={ThemeNodetool} defaultMode="dark">
+        <CssBaseline />
+        <MobileClassProvider>
+          <MenuProvider>
+            <WorkflowManagerProvider queryClient={queryClient}>
+              <KeyboardProvider active={true}>
+                {status === "pending" && !isDevTestRoute && (
+                  <div
+                    role="status"
+                    aria-label={t("startup:loadingNodeTool")}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      height: "100vh",
+                      gap: "16px"
+                    }}
+                  >
+                    <LoadingSpinner size="large" />
+                    <span
                       style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        height: "100vh",
-                        gap: "16px"
+                        color: "var(--palette-text-secondary)",
+                        fontSize: "var(--fontSizeNormal)"
                       }}
                     >
-                      <LoadingSpinner size="large" />
-                      <span
-                        style={{
-                          color: "var(--palette-text-secondary)",
-                          fontSize: "var(--fontSizeNormal)"
-                        }}
-                      >
-                        Loading NodeTool…
-                      </span>
-                    </div>
-                  )}
-                  {status === "error" && !isDevTestRoute && (
-                    <div
-                      role="alert"
+                      {t("startup:loadingNodeTool")}
+                    </span>
+                  </div>
+                )}
+                {status === "error" && !isDevTestRoute && (
+                  <div
+                    role="alert"
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      height: "100vh",
+                      flexDirection: "column",
+                      gap: "12px"
+                    }}
+                  >
+                    <span
                       style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        height: "100vh",
-                        flexDirection: "column",
-                        gap: "12px"
+                        color: "var(--palette-text-primary)",
+                        fontSize: "var(--fontSizeNormal)"
                       }}
                     >
-                      <span
-                        style={{
-                          color: "var(--palette-text-primary)",
-                          fontSize: "var(--fontSizeNormal)"
-                        }}
-                      >
-                        Error loading application metadata.
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => window.location.reload()}
-                        style={{
-                          padding: "8px 16px",
-                          borderRadius: "var(--rounded-md)",
-                          border: "1px solid var(--palette-divider)",
-                          backgroundColor: "transparent",
-                          color: "var(--palette-text-primary)",
-                          cursor: "pointer",
-                          fontSize: "var(--fontSizeNormal)"
-                        }}
-                      >
-                        Refresh Page
-                      </button>
-                    </div>
-                  )}
-                  {/* Render RouterProvider only when metadata is successfully loaded */}
-                  {shouldRenderRouter && (
-                    <>
-                      <Suspense
-                        fallback={
-                          <div
-                            role="status"
-                            aria-label="Loading"
+                      {t("startup:metadataLoadError")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => window.location.reload()}
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "var(--rounded-md)",
+                        border: "1px solid var(--palette-divider)",
+                        backgroundColor: "transparent",
+                        color: "var(--palette-text-primary)",
+                        cursor: "pointer",
+                        fontSize: "var(--fontSizeNormal)"
+                      }}
+                    >
+                      {t("common:refreshPage")}
+                    </button>
+                  </div>
+                )}
+                {/* Render RouterProvider only when metadata is successfully loaded */}
+                {shouldRenderRouter && (
+                  <>
+                    <Suspense
+                      fallback={
+                        <div
+                          role="status"
+                          aria-label={t("startup:preparingWorkspace")}
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            height: "100vh",
+                            width: "100%",
+                            gap: "16px"
+                          }}
+                        >
+                          <LoadingSpinner size="large" />
+                          <span
                             style={{
-                              display: "flex",
-                              flexDirection: "column",
-                              justifyContent: "center",
-                              alignItems: "center",
-                              height: "100vh",
-                              width: "100%",
-                              gap: "16px"
+                              color: "var(--palette-text-secondary)",
+                              fontSize: "var(--fontSizeNormal)"
                             }}
                           >
-                            <LoadingSpinner size="large" />
-                            <span
-                              style={{
-                                color: "var(--palette-text-secondary)",
-                                fontSize: "var(--fontSizeNormal)"
-                              }}
-                            >
-                              Preparing workspace…
-                            </span>
-                          </div>
-                        }
-                      >
-                        <RouterProvider router={router} />
-                      </Suspense>
-                      <DownloadManagerDialog />
-                      <RunWarningDialog />
-                    </>
-                  )}
-                </KeyboardProvider>
-              </WorkflowManagerProvider>
-            </MenuProvider>
-          </MobileClassProvider>
-        </ThemeProvider>
-      </TRPCProvider>
-    </React.StrictMode>
+                            {t("startup:preparingWorkspace")}
+                          </span>
+                        </div>
+                      }
+                    >
+                      <RouterProvider router={router} />
+                    </Suspense>
+                    <DownloadManagerDialog />
+                    <RunWarningDialog />
+                  </>
+                )}
+              </KeyboardProvider>
+            </WorkflowManagerProvider>
+          </MenuProvider>
+        </MobileClassProvider>
+      </ThemeProvider>
+    </TRPCProvider>
   );
 };
+
+const AppWrapper = () => (
+  <React.StrictMode>
+    <I18nextProvider i18n={i18n}>
+      <AppContent />
+    </I18nextProvider>
+  </React.StrictMode>
+);
 
 // We need to make the initialization async
 const initialize = async () => {
