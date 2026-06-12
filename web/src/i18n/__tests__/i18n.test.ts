@@ -53,6 +53,27 @@ describe("web i18n", () => {
     }
   });
 
+  it("pluralizes localized settings option counts", async () => {
+    expect(translate("settings:minuteInterval", { count: 10 })).toBe(
+      "10 分钟"
+    );
+    expect(translate("settings:versionCount", { count: 25 })).toBe(
+      "25 个版本"
+    );
+
+    try {
+      await i18n.changeLanguage(FALLBACK_LANGUAGE);
+      expect(translate("settings:minuteInterval", { count: 1 })).toBe(
+        "1 minute"
+      );
+      expect(translate("settings:versionCount", { count: 25 })).toBe(
+        "25 versions"
+      );
+    } finally {
+      await i18n.changeLanguage(DEFAULT_LANGUAGE);
+    }
+  });
+
   it("returns the key for missing translations", () => {
     expect(translate("common:notARealKey")).toBe("notARealKey");
   });

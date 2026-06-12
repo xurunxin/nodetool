@@ -59,43 +59,6 @@ const TAB_INTEGRATIONS = 2;
 const aboutTabIndex = 3;
 const packagesTabIndex = 4;
 
-const UPDATE_CHANNEL_OPTIONS = [
-  { value: "latest", label: "Stable" },
-  { value: "nightly", label: "Nightly" }
-] as const;
-
-const CLOSE_BEHAVIOR_OPTIONS = [
-  { value: "ask", label: "Ask Every Time" },
-  { value: "quit", label: "Quit Application" },
-  { value: "background", label: "Keep Running in Background" }
-] as const;
-
-const PAN_CONTROLS_OPTIONS = [
-  { value: "LMB", label: "Pan with LMB" },
-  { value: "RMB", label: "Pan with RMB" }
-] as const;
-
-const SELECTION_MODE_OPTIONS = [
-  { value: "full", label: "Full" },
-  { value: "partial", label: "Partial" }
-] as const;
-
-const AUTOSAVE_INTERVAL_OPTIONS = [
-  { value: 1, label: "1 minute" },
-  { value: 5, label: "5 minutes" },
-  { value: 10, label: "10 minutes" },
-  { value: 15, label: "15 minutes" },
-  { value: 30, label: "30 minutes" },
-  { value: 60, label: "60 minutes" }
-] as const;
-
-const MAX_VERSIONS_OPTIONS = [
-  { value: 10, label: "10 versions" },
-  { value: 25, label: "25 versions" },
-  { value: 50, label: "50 versions" },
-  { value: 100, label: "100 versions" }
-] as const;
-
 const TIME_FORMAT_OPTIONS = [
   { value: "12h", label: "12h" },
   { value: "24h", label: "24h" }
@@ -161,6 +124,51 @@ function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const session = useAuth((state) => state.session);
   const { t } = useTranslation("settings");
+  const updateChannelOptions = useMemo(
+    () => [
+      { value: "latest", label: t("updateChannelStable") },
+      { value: "nightly", label: t("updateChannelNightly") }
+    ],
+    [t]
+  );
+  const closeBehaviorOptions = useMemo(
+    () => [
+      { value: "ask", label: t("closeBehaviorAsk") },
+      { value: "quit", label: t("closeBehaviorQuit") },
+      { value: "background", label: t("closeBehaviorBackground") }
+    ],
+    [t]
+  );
+  const panControlsOptions = useMemo(
+    () => [
+      { value: "LMB", label: t("panWithLmb") },
+      { value: "RMB", label: t("panWithRmb") }
+    ],
+    [t]
+  );
+  const selectionModeOptions = useMemo(
+    () => [
+      { value: "full", label: t("selectionModeFull") },
+      { value: "partial", label: t("selectionModePartial") }
+    ],
+    [t]
+  );
+  const autosaveIntervalOptions = useMemo(
+    () =>
+      [1, 5, 10, 15, 30, 60].map((value) => ({
+        value,
+        label: t("minuteInterval", { count: value })
+      })),
+    [t]
+  );
+  const maxVersionsOptions = useMemo(
+    () =>
+      [10, 25, 50, 100].map((value) => ({
+        value,
+        label: t("versionCount", { count: value })
+      })),
+    [t]
+  );
 
   const tabSubtitle = (tab: number): string => {
     switch (tab) {
@@ -638,10 +646,10 @@ function SettingsPage() {
                         keywords="editor workspace show welcome screen startup"
                       >
                         <LabeledSwitch
-                          label="Show Welcome Screen"
+                          label={t("showWelcomeScreen")}
                           checked={!!settings.showWelcomeOnStartup}
                           onChange={handleShowWelcomeChange}
-                          description="Show the welcome screen when starting the application."
+                          description={t("showWelcomeScreenDescription")}
                         />
                       </SearchItem>
 
@@ -650,16 +658,14 @@ function SettingsPage() {
                         keywords="editor workspace select nodes on drag selection"
                       >
                         <LabeledSwitch
-                          label="Select Nodes On Drag"
+                          label={t("selectNodesOnDrag")}
                           checked={!!settings.selectNodesOnDrag}
                           onChange={handleSelectNodesOnDragChange}
                         />
                         <Text className="description">
-                          Mark nodes as selected after changing a node&apos;s
-                          position.
+                          {t("selectNodesOnDragDescription")}
                           <br />
-                          If disabled, nodes can still be selected by clicking on
-                          them.
+                          {t("selectNodesOnDragDisabledDescription")}
                         </Text>
                       </SearchItem>
 
@@ -669,10 +675,10 @@ function SettingsPage() {
                           keywords="editor workspace sound notifications beep"
                         >
                           <LabeledSwitch
-                            label="Sound Notifications"
+                            label={t("soundNotifications")}
                             checked={!!settings.soundNotifications}
                             onChange={handleSoundNotificationsChange}
-                            description="Play a system beep sound when workflows complete, exports finish, or other important events occur."
+                            description={t("soundNotificationsDescription")}
                           />
                         </SearchItem>
                       )}
@@ -683,10 +689,10 @@ function SettingsPage() {
                           keywords="editor workspace updates automatic desktop"
                         >
                           <LabeledSwitch
-                            label="Automatic Updates"
+                            label={t("automaticUpdates")}
                             checked={autoUpdatesEnabled}
                             onChange={handleAutoUpdatesChange}
-                            description="Check for and download desktop app updates from the selected release channel."
+                            description={t("automaticUpdatesDescription")}
                           />
                         </SearchItem>
                       )}
@@ -698,15 +704,14 @@ function SettingsPage() {
                           keywords="editor workspace update channel stable nightly"
                         >
                           <SelectField
-                            label="Update Channel"
+                            label={t("updateChannel")}
                             value={updateChannel}
                             variant="standard"
                             onChange={handleUpdateChannelChange}
-                            options={UPDATE_CHANNEL_OPTIONS}
+                            options={updateChannelOptions}
                           />
                           <Text className="description">
-                            Stable follows full releases. Nightly follows prerelease nightly builds.
-                            Nightly builds default to the Nightly channel.
+                            {t("updateChannelDescription")}
                           </Text>
                         </SearchItem>
                       )}
@@ -717,7 +722,7 @@ function SettingsPage() {
                           keywords="editor workspace on close behavior quit background tray"
                         >
                           <SelectField
-                            label="On Close Behavior"
+                            label={t("onCloseBehavior")}
                             value={closeBehavior}
                             variant="standard"
                             onChange={(v) =>
@@ -725,17 +730,19 @@ function SettingsPage() {
                                 v as "ask" | "quit" | "background"
                               )
                             }
-                            options={CLOSE_BEHAVIOR_OPTIONS}
+                            options={closeBehaviorOptions}
                           />
                           <Text className="description">
-                            Choose what happens when you close the main window.
+                            {t("closeBehaviorDescription")}
                             <br />
-                            <b>Ask Every Time:</b> Shows a dialog with options.
+                            <b>{t("closeBehaviorAsk")}:</b>{" "}
+                            {t("closeBehaviorAskDescription")}
                             <br />
-                            <b>Quit:</b> Closes the application completely.
+                            <b>{t("closeBehaviorQuitShort")}:</b>{" "}
+                            {t("closeBehaviorQuitDescription")}
                             <br />
-                            <b>Background:</b> Keeps the app running in the system
-                            tray.
+                            <b>{t("closeBehaviorBackgroundShort")}:</b>{" "}
+                            {t("closeBehaviorBackgroundDescription")}
                           </Text>
                         </SearchItem>
                       )}
@@ -747,19 +754,19 @@ function SettingsPage() {
                         id="execution"
                         className="settings-heading"
                       >
-                        Execution
+                        {t("execution")}
                       </Text>
                       <SearchItem
                         search={generalSearch}
                         keywords="execution warn before large runs confirmation"
                       >
                         <LabeledSwitch
-                          label="Warn Before Large Runs"
+                          label={t("warnBeforeLargeRuns")}
                           checked={settings.confirmLargeRun ?? true}
                           onChange={(checked) =>
                             updateSettings({ confirmLargeRun: checked })
                           }
-                          description="Running a workflow executes every node at once. Show a confirmation when a run would launch many model/provider nodes that could overload an API."
+                          description={t("warnBeforeLargeRunsDescription")}
                         />
                       </SearchItem>
 
@@ -772,7 +779,7 @@ function SettingsPage() {
                           autoComplete="off"
                           slotProps={{ htmlInput: { min: 1, max: 100 } }}
                           id="large-run-threshold-input"
-                          label="Large-Run Threshold"
+                          label={t("largeRunThreshold")}
                           value={settings.largeRunThreshold ?? 5}
                           onChange={(e) =>
                             updateSettings({
@@ -787,8 +794,7 @@ function SettingsPage() {
                           disabled={!(settings.confirmLargeRun ?? true)}
                         />
                         <Text className="description">
-                          Warn when a run would execute more than this many
-                          model/provider nodes (LLM, image, audio, API, etc.).
+                          {t("largeRunThresholdDescription")}
                         </Text>
                       </SearchItem>
 
@@ -798,11 +804,11 @@ function SettingsPage() {
                       >
                         <ServerNumberSetting
                           envVar="MAX_CONCURRENT_JOBS"
-                          label="Max Concurrent Runs"
+                          label={t("maxConcurrentRuns")}
                           defaultValue={4}
                           min={1}
                           max={64}
-                          description="Maximum number of workflow runs you can execute at once. Additional runs queue and start automatically as running ones finish."
+                          description={t("maxConcurrentRunsDescription")}
                         />
                       </SearchItem>
 
@@ -812,11 +818,13 @@ function SettingsPage() {
                       >
                         <ServerNumberSetting
                           envVar="MAX_CONCURRENT_RUNS_PER_WORKFLOW"
-                          label="Max Concurrent Runs per Workflow"
+                          label={t("maxConcurrentRunsPerWorkflow")}
                           defaultValue={4}
                           min={1}
                           max={64}
-                          description="How many runs of the same workflow may run at once before further runs queue. Applies to concurrent generation (timeline, sketch); canvas runs always stay sequential."
+                          description={t(
+                            "maxConcurrentRunsPerWorkflowDescription"
+                          )}
                         />
                       </SearchItem>
                     </div>
@@ -827,28 +835,22 @@ function SettingsPage() {
                         id="canvas-navigation"
                         className="settings-heading"
                       >
-                        Canvas & Navigation
+                        {t("canvasNavigation")}
                       </Text>
                       <SearchItem
                         search={generalSearch}
                         keywords="canvas navigation pan controls mouse"
                       >
                         <SelectField
-                          label="Pan Controls"
+                          label={t("panControls")}
                           value={settings.panControls}
                           variant="standard"
                           onChange={handlePanControlsChange}
-                          options={PAN_CONTROLS_OPTIONS}
+                          options={panControlsOptions}
                         />
                         <div className="description">
-                          <Text>
-                            Move the canvas by dragging with the left or right
-                            mouse button.
-                          </Text>
-                          <Text>
-                            With RMB selected, you can also pan with the Middle
-                            Mouse Button.
-                          </Text>
+                          <Text>{t("panControlsDescription")}</Text>
+                          <Text>{t("panControlsRmbDescription")}</Text>
                         </div>
                       </SearchItem>
 
@@ -857,18 +859,20 @@ function SettingsPage() {
                         keywords="canvas navigation node selection mode full partial"
                       >
                         <SelectField
-                          label="Node Selection Mode"
+                          label={t("nodeSelectionMode")}
                           value={settings.selectionMode}
                           variant="standard"
                           onChange={handleSelectionModeChange}
-                          options={SELECTION_MODE_OPTIONS}
+                          options={selectionModeOptions}
                         />
                         <Text className="description">
-                          When drawing a selection box for node selections:
+                          {t("nodeSelectionModeDescription")}
                           <br />
-                          <b>Full:</b> nodes have to be fully enclosed.
+                          <b>{t("selectionModeFull")}:</b>{" "}
+                          {t("selectionModeFullDescription")}
                           <br />
-                          <b>Partial:</b> intersecting nodes will be selected.
+                          <b>{t("selectionModePartial")}:</b>{" "}
+                          {t("selectionModePartialDescription")}
                         </Text>
                       </SearchItem>
 
@@ -881,14 +885,14 @@ function SettingsPage() {
                           autoComplete="off"
                           slotProps={{ htmlInput: { min: 1, max: 100 } }}
                           id="grid-snap-input"
-                          label="Grid Snap Precision"
+                          label={t("gridSnapPrecision")}
                           value={settings.gridSnap}
                           onChange={handleGridSnapChange}
                           variant="standard"
                           size="small"
                         />
                         <Text className="description">
-                          Snap precision for moving nodes on the canvas.
+                          {t("gridSnapPrecisionDescription")}
                         </Text>
                       </SearchItem>
 
@@ -901,14 +905,14 @@ function SettingsPage() {
                           autoComplete="off"
                           slotProps={{ htmlInput: { min: 5, max: 30 } }}
                           id="connection-snap-input"
-                          label="Connection Snap Range"
+                          label={t("connectionSnapRange")}
                           value={settings.connectionSnap}
                           onChange={handleConnectionSnapChange}
                           variant="standard"
                           size="small"
                         />
                         <Text className="description">
-                          Snap distance for connecting nodes.
+                          {t("connectionSnapRangeDescription")}
                         </Text>
                       </SearchItem>
                     </div>
@@ -923,19 +927,19 @@ function SettingsPage() {
                         id="autosave"
                         className="settings-heading"
                       >
-                        Autosave & Version History
+                        {t("autosaveVersionHistory")}
                       </Text>
                       <SearchItem
                         search={generalSearch}
                         keywords="autosave version history enable"
                       >
                         <LabeledSwitch
-                          label="Enable Autosave"
+                          label={t("enableAutosave")}
                           checked={settings.autosave?.enabled ?? true}
                           onChange={(checked) =>
                             updateAutosaveSettings({ enabled: checked })
                           }
-                          description="Automatically save your workflow at regular intervals."
+                          description={t("enableAutosaveDescription")}
                         />
                       </SearchItem>
 
@@ -944,7 +948,7 @@ function SettingsPage() {
                         keywords="autosave version history interval minutes"
                       >
                         <SelectField
-                          label="Autosave Interval (minutes)"
+                          label={t("autosaveIntervalMinutes")}
                           value={settings.autosave?.intervalMinutes ?? 10}
                           variant="standard"
                           onChange={(v) =>
@@ -952,9 +956,9 @@ function SettingsPage() {
                               intervalMinutes: Number(v)
                             })
                           }
-                          options={AUTOSAVE_INTERVAL_OPTIONS}
+                          options={autosaveIntervalOptions}
                           disabled={!settings.autosave?.enabled}
-                          description="How often to automatically save your workflow."
+                          description={t("autosaveIntervalDescription")}
                         />
                       </SearchItem>
 
@@ -963,14 +967,14 @@ function SettingsPage() {
                         keywords="autosave version history save before running checkpoint"
                       >
                         <LabeledSwitch
-                          label="Save Before Running"
+                          label={t("saveBeforeRunning")}
                           checked={settings.autosave?.saveBeforeRun ?? true}
                           onChange={(checked) =>
                             updateAutosaveSettings({
                               saveBeforeRun: checked
                             })
                           }
-                          description="Create a checkpoint version before executing workflow."
+                          description={t("saveBeforeRunningDescription")}
                         />
                       </SearchItem>
 
@@ -979,14 +983,14 @@ function SettingsPage() {
                         keywords="autosave version history save on window close"
                       >
                         <LabeledSwitch
-                          label="Save on Window Close"
+                          label={t("saveOnWindowClose")}
                           checked={settings.autosave?.saveOnClose ?? true}
                           onChange={(checked) =>
                             updateAutosaveSettings({
                               saveOnClose: checked
                             })
                           }
-                          description="Automatically save when closing the tab or window."
+                          description={t("saveOnWindowCloseDescription")}
                         />
                       </SearchItem>
 
@@ -995,7 +999,7 @@ function SettingsPage() {
                         keywords="autosave version history max versions per workflow"
                       >
                         <SelectField
-                          label="Max Versions per Workflow"
+                          label={t("maxVersionsPerWorkflow")}
                           value={
                             settings.autosave?.maxVersionsPerWorkflow ?? 50
                           }
@@ -1005,8 +1009,8 @@ function SettingsPage() {
                               maxVersionsPerWorkflow: Number(v)
                             })
                           }
-                          options={MAX_VERSIONS_OPTIONS}
-                          description="Maximum number of versions to keep per workflow."
+                          options={maxVersionsOptions}
+                          description={t("maxVersionsPerWorkflowDescription")}
                         />
                       </SearchItem>
                     </div>
@@ -1017,19 +1021,19 @@ function SettingsPage() {
                         id="appearance"
                         className="settings-heading"
                       >
-                        Appearance
+                        {t("appearance")}
                       </Text>
                       <SearchItem
                         search={generalSearch}
                         keywords="appearance time format 12h 24h"
                       >
                         <SelectField
-                          label="Time Format"
+                          label={t("timeFormat")}
                           value={settings.timeFormat}
                           variant="standard"
                           onChange={handleTimeFormatChange}
                           options={TIME_FORMAT_OPTIONS}
-                          description="Display time in 12h or 24h format."
+                          description={t("timeFormatDescription")}
                         />
                       </SearchItem>
                     </div>
