@@ -1044,12 +1044,15 @@ export async function handleModelsApiRequest(
     if (request.method !== "POST")
       return errorResponse(405, "Method not allowed");
     if (isProduction() || !isLocalModelManagementEnabled())
-      return errorResponse(503, {
-        status: "unavailable",
-        message: isProduction()
-          ? "Not available in production"
-          : "Local model management is disabled"
-      });
+      return jsonResponse(
+        {
+          status: "unavailable",
+          message: isProduction()
+            ? "Not available in production"
+            : "Local model management is disabled"
+        },
+        { status: 503 }
+      );
     // Streaming Ollama model pulls require Server-Sent Events with progress deltas.
     // The TS standalone server does not implement this streaming protocol yet.
     // Clients should use the Python backend or manage Ollama pulls directly via the Ollama HTTP API.

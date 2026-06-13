@@ -217,6 +217,163 @@ describe("REST models API surface", () => {
     expect(readdir).not.toHaveBeenCalled();
   });
 
+  it("hides the direct Ollama REST model list in API-first mode", async () => {
+    vi.mocked(isProviderConfigured).mockResolvedValue(true);
+
+    const { body, status } = await requestJson("/api/models/ollama");
+
+    expect(status).toBe(200);
+    expect(body).toEqual([]);
+    expect(getProvider).not.toHaveBeenCalledWith(
+      "ollama",
+      expect.any(Function)
+    );
+  });
+
+  it("hides direct local language provider paths in API-first mode", async () => {
+    vi.mocked(isProviderConfigured).mockResolvedValue(true);
+
+    const { body, status } = await requestJson("/api/models/llm/ollama");
+
+    expect(status).toBe(200);
+    expect(body).toEqual([]);
+    expect(getProvider).not.toHaveBeenCalledWith(
+      "ollama",
+      expect.any(Function)
+    );
+  });
+
+  it("hides direct local image provider paths in API-first mode", async () => {
+    vi.mocked(isProviderConfigured).mockResolvedValue(true);
+
+    const { body, status } = await requestJson("/api/models/image/lmstudio");
+
+    expect(status).toBe(200);
+    expect(body).toEqual([]);
+    expect(getProvider).not.toHaveBeenCalledWith(
+      "lmstudio",
+      expect.any(Function)
+    );
+  });
+
+  it("restores direct local provider paths in local-first mode", async () => {
+    enableLocalModelSurface();
+    vi.mocked(isProviderConfigured).mockResolvedValue(true);
+
+    const { body, status } = await requestJson("/api/models/llm/ollama");
+
+    expect(status).toBe(200);
+    expect(body).toEqual([
+      {
+        id: "ollama-model",
+        name: "ollama Model",
+        provider: "ollama"
+      }
+    ]);
+    expect(getProvider).toHaveBeenCalledWith("ollama", expect.any(Function));
+  });
+
+  it("returns disabled HuggingFace file cache checks without reading local cache", async () => {
+    const { body, status } = await requestJson(
+      "/api/models/huggingface/try_cache_files",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify([
+          { repo_id: "user/local-model", path: "model.safetensors" },
+          { repo_id: "user/empty-path" }
+        ])
+      }
+    );
+
+    expect(status).toBe(200);
+    expect(body).toEqual([
+      {
+        repo_id: "user/local-model",
+        path: "model.safetensors",
+        downloaded: false
+      },
+      {
+        repo_id: "user/empty-path",
+        path: "",
+        downloaded: false
+      }
+    ]);
+    expect(access).not.toHaveBeenCalled();
+    expect(readdir).not.toHaveBeenCalled();
+  });
+
+  it("returns disabled HuggingFace repo cache checks without reading local cache", async () => {
+    const { body, status } = await requestJson(
+      "/api/models/huggingface/try_cache_repos",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(["user/local-a", "user/local-b"])
+      }
+    );
+
+    expect(status).toBe(200);
+    expect(body).toEqual([
+      { repo_id: "user/local-a", downloaded: false },
+      { repo_id: "user/local-b", downloaded: false }
+    ]);
+    expect(access).not.toHaveBeenCalled();
+    expect(readdir).not.toHaveBeenCalled();
+  });
+
+  it("returns disabled HuggingFace fast cache status without reading local cache", async () => {
+    const { body, status } = await requestJson(
+      "/api/models/huggingface/cache_status",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify([
+          { key: "a", repo_id: "user/local-a", path: "a.bin" },
+          { key: "b", repo_id: "user/local-b" }
+        ])
+      }
+    );
+
+    expect(status).toBe(200);
+    expect(body).toEqual([
+      { key: "a", downloaded: false },
+      { key: "b", downloaded: false }
+    ]);
+    expect(access).not.toHaveBeenCalled();
+    expect(readdir).not.toHaveBeenCalled();
+  });
+
+  it("returns disabled HuggingFace file info without local metadata reads", async () => {
+    const { body, status } = await requestJson(
+      "/api/models/huggingface/file_info",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify([{ repo_id: "user/local-model" }])
+      }
+    );
+
+    expect(status).toBe(200);
+    expect(body).toEqual([]);
+    expect(access).not.toHaveBeenCalled();
+    expect(readdir).not.toHaveBeenCalled();
+  });
+
+  it("returns an unavailable Ollama pull response in API-first mode", async () => {
+    const { body, status } = await requestJson("/api/models/pull_ollama_model", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model: "llama3.2" })
+    });
+
+    expect(status).toBe(503);
+    expect(body).toEqual({
+      status: "unavailable",
+      message: "Local model management is disabled"
+    });
+  });
+
   it("omits local provider models from all-model responses in API-first mode", async () => {
     vi.mocked(listRegisteredProviderIds).mockReturnValue(["openai", "ollama"]);
     vi.mocked(isProviderConfigured).mockResolvedValue(true);
