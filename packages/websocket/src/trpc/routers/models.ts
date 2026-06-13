@@ -1431,7 +1431,10 @@ export const modelsRouter = router({
   /**
    * Ollama model info (stub).
    */
-  ollamaModelInfo: protectedProcedure.output(z.null()).query(() => null),
+  ollamaModelInfo: protectedProcedure.output(z.null()).query(() => {
+    if (!isLocalModelManagementEnabled()) return null;
+    return null;
+  }),
 
   /**
    * Check whether specific files exist in the HuggingFace cache.
@@ -1498,9 +1501,9 @@ export const modelsRouter = router({
       if (!isLocalModelManagementEnabled()) {
         return {
           repo_id: input.repo_id,
-          all_present: true,
+          all_present: false,
           total_files: 0,
-          missing: []
+          missing: normalizePatterns(input.allow_pattern) ?? []
         };
       }
       return checkHfCache(input);

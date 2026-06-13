@@ -1129,6 +1129,10 @@ describe("models router", () => {
   // ── ollamaModelInfo (stub) ────────────────────────────────────────────────
 
   describe("ollamaModelInfo", () => {
+    beforeEach(() => {
+      enableLocalModelSurface();
+    });
+
     it("returns null (stub)", async () => {
       const caller = createCaller(makeCtx());
       const result = await caller.models.ollamaModelInfo();
@@ -1160,6 +1164,25 @@ describe("models router", () => {
           }
         ])
       ).resolves.toEqual([{ key: "k1", downloaded: false }]);
+      await expect(
+        caller.models.huggingfaceCheckCache({
+          repo_id: "some/repo",
+          allow_pattern: "*.bin"
+        })
+      ).resolves.toEqual({
+        repo_id: "some/repo",
+        all_present: false,
+        total_files: 0,
+        missing: ["*.bin"]
+      });
+      await expect(caller.models.ollamaModelInfo()).resolves.toBeNull();
+    });
+
+    it("returns null for Ollama model info without local access", async () => {
+      const caller = createCaller(makeCtx());
+
+      await expect(caller.models.ollamaModelInfo()).resolves.toBeNull();
+      expect(getProvider).not.toHaveBeenCalled();
     });
 
     it("rejects local management delete and pull mutations", async () => {
