@@ -31,6 +31,11 @@ import {
   type HFFileRequest
 } from "@nodetool-ai/huggingface";
 import type { UnifiedModel } from "@nodetool-ai/protocol";
+import {
+  filterModelsForSurface,
+  filterProviderIdsForSurface,
+  isLocalModelManagementEnabled
+} from "./model-surface.js";
 
 export type { UnifiedModel };
 
@@ -245,6 +250,7 @@ function toUnifiedLanguageModel(model: LanguageModel): UnifiedModel {
     id: model.id,
     type: "language_model",
     name: model.name,
+    provider: model.provider,
     repo_id: null,
     path: null,
     downloaded: model.provider === "ollama" || model.provider === "llama_cpp",
@@ -266,6 +272,7 @@ function toUnifiedModel(
     id: model.id,
     type,
     name: model.name,
+    provider: model.provider,
     repo_id: null,
     path: null,
     downloaded: model.provider === "ollama" || model.provider === "llama_cpp",
@@ -348,7 +355,10 @@ async function instantiateProvider(
 
 async function getProvidersInfo(userId = "1"): Promise<ProviderInfo[]> {
   const infos: ProviderInfo[] = [];
-  for (const provider of await getAvailableProviderIds(userId)) {
+  const providerIds = filterProviderIdsForSurface(
+    await getAvailableProviderIds(userId)
+  );
+  for (const provider of providerIds) {
     const instance = await instantiateProvider(provider, userId);
     if (!instance) continue;
     infos.push({ provider, capabilities: providerCapabilities(instance) });
@@ -523,7 +533,7 @@ async function getServerAvailability(): Promise<Record<string, boolean>> {
 async function recommendedModels(
   checkServers: boolean
 ): Promise<UnifiedModel[]> {
-  const models = [...RECOMMENDED_MODELS];
+  const models = filterModelsForSurface([...RECOMMENDED_MODELS]);
   if (!checkServers) return models;
   const servers = await getServerAvailability();
 
@@ -538,8 +548,10 @@ function selectRecommended(
   modality: RecommendedUnifiedModel["modality"],
   task?: RecommendedUnifiedModel["task"]
 ): UnifiedModel[] {
-  return RECOMMENDED_MODELS.filter(
-    (model) => model.modality === modality && (!task || model.task === task)
+  return filterModelsForSurface(
+    RECOMMENDED_MODELS.filter(
+      (model) => model.modality === modality && (!task || model.task === task)
+    )
   );
 }
 
@@ -550,7 +562,9 @@ async function getAllModels(userId = "1"): Promise<UnifiedModel[]> {
   all.push(...RECOMMENDED_MODELS);
 
   // Include language models from all available providers
-  const availableIds = await getAvailableProviderIds(userId);
+  const availableIds = filterProviderIdsForSurface(
+    await getAvailableProviderIds(userId)
+  );
   const providerModelsPromises = availableIds.map(async (providerId) => {
     try {
       const models = await getLanguageModelsByProvider(providerId, userId);
@@ -566,8 +580,8 @@ async function getAllModels(userId = "1"): Promise<UnifiedModel[]> {
     all.push(...models);
   }
 
-  // Include HuggingFace cached/recommended models
-  if (!isProduction()) {
+  // Include HuggingFace cached/recommended models only for local-first mode
+  if (!isProduction() && isLocalModelManagementEnabled()) {
     try {
       const hfModels = await readCachedHfModels();
       all.push(...hfModels);
@@ -576,7 +590,7 @@ async function getAllModels(userId = "1"): Promise<UnifiedModel[]> {
     }
   }
 
-  return dedupeModels(all);
+  return filterModelsForSurface(dedupeModels(all));
 }
 
 async function parseJsonBody<T>(request: Request): Promise<T | null> {
@@ -603,6 +617,10 @@ function parseProvider(path: string, prefix: string): ProviderId | null {
   const value = decodeURIComponent(path.slice(prefix.length));
   if (!value) return null;
   return value;
+}
+
+function isProviderEnabledForSurface(provider: ProviderId): boolean {
+  return filterProviderIdsForSurface([provider]).length > 0;
 }
 
 async function checkHfCache(
@@ -776,7 +794,7 @@ export async function handleModelsApiRequest(
     return jsonResponse(selectRecommended("video", "image_to_video"));
   }
 
-  if (path === "/all") {
+  if (path === "" || path === "/all") {
     if (request.method !== "GET")
       return errorResponse(405, "Method not allowed");
     return jsonResponse(await getAllModels(userId));
@@ -784,7 +802,8 @@ export async function handleModelsApiRequest(
 
   if (path === "/huggingface") {
     if (request.method === "GET") {
-      if (isProduction()) return jsonResponse([]);
+      if (isProduction() || !isLocalModelManagementEnabled())
+        return jsonResponse([]);
       try {
         const models = await readCachedHfModels();
         return jsonResponse(models);
@@ -795,7 +814,8 @@ export async function handleModelsApiRequest(
     if (request.method === "DELETE") {
       const repoId = url.searchParams.get("repo_id");
       if (!repoId) return errorResponse(400, "Missing repo_id parameter");
-      if (isProduction()) return jsonResponse(false);
+      if (isProduction() || !isLocalModelManagementEnabled())
+        return jsonResponse(false);
       try {
         const deleted = await deleteCachedHfModel(repoId);
         return jsonResponse(deleted);
@@ -809,7 +829,8 @@ export async function handleModelsApiRequest(
   if (path === "/huggingface/search") {
     if (request.method !== "GET")
       return errorResponse(405, "Method not allowed");
-    if (isProduction()) return jsonResponse([]);
+    if (isProduction() || !isLocalModelManagementEnabled())
+      return jsonResponse([]);
     const rawQuery = url.searchParams.get("query") ?? undefined;
     const type = url.searchParams.get("type") ?? undefined;
     // Wrap bare queries with wildcards so "whisper" matches "openai/whisper-small"
@@ -833,6 +854,8 @@ export async function handleModelsApiRequest(
       path.slice("/huggingface/type/".length)
     );
     if (!modelType) return jsonResponse([]);
+    if (isProduction() || !isLocalModelManagementEnabled())
+      return jsonResponse([]);
     try {
       const models = await getModelsByHfType(modelType);
       return jsonResponse(models);
@@ -848,6 +871,7 @@ export async function handleModelsApiRequest(
     }
     if (request.method !== "GET")
       return errorResponse(405, "Method not allowed");
+    if (!isLocalModelManagementEnabled()) return jsonResponse([]);
 
     const models = await getLanguageModelsByProvider("ollama", userId);
     return jsonResponse(models.map((model) => toOllamaModel(model)));
@@ -857,6 +881,7 @@ export async function handleModelsApiRequest(
   if (llmProvider) {
     if (request.method !== "GET")
       return errorResponse(405, "Method not allowed");
+    if (!isProviderEnabledForSurface(llmProvider)) return jsonResponse([]);
     return jsonResponse(await getLanguageModelsByProvider(llmProvider, userId));
   }
 
@@ -864,13 +889,16 @@ export async function handleModelsApiRequest(
   if (imageProvider) {
     if (request.method !== "GET")
       return errorResponse(405, "Method not allowed");
+    if (!isProviderEnabledForSurface(imageProvider)) return jsonResponse([]);
     return jsonResponse(await getImageModelsByProvider(imageProvider, userId));
   }
 
   if (path === "/tts") {
     if (request.method !== "GET")
       return errorResponse(405, "Method not allowed");
-    const availableIds = await getAvailableProviderIds(userId);
+    const availableIds = filterProviderIdsForSurface(
+      await getAvailableProviderIds(userId)
+    );
     const providers = await Promise.all(
       availableIds.map((provider) => getTtsModelsByProvider(provider, userId))
     );
@@ -881,6 +909,7 @@ export async function handleModelsApiRequest(
   if (ttsProvider) {
     if (request.method !== "GET")
       return errorResponse(405, "Method not allowed");
+    if (!isProviderEnabledForSurface(ttsProvider)) return jsonResponse([]);
     return jsonResponse(await getTtsModelsByProvider(ttsProvider, userId));
   }
 
@@ -888,6 +917,7 @@ export async function handleModelsApiRequest(
   if (asrProvider) {
     if (request.method !== "GET")
       return errorResponse(405, "Method not allowed");
+    if (!isProviderEnabledForSurface(asrProvider)) return jsonResponse([]);
     return jsonResponse(await getAsrModelsByProvider(asrProvider, userId));
   }
 
@@ -895,6 +925,7 @@ export async function handleModelsApiRequest(
   if (videoProvider) {
     if (request.method !== "GET")
       return errorResponse(405, "Method not allowed");
+    if (!isProviderEnabledForSurface(videoProvider)) return jsonResponse([]);
     return jsonResponse(await getVideoModelsByProvider(videoProvider, userId));
   }
 
@@ -902,6 +933,8 @@ export async function handleModelsApiRequest(
   if (embeddingProvider) {
     if (request.method !== "GET")
       return errorResponse(405, "Method not allowed");
+    if (!isProviderEnabledForSurface(embeddingProvider))
+      return jsonResponse([]);
     return jsonResponse(
       await getEmbeddingModelsByProvider(embeddingProvider, userId)
     );
@@ -919,6 +952,15 @@ export async function handleModelsApiRequest(
     const body =
       await parseJsonBody<Array<{ repo_id?: string; path?: string }>>(request);
     if (!body) return errorResponse(400, "Invalid JSON body");
+    if (!isLocalModelManagementEnabled()) {
+      return jsonResponse(
+        body.map((entry) => ({
+          repo_id: entry.repo_id ?? "",
+          path: entry.path ?? "",
+          downloaded: false
+        }))
+      );
+    }
 
     const checked: RepoPath[] = await Promise.all(
       body.map(async (entry) => {
@@ -943,6 +985,14 @@ export async function handleModelsApiRequest(
       return errorResponse(405, "Method not allowed");
     const body = await parseJsonBody<string[]>(request);
     if (!body) return errorResponse(400, "Invalid JSON body");
+    if (!isLocalModelManagementEnabled()) {
+      return jsonResponse(
+        body.map((repoId) => ({
+          repo_id: repoId,
+          downloaded: false
+        }))
+      );
+    }
 
     const checked: CachedRepo[] = await Promise.all(
       body.map(async (repoId) => ({
@@ -965,6 +1015,14 @@ export async function handleModelsApiRequest(
     ) {
       return errorResponse(400, "Invalid JSON body");
     }
+    if (!isLocalModelManagementEnabled()) {
+      return jsonResponse({
+        repo_id: body.repo_id,
+        all_present: false,
+        total_files: 0,
+        missing: normalizePatterns(body.allow_pattern) ?? []
+      });
+    }
 
     return jsonResponse(await checkHfCache(body));
   }
@@ -974,16 +1032,23 @@ export async function handleModelsApiRequest(
       return errorResponse(405, "Method not allowed");
     const body = await parseJsonBody<HFFastCacheStatusRequest[]>(request);
     if (!body) return errorResponse(400, "Invalid JSON body");
+    if (!isLocalModelManagementEnabled()) {
+      return jsonResponse(
+        body.map((item) => ({ key: item.key, downloaded: false }))
+      );
+    }
     return jsonResponse(await fastCacheStatus(body));
   }
 
   if (path === "/pull_ollama_model") {
     if (request.method !== "POST")
       return errorResponse(405, "Method not allowed");
-    if (isProduction())
+    if (isProduction() || !isLocalModelManagementEnabled())
       return errorResponse(503, {
         status: "unavailable",
-        message: "Not available in production"
+        message: isProduction()
+          ? "Not available in production"
+          : "Local model management is disabled"
       });
     // Streaming Ollama model pulls require Server-Sent Events with progress deltas.
     // The TS standalone server does not implement this streaming protocol yet.
@@ -997,7 +1062,8 @@ export async function handleModelsApiRequest(
   if (path === "/huggingface/file_info") {
     if (request.method !== "POST")
       return errorResponse(405, "Method not allowed");
-    if (isProduction()) return jsonResponse([]);
+    if (isProduction() || !isLocalModelManagementEnabled())
+      return jsonResponse([]);
     const body = await parseJsonBody<HFFileRequest[]>(request);
     if (!body) return errorResponse(400, "Invalid JSON body");
     try {
