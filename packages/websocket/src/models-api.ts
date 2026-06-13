@@ -105,6 +105,10 @@ function errorResponse(
   return jsonResponse({ detail }, { status });
 }
 
+function disabledLocalModelManagementResponse(): Response {
+  return errorResponse(403, "Local model management is disabled");
+}
+
 function isProduction(): boolean {
   const value = (
     process.env.NODETOOL_ENV ??
@@ -814,7 +818,9 @@ export async function handleModelsApiRequest(
     if (request.method === "DELETE") {
       const repoId = url.searchParams.get("repo_id");
       if (!repoId) return errorResponse(400, "Missing repo_id parameter");
-      if (isProduction() || !isLocalModelManagementEnabled())
+      if (!isLocalModelManagementEnabled())
+        return disabledLocalModelManagementResponse();
+      if (isProduction())
         return jsonResponse(false);
       try {
         const deleted = await deleteCachedHfModel(repoId);
@@ -1043,16 +1049,13 @@ export async function handleModelsApiRequest(
   if (path === "/pull_ollama_model") {
     if (request.method !== "POST")
       return errorResponse(405, "Method not allowed");
-    if (isProduction() || !isLocalModelManagementEnabled())
-      return jsonResponse(
-        {
-          status: "unavailable",
-          message: isProduction()
-            ? "Not available in production"
-            : "Local model management is disabled"
-        },
-        { status: 503 }
-      );
+    if (!isLocalModelManagementEnabled())
+      return disabledLocalModelManagementResponse();
+    if (isProduction())
+      return errorResponse(503, {
+        status: "unavailable",
+        message: "Not available in production"
+      });
     // Streaming Ollama model pulls require Server-Sent Events with progress deltas.
     // The TS standalone server does not implement this streaming protocol yet.
     // Clients should use the Python backend or manage Ollama pulls directly via the Ollama HTTP API.

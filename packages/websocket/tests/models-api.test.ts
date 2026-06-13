@@ -266,7 +266,7 @@ describe("REST models API surface", () => {
     expect(readCachedHfModels).not.toHaveBeenCalled();
   });
 
-  it("disables HuggingFace cache deletion in API-first mode without deleting local state", async () => {
+  it("rejects HuggingFace cache deletion in API-first mode without deleting local state", async () => {
     vi.mocked(deleteCachedHfModel).mockResolvedValue(true);
 
     const { body, status } = await requestJson(
@@ -274,8 +274,10 @@ describe("REST models API surface", () => {
       { method: "DELETE" }
     );
 
-    expect(status).toBe(200);
-    expect(body).toBe(false);
+    expect(status).toBe(403);
+    expect(body).toEqual({
+      detail: "Local model management is disabled"
+    });
     expect(deleteCachedHfModel).not.toHaveBeenCalled();
     expect(access).not.toHaveBeenCalled();
     expect(readdir).not.toHaveBeenCalled();
@@ -496,17 +498,16 @@ describe("REST models API surface", () => {
     expect(body).toBeNull();
   });
 
-  it("returns an unavailable Ollama pull response in API-first mode", async () => {
+  it("rejects Ollama pull requests in API-first mode", async () => {
     const { body, status } = await requestJson("/api/models/pull_ollama_model", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ model: "llama3.2" })
     });
 
-    expect(status).toBe(503);
+    expect(status).toBe(403);
     expect(body).toEqual({
-      status: "unavailable",
-      message: "Local model management is disabled"
+      detail: "Local model management is disabled"
     });
   });
 
