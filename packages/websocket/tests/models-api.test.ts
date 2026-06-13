@@ -204,6 +204,24 @@ describe("REST models API surface", () => {
     ).toEqual(["openai", ...LOCAL_PROVIDER_IDS]);
   });
 
+  it("does not probe local servers for recommended models in API-first mode", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, { status: 200 })
+    );
+
+    try {
+      const { body, status } = await requestJson(
+        "/api/models/recommended?check_servers=true"
+      );
+
+      expect(status).toBe(200);
+      expect(Array.isArray(body)).toBe(true);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it("returns disabled HuggingFace cache status without reading local cache", async () => {
     const { body, status } = await requestJson(
       "/api/models/huggingface/check_cache",

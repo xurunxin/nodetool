@@ -497,8 +497,8 @@ async function serverAllowsModel(
 }
 
 async function getServerAvailability(): Promise<Record<string, boolean>> {
-  // Skip localhost probes in production — local servers won't be available
-  if (isProduction()) {
+  // Skip localhost probes when local model management is unavailable.
+  if (isProduction() || !isLocalModelManagementEnabled()) {
     return { ollama: false, llama_cpp: false, lmstudio: false, vllm: false };
   }
 
