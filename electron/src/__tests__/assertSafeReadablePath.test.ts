@@ -1,3 +1,6 @@
+import * as os from "os";
+import * as path from "path";
+
 import { assertSafeReadablePath } from "../utils";
 
 jest.mock("../state", () => ({
@@ -38,8 +41,9 @@ describe("assertSafeReadablePath", () => {
 
   describe("valid paths", () => {
     it("returns the resolved path for valid absolute paths", () => {
-      const result = assertSafeReadablePath("/tmp/test-file.txt");
-      expect(result).toBe("/tmp/test-file.txt");
+      const filePath = path.join(os.tmpdir(), "test-file.txt");
+      const result = assertSafeReadablePath(filePath);
+      expect(result).toBe(path.resolve(filePath));
     });
 
     it("returns resolved path for paths in home directory", () => {
@@ -85,6 +89,7 @@ describe("assertSafeReadablePath", () => {
   });
 
   describe("sensitive absolute prefixes", () => {
+    const itPosix = process.platform === "win32" ? it.skip : it;
     const blockedPaths = [
       "/etc/passwd",
       "/proc/self/environ",
@@ -95,7 +100,7 @@ describe("assertSafeReadablePath", () => {
       "/var/log/syslog"
     ];
 
-    it.each(blockedPaths)("blocks access to %s", (blockedPath) => {
+    itPosix.each(blockedPaths)("blocks access to %s", (blockedPath) => {
       expect(() => assertSafeReadablePath(blockedPath)).toThrow(
         "Access to this path is not permitted"
       );

@@ -117,9 +117,9 @@ describe("NpmRuntimePackage", () => {
       );
       const result = await pkg.resolve(ctx);
       expect(result).not.toBeNull();
-      expect(result!.nodeModulePaths).toEqual([
-        "/mock/optional/node_modules"
-      ]);
+      expect(result!.nodeModulePaths?.map((p) => p.replace(/\\/g, "/"))).toEqual(
+        ["/mock/optional/node_modules"]
+      );
     });
 
     it("returns null when not installed", async () => {

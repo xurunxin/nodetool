@@ -53,9 +53,11 @@ describe("CalendarEventView", () => {
 
   it("formats dates correctly", () => {
     render(<CalendarEventView event={mockEvent} />, { wrapper });
-    // Locale-independent: accept either MM/DD/YYYY or DD.MM.YYYY (with optional leading zeros)
+    // Locale-independent: accept year-first, month-first, or day-first dates.
     expect(
-      screen.getByText(/(?:0?10\D+0?15|0?15\D+0?10)\D+2023/)
+      screen.getByText(
+        /(?:2023\D+0?10\D+0?15|0?10\D+0?15\D+2023|0?15\D+0?10\D+2023)/
+      )
     ).toBeInTheDocument();
   });
 });

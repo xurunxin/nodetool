@@ -3,9 +3,10 @@ import "@testing-library/jest-dom";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MessageInput } from "../../../../components/chat/composer/MessageInput";
+import { renderWithI18n } from "../../../../i18n/__tests__/testUtils";
 
 const renderComponent = (props: any) => {
-  return render(<MessageInput {...props} />);
+  return renderWithI18n(<MessageInput {...props} />);
 };
 
 describe("MessageInput", () => {
@@ -38,14 +39,14 @@ describe("MessageInput", () => {
       expect(textarea).toBeInTheDocument();
       expect(textarea).toHaveAttribute("class", "chat-input");
       expect(textarea).toHaveAttribute("id", "chat-prompt");
-      expect(textarea).toHaveAttribute("aria-label", "Type your message...");
+      expect(textarea).toHaveAttribute("aria-label", "输入消息...");
     });
 
     it("renders with default placeholder", () => {
       renderComponent(baseProps);
 
       const textarea = screen.getByRole("textbox");
-      expect(textarea).toHaveAttribute("placeholder", "Type your message...");
+      expect(textarea).toHaveAttribute("placeholder", "输入消息...");
     });
 
     it("renders with custom placeholder", () => {
@@ -242,7 +243,7 @@ describe("MessageInput", () => {
       renderComponent(baseProps);
 
       const textarea = screen.getByRole("textbox");
-      expect(textarea).toHaveAttribute("aria-label", "Type your message...");
+      expect(textarea).toHaveAttribute("aria-label", "输入消息...");
     });
 
     it("has correct id attribute", () => {

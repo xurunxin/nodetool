@@ -3,8 +3,10 @@ import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material/styles";
 import { MemoryRouter } from "react-router-dom";
+import { I18nextProvider } from "react-i18next";
 import GlobalChat from "../../../../components/chat/containers/GlobalChat";
 import mockTheme from "../../../../__mocks__/themeMock";
+import i18n from "../../../../i18n";
 
 // Mock react-router-dom hooks
 const mockNavigate = jest.fn();
@@ -165,9 +167,11 @@ jest.mock("../../../../components/chat/sidebar/ChatSidebar", () => ({
 
 const renderWithProviders = (component: React.ReactElement) => {
   return render(
-    <ThemeProvider theme={mockTheme}>
-      <MemoryRouter>{component}</MemoryRouter>
-    </ThemeProvider>
+    <I18nextProvider i18n={i18n}>
+      <ThemeProvider theme={mockTheme}>
+        <MemoryRouter>{component}</MemoryRouter>
+      </ThemeProvider>
+    </I18nextProvider>
   );
 };
 
@@ -208,7 +212,7 @@ describe("GlobalChat", () => {
 
       renderWithProviders(<GlobalChat />);
 
-      expect(screen.getByText("Loading chat…")).toBeInTheDocument();
+      expect(screen.getByText("正在加载聊天...")).toBeInTheDocument();
     });
 
     it("shows error state when threads fail to load", async () => {
@@ -221,7 +225,7 @@ describe("GlobalChat", () => {
 
       renderWithProviders(<GlobalChat />);
 
-      expect(screen.getByText(/Failed to load threads/)).toBeInTheDocument();
+      expect(screen.getByText(/加载会话失败/)).toBeInTheDocument();
     });
   });
 

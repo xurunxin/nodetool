@@ -60,7 +60,9 @@ describe("nodePackManager", () => {
   describe("getNodePackInstallRoot", () => {
     it("returns the expected path under userData", () => {
       const root = getNodePackInstallRoot();
-      expect(root).toMatch(/\/mock\/userData\/optional-node$/);
+      expect(root.replace(/\\/g, "/")).toMatch(
+        /\/mock\/userData\/optional-node$/
+      );
     });
   });
 

@@ -91,7 +91,7 @@ describe('Config – node paths', () => {
 
     it('should fall back to PATH search when conda node does not exist', () => {
       Object.defineProperty(process, 'platform', { value: 'linux' });
-      process.env.PATH = '/usr/local/bin:/usr/bin';
+      process.env.PATH = ['/usr/local/bin', '/usr/bin'].join(path.delimiter);
 
       const condaNode = path.join('/test/conda', 'bin', 'node');
       const pathNode = path.join('/usr/local/bin', 'node');

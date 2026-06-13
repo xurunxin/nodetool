@@ -105,7 +105,10 @@ describe('CondaRuntimePackage', () => {
       const pkg = makePackage();
       const ctx = makeCtx({ platform: 'linux' });
       await pkg.status(ctx);
-      const verifyCall = fileExists.mock.calls[1][0] as string;
+      const verifyCall = (fileExists.mock.calls[1][0] as string).replace(
+        /\\/g,
+        '/'
+      );
       expect(verifyCall).toContain('/bin/testbin');
       expect(verifyCall).not.toContain('.exe');
     });
@@ -128,7 +131,7 @@ describe('CondaRuntimePackage', () => {
       const resolution = await pkg.resolve(ctx);
       expect(resolution).not.toBeNull();
       expect(resolution!.binPaths).toHaveLength(1);
-      expect(resolution!.binPaths![0]).toContain('/bin');
+      expect(resolution!.binPaths![0].replace(/\\/g, '/')).toContain('/bin');
       expect(resolution!.binaries).toHaveProperty('testbin');
       expect(resolution!.binaries).toHaveProperty('helper');
     });

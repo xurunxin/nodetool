@@ -146,7 +146,9 @@ describe("placeNodeRuntime", () => {
       "node"
     );
     expect(fs.existsSync(placed)).toBe(true);
-    expect((fs.statSync(placed).mode & 0o111) !== 0).toBe(true); // executable
+    if (process.platform !== "win32") {
+      expect((fs.statSync(placed).mode & 0o111) !== 0).toBe(true); // executable
+    }
   });
 });
 
