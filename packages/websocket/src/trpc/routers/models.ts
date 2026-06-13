@@ -13,6 +13,7 @@ import {
   type RecommendedUnifiedModel
 } from "@nodetool-ai/runtime";
 import { getSecret as getStoredSecret } from "@nodetool-ai/models";
+import { TRPCError } from "@trpc/server";
 
 function secretResolverFor(userId: string) {
   return (key: string) =>
@@ -43,6 +44,20 @@ import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { z } from "zod";
 import { getSecret } from "@nodetool-ai/models";
+import {
+  filterModelsForSurface,
+  filterProviderIdsForSurface,
+  isLocalModelManagementEnabled
+} from "../../model-surface.js";
+
+function assertLocalModelManagementEnabled(): void {
+  if (!isLocalModelManagementEnabled()) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Local model management is disabled"
+    });
+  }
+}
 
 // ── Local schemas (mirrored in packages/protocol/src/api-schemas/models.ts) ──
 
@@ -666,7 +681,9 @@ async function getAllModels(userId: string): Promise<UnifiedModel[]> {
 
   all.push(...RECOMMENDED_MODELS);
 
-  const availableIds = await getAvailableProviderIds(userId);
+  const availableIds = filterProviderIdsForSurface(
+    await getAvailableProviderIds(userId)
+  ) as ProviderId[];
   const providerModelsPromises = availableIds.map(async (providerId) => {
     try {
       const instance = await instantiateProvider(providerId, userId);
@@ -718,7 +735,7 @@ async function getAllModels(userId: string): Promise<UnifiedModel[]> {
     }
   }
 
-  return dedupeModels(all);
+  return filterModelsForSurface(dedupeModels(all));
 }
 
 async function checkHfCache(body: {
@@ -775,7 +792,9 @@ async function collectProviderModelsForKind(
   kind: ModelSearchKind
 ): Promise<UnifiedModel[]> {
   const out: UnifiedModel[] = [];
-  const providerIds = await getAvailableProviderIds(userId);
+  const providerIds = filterProviderIdsForSurface(
+    await getAvailableProviderIds(userId)
+  ) as ProviderId[];
   for (const providerId of providerIds) {
     await safeProviderCall(
       "availableForKind",
@@ -860,7 +879,10 @@ export const modelsRouter = router({
     .query(async ({ ctx }) => {
       const userId = ctx.userId;
       const infos: Array<{ provider: string; capabilities: string[] }> = [];
-      for (const providerId of await getAvailableProviderIds(userId)) {
+      const providerIds = filterProviderIdsForSurface(
+        await getAvailableProviderIds(userId)
+      ) as ProviderId[];
+      for (const providerId of providerIds) {
         const instance = await instantiateProvider(providerId, userId);
         if (!instance) continue;
         infos.push({
@@ -877,7 +899,9 @@ export const modelsRouter = router({
   recommended: protectedProcedure
     .input(recommendedInput)
     .query(async ({ input }) => {
-      return getRecommendedModels(input.check_servers ?? false);
+      return filterModelsForSurface(
+        await getRecommendedModels(input.check_servers ?? false)
+      );
     }),
 
   /**
@@ -962,7 +986,7 @@ export const modelsRouter = router({
         seen.add(key);
         deduped.push(m);
       }
-      return deduped;
+      return filterModelsForSurface(deduped);
     }),
 
   /**
@@ -977,6 +1001,7 @@ export const modelsRouter = router({
   huggingfaceList: protectedProcedure
     .output(modelsListOutput)
     .query(async () => {
+      if (!isLocalModelManagementEnabled()) return [];
       if (isProduction()) return [];
       try {
         return await readCachedHfModels();
@@ -992,6 +1017,7 @@ export const modelsRouter = router({
     .input(hfDeleteInput)
     .output(z.boolean())
     .mutation(async ({ input }) => {
+      assertLocalModelManagementEnabled();
       if (isProduction()) return false;
       try {
         return await deleteCachedHfModel(input.repo_id);
@@ -1007,6 +1033,7 @@ export const modelsRouter = router({
     .input(hfSearchInput)
     .output(modelsListOutput)
     .query(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) return [];
       if (isProduction()) return [];
       const rawQuery = input.query;
       const type = input.type;
@@ -1029,6 +1056,7 @@ export const modelsRouter = router({
     .input(hfByTypeInput)
     .output(modelsListOutput)
     .query(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) return [];
       try {
         return await getModelsByHfType(input.model_type);
       } catch {
@@ -1042,6 +1070,7 @@ export const modelsRouter = router({
   transformersJsList: protectedProcedure
     .output(modelsListOutput)
     .query(async () => {
+      if (!isLocalModelManagementEnabled()) return [];
       if (isProduction()) return [];
       try {
         const cached = await scanTransformersJsCache(getTransformersJsCacheDir());
@@ -1071,6 +1100,7 @@ export const modelsRouter = router({
     .input(tjsByTypeInput)
     .output(modelsListOutput)
     .query(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) return [];
       if (isProduction()) return [];
       const modelType = input.model_type;
       const recs = recommendedFor(modelType);
@@ -1126,6 +1156,7 @@ export const modelsRouter = router({
     .input(tjsByTypeInput)
     .output(modelsListOutput)
     .query(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) return [];
       if (isProduction()) return [];
       const modelType = input.model_type;
       const recs = recommendedFor(modelType);
@@ -1152,6 +1183,7 @@ export const modelsRouter = router({
     .input(z.object({ repo_id: z.string().min(1) }))
     .output(z.boolean())
     .query(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) return false;
       if (isProduction()) return false;
       try {
         return await isRepoCached(getTransformersJsCacheDir(), input.repo_id);
@@ -1165,8 +1197,9 @@ export const modelsRouter = router({
    */
   ollama: protectedProcedure
     .output(ollamaModelsOutput)
-    .query(async ({ ctx }) =>
-      safeProviderCall(
+    .query(async ({ ctx }) => {
+      if (!isLocalModelManagementEnabled()) return [];
+      return safeProviderCall(
         "ollama models",
         { provider: "ollama", userId: ctx.userId },
         async () => {
@@ -1176,8 +1209,8 @@ export const modelsRouter = router({
           return models.map(toOllamaModel);
         },
         []
-      )
-    ),
+      );
+    }),
 
   /**
    * LLM models by provider.
@@ -1407,6 +1440,17 @@ export const modelsRouter = router({
     .input(tryCacheFilesInput)
     .output(tryCacheFilesOutput)
     .mutation(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) {
+        return input.map((entry) => {
+          const repoId = entry.repo_id ?? "";
+          const repoPath = entry.path ?? "";
+          return {
+            repo_id: repoId,
+            path: repoPath,
+            downloaded: false
+          };
+        });
+      }
       return Promise.all(
         input.map(async (entry) => {
           const repoId = entry.repo_id ?? "";
@@ -1430,6 +1474,12 @@ export const modelsRouter = router({
     .input(tryCacheReposInput)
     .output(tryCacheReposOutput)
     .mutation(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) {
+        return input.map((repoId) => ({
+          repo_id: repoId,
+          downloaded: false
+        }));
+      }
       return Promise.all(
         input.map(async (repoId) => ({
           repo_id: repoId,
@@ -1444,7 +1494,17 @@ export const modelsRouter = router({
   huggingfaceCheckCache: protectedProcedure
     .input(hfCacheCheckInput)
     .output(hfCacheCheckOutput)
-    .mutation(async ({ input }) => checkHfCache(input)),
+    .mutation(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) {
+        return {
+          repo_id: input.repo_id,
+          all_present: true,
+          total_files: 0,
+          missing: []
+        };
+      }
+      return checkHfCache(input);
+    }),
 
   /**
    * Fast batch cache status check for multiple models.
@@ -1453,6 +1513,12 @@ export const modelsRouter = router({
     .input(hfFastCacheStatusInput)
     .output(hfFastCacheStatusOutput)
     .mutation(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) {
+        return input.map((item) => ({
+          key: item.key,
+          downloaded: false
+        }));
+      }
       return Promise.all(
         input.map(async (item) => {
           const allowPatterns = normalizePatterns(item.allow_patterns);
@@ -1497,11 +1563,14 @@ export const modelsRouter = router({
         message: z.string()
       })
     )
-    .mutation(() => ({
-      status: "unavailable",
-      message:
-        "Streaming Ollama model pulls are not available in the TS standalone server. Use the Ollama API directly or the Python backend."
-    })),
+    .mutation(() => {
+      assertLocalModelManagementEnabled();
+      return {
+        status: "unavailable",
+        message:
+          "Streaming Ollama model pulls are not available in the TS standalone server. Use the Ollama API directly or the Python backend."
+      };
+    }),
 
   /**
    * Get HuggingFace file info (size, sha256, etc.).
@@ -1510,6 +1579,7 @@ export const modelsRouter = router({
     .input(hfFileInfoInput)
     .output(z.array(z.record(z.string(), z.unknown())))
     .mutation(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) return [];
       if (isProduction()) return [];
       try {
         const token = (await getSecret("HF_TOKEN", "1")) ?? undefined;
