@@ -492,6 +492,27 @@ describe("REST models API surface", () => {
     });
   });
 
+  it("excludes cached HuggingFace entries from all-model responses in API-first mode", async () => {
+    vi.mocked(readCachedHfModels).mockResolvedValue([
+      {
+        id: "cached-hf-all",
+        name: "Cached HF All",
+        type: "language_model",
+        repo_id: "user/cached-hf-all",
+        path: null,
+        downloaded: true,
+        tags: []
+      }
+    ]);
+
+    const { body, status } = await requestJson("/api/models/all");
+    const models = body as UnifiedModel[];
+
+    expect(status).toBe(200);
+    expect(models.map((model) => model.id)).not.toContain("cached-hf-all");
+    expect(readCachedHfModels).not.toHaveBeenCalled();
+  });
+
   it("omits local provider models from all-model responses in API-first mode", async () => {
     vi.mocked(listRegisteredProviderIds).mockReturnValue(["openai", "ollama"]);
     vi.mocked(isProviderConfigured).mockResolvedValue(true);
