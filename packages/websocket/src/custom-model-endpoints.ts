@@ -4,6 +4,7 @@ import {
   type CustomModelEndpointUpsertInput
 } from "@nodetool-ai/protocol/api-schemas/custom-model-endpoints.js";
 import { Setting, Secret, clearSecretCache } from "@nodetool-ai/models";
+import { Buffer } from "node:buffer";
 
 export const CUSTOM_MODEL_ENDPOINTS_SETTING = "custom_model_endpoints";
 
@@ -15,8 +16,10 @@ export function customEndpointProviderId(endpointId: string): string {
 }
 
 export function customEndpointSecretKey(endpointId: string): string {
-  const safeId = endpointId.toUpperCase().replace(/-/g, "_");
-  return `CUSTOM_MODEL_ENDPOINT_${safeId}_API_KEY`;
+  const encodedId = Buffer.from(endpointId, "utf8")
+    .toString("hex")
+    .toUpperCase();
+  return `CUSTOM_MODEL_ENDPOINT_HEX_${encodedId}_API_KEY`;
 }
 
 export async function listCustomModelEndpoints(

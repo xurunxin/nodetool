@@ -108,8 +108,30 @@ describe("custom model endpoints", () => {
       "custom:local-gateway_1"
     );
     expect(customEndpointSecretKey("local-gateway_1")).toBe(
-      "CUSTOM_MODEL_ENDPOINT_LOCAL_GATEWAY_1_API_KEY"
+      "CUSTOM_MODEL_ENDPOINT_HEX_6C6F63616C2D676174657761795F31_API_KEY"
     );
+  });
+
+  it("creates distinct deterministic secret keys for distinct valid endpoint ids", () => {
+    expect(customEndpointSecretKey("foo-bar")).toBe(
+      "CUSTOM_MODEL_ENDPOINT_HEX_666F6F2D626172_API_KEY"
+    );
+    expect(customEndpointSecretKey("foo_bar")).toBe(
+      "CUSTOM_MODEL_ENDPOINT_HEX_666F6F5F626172_API_KEY"
+    );
+    expect(customEndpointSecretKey("abc")).toBe(
+      "CUSTOM_MODEL_ENDPOINT_HEX_616263_API_KEY"
+    );
+    expect(customEndpointSecretKey("ABC")).toBe(
+      "CUSTOM_MODEL_ENDPOINT_HEX_414243_API_KEY"
+    );
+    expect(
+      new Set(
+        ["foo-bar", "foo_bar", "abc", "ABC"].map((id) =>
+          customEndpointSecretKey(id)
+        )
+      ).size
+    ).toBe(4);
   });
 
   it("upserts metadata, stores a real api key, clears cache, preserves creation time, and sorts by name", async () => {
@@ -161,13 +183,13 @@ describe("custom model endpoints", () => {
     });
     expect(Secret.upsert).toHaveBeenCalledWith({
       userId: "user-1",
-      key: "CUSTOM_MODEL_ENDPOINT_BETA_GATEWAY_API_KEY",
+      key: "CUSTOM_MODEL_ENDPOINT_HEX_626574615F67617465776179_API_KEY",
       value: "sk-real",
       description: "API key for custom model endpoint Aardvark Gateway"
     });
     expect(clearSecretCache).toHaveBeenCalledWith(
       "user-1",
-      "CUSTOM_MODEL_ENDPOINT_BETA_GATEWAY_API_KEY"
+      "CUSTOM_MODEL_ENDPOINT_HEX_626574615F67617465776179_API_KEY"
     );
   });
 
@@ -211,11 +233,11 @@ describe("custom model endpoints", () => {
     expect(savedValue.map((item) => item.id)).toEqual(["alpha_gateway"]);
     expect(Secret.deleteSecret).toHaveBeenCalledWith(
       "user-1",
-      "CUSTOM_MODEL_ENDPOINT_BETA_GATEWAY_API_KEY"
+      "CUSTOM_MODEL_ENDPOINT_HEX_626574612D67617465776179_API_KEY"
     );
     expect(clearSecretCache).toHaveBeenCalledWith(
       "user-1",
-      "CUSTOM_MODEL_ENDPOINT_BETA_GATEWAY_API_KEY"
+      "CUSTOM_MODEL_ENDPOINT_HEX_626574612D67617465776179_API_KEY"
     );
   });
 
