@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { memo, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -103,6 +104,7 @@ const summarizeArgs = (args: unknown): string => {
 
 export const ToolCallRenderer: React.FC<Props> = memo(({ chunk }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const [open, setOpen] = useState(false);
 
   const meta = chunk.content_metadata ?? {};
@@ -140,7 +142,7 @@ export const ToolCallRenderer: React.FC<Props> = memo(({ chunk }) => {
           }
         }}
       >
-        <span className="badge">tool</span>
+        <span className="badge">{t("tool")}</span>
         <span className="name">{toolName}</span>
         {!open && (
           <span style={{ color: theme.vars.palette.grey[400] }}>

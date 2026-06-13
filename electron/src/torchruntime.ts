@@ -65,14 +65,14 @@ async function isTorchruntimeInstalled(): Promise<boolean> {
       });
     });
   } catch (error) {
-    logMessage(`Error checking torchruntime installation: ${error}`, "error");
+    logMessage(`检查 torchruntime 安装状态时出错：${error}`, "error");
     return false;
   }
 }
 
 async function installTorchruntime(): Promise<void> {
-  emitBootMessage("Installing torchruntime for GPU detection...");
-  logMessage("Installing torchruntime package");
+  emitBootMessage("正在安装用于 GPU 检测的 torchruntime...");
+  logMessage("正在安装 torchruntime 包");
 
   const pythonPath = getPythonPath();
   const torchruntimeSpec = "torchruntime~=2.0";
@@ -96,22 +96,22 @@ async function installTorchruntime(): Promise<void> {
 
     installProcess.stdout?.on("data", (data: Buffer) => {
       const output = data.toString();
-      logMessage(`torchruntime install: ${output.trim()}`);
+      logMessage(`torchruntime 安装：${output.trim()}`);
     });
 
     installProcess.on("exit", (code) => {
       if (code === 0) {
-        logMessage("Torchruntime installed successfully");
+        logMessage("torchruntime 安装完成");
         resolve();
       } else {
-        const errorMsg = `Failed to install torchruntime (exit code ${code}): ${stderr}`;
+        const errorMsg = `torchruntime 安装失败（退出码 ${code}）：${stderr}`;
         logMessage(errorMsg, "error");
         reject(new Error(errorMsg));
       }
     });
 
     installProcess.on("error", (error) => {
-      const errorMsg = `Failed to spawn pip for torchruntime: ${error.message}`;
+      const errorMsg = `无法为 torchruntime 启动 pip：${error.message}`;
       logMessage(errorMsg, "error");
       reject(new Error(errorMsg));
     });
@@ -214,25 +214,25 @@ except Exception as e:
 
 export async function detectTorchPlatform(): Promise<TorchruntimeDetectionResult> {
   try {
-    emitBootMessage("Detecting GPU hardware...");
-    logMessage("Starting GPU platform detection with torchruntime");
+    emitBootMessage("正在检测 GPU 硬件...");
+    logMessage("正在通过 torchruntime 检测 GPU 平台");
 
     const isInstalled = await isTorchruntimeInstalled();
     if (!isInstalled) {
-      logMessage("Torchruntime not found, installing...");
+      logMessage("未找到 torchruntime，正在安装...");
       await installTorchruntime();
     } else {
-      logMessage("Torchruntime is already installed");
+      logMessage("torchruntime 已安装");
     }
 
     const platform = await detectPlatformWithTorchruntime();
     const indexUrl = getPyTorchIndexUrl(platform);
 
-    logMessage(`Platform detection complete: ${platform}`);
+    logMessage(`平台检测完成：${platform}`);
     if (indexUrl) {
       logMessage(`PyTorch index URL: ${indexUrl}`);
     } else {
-      logMessage("Using default PyPI index (no extra index needed)");
+      logMessage("使用默认 PyPI 索引（无需额外索引）");
     }
 
     return {

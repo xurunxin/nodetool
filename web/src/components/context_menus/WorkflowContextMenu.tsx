@@ -1,4 +1,5 @@
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { MenuItem } from "@mui/material";
 import { Text, ContextMenu } from "../ui_primitives";
 import ContextMenuItem from "./ContextMenuItem";
@@ -16,6 +17,7 @@ import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 
 const WorkflowContextMenu: React.FC = () => {
+  const { t } = useTranslation("workflows");
   const menuPosition = useContextMenuStore((state) => state.menuPosition);
   const closeContextMenu = useContextMenuStore((state) => state.closeContextMenu);
   const nodeId = useContextMenuStore((state) => state.nodeId);
@@ -81,25 +83,25 @@ const WorkflowContextMenu: React.FC = () => {
       </MenuItem>
       <ContextMenuItem
         onClick={handleToggleFavorite}
-        label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+        label={isFavorite ? t("removeFromFavorites") : t("addToFavorites")}
         IconComponent={isFavorite ? <StarIcon /> : <StarBorderIcon />}
       />
-      <ContextMenuItem onClick={handleEdit} label="Edit" IconComponent={<EditIcon />} />
+      <ContextMenuItem onClick={handleEdit} label={t("edit")} IconComponent={<EditIcon />} />
       <ContextMenuItem
         onClick={handleDuplicate}
-        label="Duplicate"
+        label={t("duplicate")}
         IconComponent={<ContentCopyIcon />}
       />
       {onOpenAsApp && (
         <ContextMenuItem
           onClick={handleOpenAsApp}
-          label="Open as App"
+          label={t("openAsApp")}
           IconComponent={<StarIcon />}
         />
       )}
       <ContextMenuItem
         onClick={handleDelete}
-        label="Delete"
+        label={t("delete")}
         addButtonClassName="delete"
         IconComponent={<DeleteIcon />}
       />

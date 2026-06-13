@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import React from "react";
@@ -114,6 +115,7 @@ const ChatToolBar: React.FC<ChatToolBarProps> = ({
   allowedProviders,
   embedded = false
 }) => {
+  const { t } = useTranslation("chat");
   const theme = useTheme();
 
   const hasModelSection = onModelChange;
@@ -160,8 +162,8 @@ const ChatToolBar: React.FC<ChatToolBarProps> = ({
               icon={<PsychologyOutlinedIcon fontSize="small" />}
               tooltip={
                 memoryEnabled
-                  ? "Long-term memory: ON — recalls facts from prior sessions and mines new ones after each turn"
-                  : "Long-term memory: OFF — this session won't recall or store memories"
+                  ? t("longTermMemoryOn")
+                  : t("longTermMemoryOff")
               }
               isActive={!!memoryEnabled}
               onClick={() => onMemoryToggle(!memoryEnabled)}

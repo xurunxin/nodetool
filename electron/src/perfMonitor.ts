@@ -25,7 +25,7 @@ const PAGE_HTML = `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8" />
-<title>Performance Monitor</title>
+<title>性能监视器</title>
 <style>
   body { margin: 0; background: #111; color: #ddd; font: 13px/1.5 -apple-system, system-ui, sans-serif; }
   table { width: 100%; border-collapse: collapse; }
@@ -40,9 +40,9 @@ const PAGE_HTML = `<!doctype html>
 <body>
 <table>
   <thead>
-    <tr><th>Process</th><th class="num">PID</th><th class="num">CPU %</th><th class="num">Memory</th></tr>
+    <tr><th>进程</th><th class="num">PID</th><th class="num">CPU %</th><th class="num">内存</th></tr>
   </thead>
-  <tbody id="rows"><tr><td colspan="4" style="padding:16px;color:#777">Collecting…</td></tr></tbody>
+  <tbody id="rows"><tr><td colspan="4" style="padding:16px;color:#777">正在采集...</td></tr></tbody>
 </table>
 <script>
   window.__updateMetrics = function (rows) {
@@ -81,9 +81,9 @@ function collectMetrics(): MetricRow[] {
     .map((m) => {
       let label: string = m.type;
       if (m.type === "Browser") {
-        label = "Main process";
+        label = "主进程";
       } else if (m.type === "Tab") {
-        label = rendererLabels.get(m.pid) ?? "Renderer";
+        label = rendererLabels.get(m.pid) ?? "渲染进程";
       } else if (m.name) {
         label = `${m.type}: ${m.name}`;
       } else if (m.serviceName) {
@@ -111,7 +111,7 @@ export function openPerformanceMonitorWindow(): void {
   const window = new BrowserWindow({
     width: 700,
     height: 420,
-    title: "Performance Monitor",
+    title: "性能监视器",
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

@@ -16,6 +16,7 @@
 
 import React, { memo, useMemo, useState, useCallback } from "react";
 import { css } from "@emotion/react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { Text, FlexRow, FlexColumn } from "../ui_primitives";
@@ -304,20 +305,21 @@ function stringifyResult(v: unknown): string {
 }
 
 const StepInspector: React.FC<{ step: StepState }> = memo(({ step }) => {
+  const { t } = useTranslation("chat");
   const resultText = useMemo(() => stringifyResult(step.rawResult), [step.rawResult]);
 
   return (
     <div className="tree-step-inspector">
       {step.instructions ? (
         <div className="tree-step-inspector-section">
-          <span className="tree-step-inspector-label">Instructions</span>
+          <span className="tree-step-inspector-label">{t("instructions")}</span>
           <span className="tree-step-inspector-body">{step.instructions}</span>
         </div>
       ) : null}
 
       {step.duration !== undefined ? (
         <div className="tree-step-inspector-section">
-          <span className="tree-step-inspector-label">Duration</span>
+          <span className="tree-step-inspector-label">{t("duration")}</span>
           <span className="tree-step-inspector-body">
             {formatDuration(step.duration)}
           </span>
@@ -327,7 +329,7 @@ const StepInspector: React.FC<{ step: StepState }> = memo(({ step }) => {
       {step.toolCalls.length > 0 ? (
         <div className="tree-step-inspector-section">
           <span className="tree-step-inspector-label">
-            Tool calls ({step.toolCalls.length})
+            {t("toolCallsWithCount", { count: step.toolCalls.length })}
           </span>
           {step.toolCalls.map((call: StepToolCallEntry, i: number) => (
             <div
@@ -335,7 +337,7 @@ const StepInspector: React.FC<{ step: StepState }> = memo(({ step }) => {
               className="tree-step-inspector-tool"
             >
               <span className="tree-step-inspector-body">
-                <strong>{call.name || "tool"}</strong>
+                <strong>{call.name || t("tool")}</strong>
                 {call.message ? `  ${call.message}` : ""}
               </span>
               {Object.keys(call.args ?? {}).length > 0 ? (
@@ -350,7 +352,7 @@ const StepInspector: React.FC<{ step: StepState }> = memo(({ step }) => {
 
       {resultText ? (
         <div className="tree-step-inspector-section">
-          <span className="tree-step-inspector-label">Result</span>
+          <span className="tree-step-inspector-label">{t("result")}</span>
           <pre className="tree-step-inspector-code">{resultText}</pre>
         </div>
       ) : null}
@@ -358,7 +360,7 @@ const StepInspector: React.FC<{ step: StepState }> = memo(({ step }) => {
       {step.error ? (
         <div className="tree-step-inspector-section">
           <span className="tree-step-inspector-label tree-step-inspector-error">
-            Error
+            {t("error")}
           </span>
           <pre className="tree-step-inspector-code tree-step-inspector-error">
             {step.error}
@@ -452,6 +454,7 @@ const TaskNode: React.FC<{
   isLast: boolean;
   onToggle: () => void;
 }> = memo(({ task, isLast, onToggle }) => {
+  const { t } = useTranslation("chat");
   const branch = isLast ? "└─ " : "├─ ";
   const cont = isLast ? "   " : "│  ";
   const iconClass = `tree-icon-${task.status}`;
@@ -472,7 +475,7 @@ const TaskNode: React.FC<{
         <span className={`tree-task-name ${iconClass}`}>{task.name}</span>
         {duration && <span className="tree-task-meta">{duration}</span>}
         <span className="tree-task-meta">
-          ({completedSteps}/{stepCount} steps)
+          {t("stepsProgress", { completed: completedSteps, total: stepCount })}
         </span>
       </FlexRow>
     );
@@ -485,7 +488,7 @@ const TaskNode: React.FC<{
         <span className={iconClass}>{icon}</span>
         <span className={`tree-task-name ${iconClass}`}>{task.name}</span>
         {task.status === "waiting" && (
-          <span className="tree-task-meta">waiting</span>
+          <span className="tree-task-meta">{t("waiting")}</span>
         )}
       </FlexRow>
       {task.steps.map((step, i) => (
@@ -525,12 +528,14 @@ const PlanningLog: React.FC<{
   logs: LogEntry[];
   isActive: boolean;
 }> = memo(({ entries, logs, isActive }) => {
+  const { t } = useTranslation("chat");
+
   if (entries.length === 0 && logs.length === 0) {
     if (isActive) {
       return (
         <FlexRow align="center" className="tree-planning">
           <span className="tree-icon-running">{ICONS.running}</span>
-          <Text>planning</Text>
+          <Text>{t("planning")}</Text>
         </FlexRow>
       );
     }
@@ -557,7 +562,7 @@ const PlanningLog: React.FC<{
           <div key={`${entry.phase}-${i}`} className="tree-planning-entry">
             <span className={statusClass}>{icon}</span>
             <span className={`tree-planning-phase ${statusClass}`}>
-              {entry.phase}
+              {t(`planningPhase_${entry.phase}`, { defaultValue: entry.phase })}
             </span>
             <span className="tree-planning-content">
               {entry.content}
@@ -581,6 +586,7 @@ interface ExecutionTreeProps {
 }
 
 const ExecutionTree: React.FC<ExecutionTreeProps> = ({ state, onToggleTask }) => {
+  const { t } = useTranslation("chat");
   const theme = useTheme();
 
   const completedCount = useMemo(
@@ -607,16 +613,19 @@ const ExecutionTree: React.FC<ExecutionTreeProps> = ({ state, onToggleTask }) =>
       {state.phase === "planning" && state.planningLog.length === 0 && (
         <FlexRow align="center" className="tree-planning">
           <span className="tree-icon-running">{ICONS.running}</span>
-          <Text>planning</Text>
+          <Text>{t("planning")}</Text>
         </FlexRow>
       )}
       {hasTasks && (
         <>
           <FlexRow align="center" className="tree-plan-header">
             <span className="tree-plan-icon">{ICONS.plan}</span>
-            <span className="tree-plan-label">Plan</span>
+            <span className="tree-plan-label">{t("plan")}</span>
             <span className="tree-plan-count">
-              ({completedCount}/{state.tasks.length} tasks)
+              {t("tasksProgress", {
+                completed: completedCount,
+                total: state.tasks.length
+              })}
             </span>
           </FlexRow>
           <FlexColumn>

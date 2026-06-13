@@ -30,10 +30,10 @@ const buildMenu = () => {
       ],
     },
     {
-      label: "File",
+      label: "文件",
       submenu: [
         {
-          label: "Save",
+          label: "保存",
           accelerator: "CmdOrCtrl+S",
           click: () => {
             mainWindow.webContents.send(IpcChannels.MENU_EVENT, {
@@ -43,7 +43,7 @@ const buildMenu = () => {
         },
         { type: "separator" },
         {
-          label: "New Workflow",
+          label: "新建工作流",
           accelerator: "CmdOrCtrl+T",
           click: () => {
             mainWindow.webContents.send(IpcChannels.MENU_EVENT, {
@@ -52,7 +52,7 @@ const buildMenu = () => {
           },
         },
         {
-          label: "Close Tab",
+          label: "关闭标签页",
           accelerator: "CmdOrCtrl+W",
           click: () => {
             mainWindow.webContents.send(IpcChannels.MENU_EVENT, {
@@ -63,10 +63,10 @@ const buildMenu = () => {
       ],
     },
     {
-      label: "Edit",
+      label: "编辑",
       submenu: [
         {
-          label: "Undo",
+          label: "撤销",
           accelerator: "CmdOrCtrl+Z",
           role: "undo",
           click: () => {
@@ -76,7 +76,7 @@ const buildMenu = () => {
           },
         },
         {
-          label: "Redo",
+          label: "重做",
           accelerator: "Shift+CmdOrCtrl+Z",
           role: "redo",
           click: () => {
@@ -87,7 +87,7 @@ const buildMenu = () => {
         },
         { type: "separator" },
         {
-          label: "Cut",
+          label: "剪切",
           accelerator: "CmdOrCtrl+X",
           click: () => {
             // Execute native cut operation first (for text fields)
@@ -99,7 +99,7 @@ const buildMenu = () => {
           },
         },
         {
-          label: "Copy",
+          label: "复制",
           accelerator: "CmdOrCtrl+C",
           click: () => {
             // Execute native copy operation first (for text fields)
@@ -111,7 +111,7 @@ const buildMenu = () => {
           },
         },
         {
-          label: "Paste",
+          label: "粘贴",
           accelerator: "CmdOrCtrl+V",
           click: () => {
             // Execute native paste operation first (for text fields)
@@ -123,7 +123,7 @@ const buildMenu = () => {
           },
         },
         {
-          label: "Duplicate",
+          label: "复制节点",
           accelerator: "CmdOrCtrl+D",
           click: () => {
             mainWindow.webContents.send(IpcChannels.MENU_EVENT, {
@@ -132,7 +132,7 @@ const buildMenu = () => {
           },
         },
         {
-          label: "Duplicate Vertical",
+          label: "垂直复制",
           accelerator: "CmdOrCtrl+Shift+D",
           click: () => {
             mainWindow.webContents.send(IpcChannels.MENU_EVENT, {
@@ -141,7 +141,7 @@ const buildMenu = () => {
           },
         },
         {
-          label: "Group",
+          label: "分组",
           accelerator: "CmdOrCtrl+G",
           click: () => {
             mainWindow.webContents.send(IpcChannels.MENU_EVENT, {
@@ -150,7 +150,7 @@ const buildMenu = () => {
           },
         },
         {
-          label: "Select All",
+          label: "全选",
           accelerator: "CmdOrCtrl+A",
           role: "selectAll",
           click: () => {
@@ -161,7 +161,7 @@ const buildMenu = () => {
         },
         { type: "separator" },
         {
-          label: "Align",
+          label: "对齐",
           accelerator: "CmdOrCtrl+A",
           click: () => {
             mainWindow.webContents.send(IpcChannels.MENU_EVENT, {
@@ -170,7 +170,7 @@ const buildMenu = () => {
           },
         },
         {
-          label: "Align with Spacing",
+          label: "等距对齐",
           accelerator: "Shift+CmdOrCtrl+A",
           click: () => {
             mainWindow.webContents.send(IpcChannels.MENU_EVENT, {
@@ -181,10 +181,10 @@ const buildMenu = () => {
       ],
     },
     {
-      label: "View",
+      label: "视图",
       submenu: [
         {
-          label: "Fit View",
+          label: "适配视图",
           accelerator: "CmdOrCtrl+0",
           click: () => {
             mainWindow.webContents.send(IpcChannels.MENU_EVENT, {
@@ -194,7 +194,7 @@ const buildMenu = () => {
         },
         { type: "separator" },
         {
-          label: "Reset Zoom",
+          label: "重置缩放",
           click: () => {
             mainWindow.webContents.send(IpcChannels.MENU_EVENT, {
               type: "resetZoom",
@@ -202,7 +202,7 @@ const buildMenu = () => {
           },
         },
         {
-          label: "Zoom In",
+          label: "放大",
           click: () => {
             mainWindow.webContents.send(IpcChannels.MENU_EVENT, {
               type: "zoomIn",
@@ -210,7 +210,7 @@ const buildMenu = () => {
           },
         },
         {
-          label: "Zoom Out",
+          label: "缩小",
           click: () => {
             mainWindow.webContents.send(IpcChannels.MENU_EVENT, {
               type: "zoomOut",
@@ -222,47 +222,47 @@ const buildMenu = () => {
       ],
     },
     {
-      label: "Tools",
+      label: "工具",
       submenu: [
         {
-          label: "Chat",
+          label: "聊天",
           click: () => createChatWindow(),
         },
         {
-          label: "Package Manager",
+          label: "包管理器",
           click: () => createPackageManagerWindow(),
         },
         {
-          label: "Log Viewer",
+          label: "日志查看器",
           click: () => createLogViewerWindow(),
         },
         {
-          label: "Performance Monitor",
+          label: "性能监视器",
           click: () => openPerformanceMonitorWindow(),
         },
         { type: "separator" },
         {
-          label: "Settings",
+          label: "设置",
           click: () => createSettingsWindow(),
         },
       ],
     },
     {
-      label: "Window",
+      label: "窗口",
       submenu: [{ role: "minimize" }],
     },
     {
       role: "help",
       submenu: [
         {
-          label: "Learn More",
+          label: "了解更多",
           click: async () => {
             await shell.openExternal("https://nodetool.ai");
           },
         },
         { type: "separator" },
         {
-          label: "System Information",
+          label: "系统信息",
           click: async () => {
             await showSystemInfoDialog();
           },
@@ -285,33 +285,33 @@ async function showSystemInfoDialog(): Promise<void> {
     
     const message = `NodeTool ${info.appVersion}
 
-Application
+应用
   Electron: ${info.electronVersion}
   Chrome: ${info.chromeVersion}
   Node.js: ${info.nodeVersion}
 
-Operating System
-  OS: ${info.os}
-  Version: ${info.osVersion}
-  Architecture: ${info.arch}
+操作系统
+  系统: ${info.os}
+  版本: ${info.osVersion}
+  架构: ${info.arch}
 
-Installation Paths
-  Application: ${info.installPath}
-  Conda Environment: ${info.condaEnvPath}
-  Data: ${info.dataPath}
-  Logs: ${info.logsPath}
+安装路径
+  应用: ${info.installPath}
+  Conda 环境: ${info.condaEnvPath}
+  数据: ${info.dataPath}
+  日志: ${info.logsPath}
 
-Features & Versions
-  Python: ${info.pythonVersion || "Not available"}
-  CUDA: ${info.cudaAvailable ? (info.cudaVersion || "Available") : "Not available"}
-  Llama Server: ${info.llamaServerInstalled ? (info.llamaServerVersion || "Installed") : "Not installed"}`;
+功能与版本
+  Python: ${info.pythonVersion || "不可用"}
+  CUDA: ${info.cudaAvailable ? (info.cudaVersion || "可用") : "不可用"}
+  Llama Server: ${info.llamaServerInstalled ? (info.llamaServerVersion || "已安装") : "未安装"}`;
 
     const dialogOptions = {
       type: "info" as const,
-      title: "System Information",
+      title: "系统信息",
       message: `NodeTool ${info.appVersion}`,
       detail: message,
-      buttons: ["OK", "Copy to Clipboard"],
+      buttons: ["确定", "复制到剪贴板"],
     };
 
     const showDialog = mainWindow 
@@ -324,7 +324,7 @@ Features & Versions
       clipboard.writeText(message);
     }
   } catch (error) {
-    dialog.showErrorBox("Error", `Failed to gather system information: ${error}`);
+    dialog.showErrorBox("错误", `无法收集系统信息：${error}`);
   }
 }
 

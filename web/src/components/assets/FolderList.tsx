@@ -15,6 +15,7 @@ import { useAssetGridStore } from "../../stores/AssetGridStore";
 import { Asset } from "../../stores/ApiTypes";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 
 // Layout constants for folder tree
 const ROW_HEIGHT_REM = 1.5; // compact row height in em
@@ -170,6 +171,7 @@ interface FolderListProps {
 
 const FolderList: React.FC<FolderListProps> = ({ isHorizontal }) => {
   const theme = useTheme();
+  const { t } = useTranslation("assets");
   const folderListStyles = useMemo(() => styles(theme), [theme]);
   const currentUser = useAuth((state) => state.user);
   const { folderTree } = useAssets();
@@ -389,11 +391,11 @@ const FolderList: React.FC<FolderListProps> = ({ isHorizontal }) => {
 
   const rootFolder: RootFolder = useMemo(() => ({
     id: currentUser?.id ?? "root",
-    name: "ASSETS",
+    name: t("rootFolder"),
     content_type: "folder",
     children: (Object.values(folderTree || {}) as FolderNode[]) || [],
     parent_id: currentUser?.id || ""
-  }), [currentUser?.id, folderTree]);
+  }), [currentUser?.id, folderTree, t]);
 
   return (
     <div

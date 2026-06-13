@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { memo, useRef, useEffect, useCallback, useState, useMemo } from "react";
@@ -52,6 +53,7 @@ const styles = (theme: Theme) =>
 export const NodeLogsDialog: React.FC<NodeLogsDialogProps> = memo(
   ({ id, workflowId, open, onClose }) => {
     const theme = useTheme();
+    const { t } = useTranslation("nodeMenu");
     const logsRef = useRef<HTMLDivElement>(null);
     // O(1) lookup via pre-keyed map instead of filtering the full logs array.
     const logs = useLogsStore(
@@ -140,12 +142,12 @@ export const NodeLogsDialog: React.FC<NodeLogsDialogProps> = memo(
         <DialogTitle className="dialog-title">
           <FlexRow gap={1} align="center">
             <Text size="normal" weight={600} component="h6">
-              Node Logs
+              {t("nodeLogs")}
             </Text>
             <Chip size="small" label={`${count}`} />
             <CopyButton
               value={logText}
-              tooltip="Copy logs"
+              tooltip={t("copyLogs")}
               nodrag={false}
             />
           </FlexRow>
@@ -154,7 +156,7 @@ export const NodeLogsDialog: React.FC<NodeLogsDialogProps> = memo(
           <div style={{ padding: 8 }}>
             <Chip
               size="small"
-              label={`Info`}
+              label={t("info")}
               variant={
                 selectedSeverities.includes("info") ? "filled" : "outlined"
               }
@@ -162,7 +164,7 @@ export const NodeLogsDialog: React.FC<NodeLogsDialogProps> = memo(
             />
             <Chip
               size="small"
-              label={`Warnings`}
+              label={t("warnings")}
               color="warning"
               variant={
                 selectedSeverities.includes("warning") ? "filled" : "outlined"
@@ -171,7 +173,7 @@ export const NodeLogsDialog: React.FC<NodeLogsDialogProps> = memo(
             />
             <Chip
               size="small"
-              label={`Errors`}
+              label={t("errors")}
               color="error"
               variant={
                 selectedSeverities.includes("error") ? "filled" : "outlined"
@@ -180,7 +182,7 @@ export const NodeLogsDialog: React.FC<NodeLogsDialogProps> = memo(
             />
             <Chip
               size="small"
-              label={`Warnings`}
+              label={t("warnings")}
               color="warning"
               variant={
                 selectedSeverities.includes("warning") ? "filled" : "outlined"
@@ -189,7 +191,7 @@ export const NodeLogsDialog: React.FC<NodeLogsDialogProps> = memo(
             />
             <Chip
               size="small"
-              label={`Errors`}
+              label={t("errors")}
               color="error"
               variant={
                 selectedSeverities.includes("error") ? "filled" : "outlined"
@@ -206,7 +208,7 @@ export const NodeLogsDialog: React.FC<NodeLogsDialogProps> = memo(
           </div>
         </DialogContent>
         <DialogActions>
-          <EditorButton onClick={onClose}>Close</EditorButton>
+          <EditorButton onClick={onClose}>{t("close")}</EditorButton>
         </DialogActions>
       </Dialog>
     );
@@ -218,6 +220,7 @@ NodeLogsDialog.displayName = "NodeLogsDialog";
 
 export const NodeLogs: React.FC<NodeLogsProps> = ({ id, workflowId }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const memoizedStyles = useMemo(() => styles(theme), [theme]);
   // O(1) lookup via pre-keyed map instead of filtering the full logs array.
   const logs = useLogsStore(
@@ -249,7 +252,7 @@ export const NodeLogs: React.FC<NodeLogsProps> = ({ id, workflowId }) => {
           onClick={handleOpen}
           startIcon={<ListAltIcon />}
         >
-          <span>Logs</span>
+          <span>{t("logs")}</span>
           <Chip size="small" label={count} sx={{ ml: 1 }} />
         </EditorButton>
       </div>

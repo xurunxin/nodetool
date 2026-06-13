@@ -3,13 +3,13 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Tooltip, Text, Divider, MOTION } from "../ui_primitives";
 import { NodeMetadata } from "../../stores/ApiTypes";
 import { colorForType, descriptionForType } from "../../config/data_types";
 import { hexToRgba } from "../../utils/ColorUtils";
 import { TOOLTIP_ENTER_DELAY } from "../../config/constants";
 import useNodeMenuStore from "../../stores/NodeMenuStore";
-import { titleizeString } from "../../utils/titleizeString";
 import { formatNodeDocumentation } from "../../stores/formatNodeDocumentation";
 import { HighlightText } from "../ui_primitives/HighlightText";
 import {
@@ -25,6 +25,13 @@ import {
   isKieVagueBillingSummary,
 } from "../../utils/formatKieUnitPricing";
 import isEqual from "fast-deep-equal";
+import {
+  localizeDataTypeLabel,
+  localizeDescription,
+  localizeNodeTitle,
+  localizeOutputName,
+  localizePropertyName
+} from "../../i18n/nodeMetadataLocalization";
 
 interface NodeInfoProps {
   nodeMetadata: NodeMetadata;
@@ -184,13 +191,14 @@ const NodeInfo: React.FC<NodeInfoProps> = ({
   menuWidth = 300,
   showConnections = true
 }) => {
+  const { t } = useTranslation("nodeMenu");
   const searchTerm = useNodeMenuStore((state) => state.searchTerm);
   const setSearchTerm = useNodeMenuStore((state) => state.setSearchTerm);
 
   const description = useMemo(
     () =>
       formatNodeDocumentation(
-        nodeMetadata?.description || "",
+        localizeDescription(nodeMetadata?.description || ""),
         searchTerm,
         nodeMetadata.searchInfo
       ),
@@ -233,7 +241,7 @@ const NodeInfo: React.FC<NodeInfoProps> = ({
     <div css={nodeInfoStyles(theme)} style={{ width: menuWidth }}>
       <div className="title-container">
         <Text className="node-title">
-          {titleizeString(nodeMetadata.title)}
+          {localizeNodeTitle(nodeMetadata.title)}
         </Text>
       </div>
       <div className="node-description">
@@ -318,26 +326,28 @@ const NodeInfo: React.FC<NodeInfoProps> = ({
       {showConnections && (
         <div className="inputs-outputs">
           <div className="inputs">
-            <Text size="big">Inputs</Text>
+            <Text size="big">{t("inputs")}</Text>
             {nodeMetadata.properties.map((property) => (
               <div key={property.name} className="item">
                 <Tooltip
                   delay={TOOLTIP_ENTER_DELAY}
                   placement="top-start"
-                  title={property.description}
+                  title={localizeDescription(property.description)}
                 >
                   <Text
                     className={
                       property.description ? "property description" : "property"
                     }
                   >
-                    {property.name}
+                    {localizePropertyName(property.name)}
                   </Text>
                 </Tooltip>
                 <Tooltip
                   delay={TOOLTIP_ENTER_DELAY}
                   placement="top-end"
-                  title={descriptionForType(property.type.type || "")}
+                  title={localizeDescription(
+                    descriptionForType(property.type.type || "")
+                  )}
                 >
                   <Text
                     className="type"
@@ -345,21 +355,25 @@ const NodeInfo: React.FC<NodeInfoProps> = ({
                       borderColor: hexToRgba(colorForType(property.type.type), 0.4)
                     }}
                   >
-                    {property.type.type}
+                    {localizeDataTypeLabel(property.type.type)}
                   </Text>
                 </Tooltip>
               </div>
             ))}
           </div>
           <div className="outputs">
-            <Text size="big">Outputs</Text>
+            <Text size="big">{t("outputs")}</Text>
             {nodeMetadata.outputs.map((property) => (
               <div key={property.name} className="item">
-                <Text className="property">{property.name}</Text>
+                <Text className="property">
+                  {localizeOutputName(property.name)}
+                </Text>
                 <Tooltip
                   delay={TOOLTIP_ENTER_DELAY}
                   placement="top-end"
-                  title={descriptionForType(property.type.type || "")}
+                  title={localizeDescription(
+                    descriptionForType(property.type.type || "")
+                  )}
                 >
                   <Text
                     className="type"
@@ -367,7 +381,7 @@ const NodeInfo: React.FC<NodeInfoProps> = ({
                       borderColor: hexToRgba(colorForType(property.type.type), 0.4)
                     }}
                   >
-                    {property.type.type}
+                    {localizeDataTypeLabel(property.type.type)}
                   </Text>
                 </Tooltip>
               </div>

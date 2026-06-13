@@ -1,4 +1,5 @@
 import { memo, useCallback, forwardRef, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 import { Tooltip, Text, ToolbarIconButton, FlexRow, Box } from "../ui_primitives";
 import StarIcon from "@mui/icons-material/Star";
@@ -46,6 +47,7 @@ const NodeItem = memo(
       },
       ref
     ) => {
+      const { t } = useTranslation("nodeMenu");
       const theme = useTheme();
       const outputType =
         node.outputs.length > 0 ? node.outputs[0].type.type : "";
@@ -149,12 +151,12 @@ const NodeItem = memo(
           addNotification({
             type: "info",
             content: wasAdded
-              ? "Node added to favorites"
-              : "Node removed from favorites",
+              ? t("nodeAddedToFavorites")
+              : t("nodeRemovedFromFavorites"),
             timeout: NOTIFICATION_TIMEOUT_SHORT
           });
         },
-        [node.node_type, isFavorite, toggleFavorite, addNotification]
+        [node.node_type, isFavorite, toggleFavorite, addNotification, t]
       );
 
       const handleDragStart = useCallback(
@@ -333,7 +335,9 @@ const NodeItem = memo(
             )}
             {hasRuntimeDeps && (
               <Tooltip
-                title={`Requires: ${node.required_runtimes!.join(", ")}`}
+                title={t("requires", {
+                  items: node.required_runtimes!.join(", ")
+                })}
                 placement="top"
                 delay={TOOLTIP_ENTER_DELAY}
                 slotProps={{
@@ -383,15 +387,19 @@ const NodeItem = memo(
             {showFavoriteButton && (
               <ToolbarIconButton
                 icon={isFavorite ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
-                tooltip={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                tooltip={
+                  isFavorite
+                    ? t("removeFromFavorites", { name: node.title })
+                    : t("addToFavorites", { name: node.title })
+                }
                 tooltipPlacement="top"
                 size="small"
                 onClick={handleFavoriteClick}
                 sx={favoriteButtonSx}
                 aria-label={
                   isFavorite
-                    ? `Remove ${node.title} from favorites`
-                    : `Add ${node.title} to favorites`
+                    ? t("removeFromFavorites", { name: node.title })
+                    : t("addToFavorites", { name: node.title })
                 }
               />
             )}

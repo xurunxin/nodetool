@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { useState, useCallback, memo } from "react";
+import { useTranslation } from "react-i18next";
 import { FlexRow, FlexColumn, ToolbarIconButton, Text, ScrollArea, SearchInput, NavButton, MOTION } from "../../ui_primitives";
 import { useTheme } from "@mui/material/styles";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -33,6 +34,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
     onOpenChange
 }) => {
     const theme = useTheme();
+    const { t } = useTranslation("chat");
     const [searchQuery, setSearchQuery] = useState("");
 
     const handleSearchChange = useCallback((value: string) => {
@@ -101,7 +103,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             >
                 <ToolbarIconButton
                     onClick={handleOpen}
-                    tooltip="Open sidebar"
+                    tooltip={t("openConversations")}
                     icon={<MenuIcon />}
                     sx={{
                         color: theme.vars.palette.text.secondary,
@@ -113,7 +115,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 />
                 <ToolbarIconButton
                     onClick={handleNewChat}
-                    tooltip="New chat"
+                    tooltip={t("newConversation")}
                     icon={<AddIcon />}
                     sx={{
                         color: theme.vars.palette.text.secondary,
@@ -172,7 +174,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                                 letterSpacing: "0.08em"
                             }}
                         >
-                            Conversations
+                            {t("conversations")}
                         </Text>
                         {threadCount > 0 && (
                             <Text
@@ -186,7 +188,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                     </FlexRow>
                     <ToolbarIconButton
                         onClick={handleClose}
-                        tooltip="Collapse sidebar"
+                        tooltip={t("collapseSidebar")}
                         icon={<ChevronLeftIcon />}
                         sx={{
                             color: theme.vars.palette.text.secondary,
@@ -225,7 +227,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                         }}
                     >
                         <SearchInput
-                            placeholder="Search threads..."
+                            placeholder={t("searchThreads")}
                             value={searchQuery}
                             onChange={handleSearchChange}
                             fullWidth
@@ -252,7 +254,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                     </FlexRow>
                     <NavButton
                         icon={<AddIcon sx={{ fontSize: "var(--fontSizeBig)" }} />}
-                        label="New conversation"
+                        label={t("newConversation")}
                         onClick={handleNewChat}
                         tabIndex={0}
                         sx={{

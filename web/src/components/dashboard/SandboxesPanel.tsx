@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from "react";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 import {
   FlexColumn,
   FlexRow,
@@ -88,6 +89,7 @@ function isSafeVncUrl(url: string): boolean {
 
 const SandboxesPanel: React.FC = () => {
   const theme = useTheme();
+  const { t } = useTranslation(["navigation", "common"]);
   const [selectedSandboxId, setSelectedSandboxId] = useState<string | null>(null);
   const vncIframeRef = useRef<HTMLIFrameElement | null>(null);
 
@@ -165,12 +167,14 @@ const SandboxesPanel: React.FC = () => {
 
   return (
     <FlexColumn gap={0} fullHeight css={panelStyles}>
-      <PanelToolbar title="Sandboxes" count={sandboxes.length}>
-        {sandboxesQuery.isLoading && <Caption size="small">Loading…</Caption>}
+      <PanelToolbar title={t("navigation:sandboxes")} count={sandboxes.length}>
+        {sandboxesQuery.isLoading && (
+          <Caption size="small">{t("common:loading")}</Caption>
+        )}
       </PanelToolbar>
       {sandboxesQuery.isError && (
         <AlertBanner severity="error" sx={{ mx: 1.5, mt: 1 }}>
-          Failed to load sandbox status
+          {t("common:failedToLoadSandboxStatus")}
         </AlertBanner>
       )}
       <FlexColumn className="scrollable-content">
@@ -181,7 +185,9 @@ const SandboxesPanel: React.FC = () => {
         ) : (
           <FlexColumn gap={2}>
             {sandboxes.length === 0 && (
-              <Caption size="small">Run a sandbox node to start a sandbox.</Caption>
+              <Caption size="small">
+                {t("common:runSandboxNodeToStart")}
+              </Caption>
             )}
             {sandboxes.map((sandbox) => {
               const isSelected = sandbox.container_id === selectedSandboxId;
@@ -209,16 +215,17 @@ const SandboxesPanel: React.FC = () => {
                       </FlexColumn>
                       <FlexRow gap={2}>
                         <Caption size="small">
-                          Age: {formatAge(sandbox.age_seconds)}
+                          {t("common:age")}: {formatAge(sandbox.age_seconds)}
                         </Caption>
                         <Caption size="small">
-                          CPU:{" "}
+                          {t("navigation:cpu")}:{" "}
                           {sandbox.cpu_percent === null
                             ? "—"
                             : `${sandbox.cpu_percent.toFixed(2)}%`}
                         </Caption>
                         <Caption size="small">
-                          RAM: {formatBytes(sandbox.memory_usage_bytes)}
+                          {t("common:ram")}:{" "}
+                          {formatBytes(sandbox.memory_usage_bytes)}
                           {sandbox.memory_limit_bytes !== null
                             ? ` / ${formatBytes(sandbox.memory_limit_bytes)}`
                             : ""}
@@ -234,7 +241,7 @@ const SandboxesPanel: React.FC = () => {
                           pauseSandbox.mutate({ container_id: sandbox.container_id })
                         }
                       >
-                        Pause
+                        {t("common:pause")}
                       </EditorButton>
                       <EditorButton
                         density="compact"
@@ -244,7 +251,7 @@ const SandboxesPanel: React.FC = () => {
                           resumeSandbox.mutate({ container_id: sandbox.container_id })
                         }
                       >
-                        Resume
+                        {t("common:resume")}
                       </EditorButton>
                       <EditorButton
                         density="compact"
@@ -254,7 +261,7 @@ const SandboxesPanel: React.FC = () => {
                           killSandbox.mutate({ container_id: sandbox.container_id })
                         }
                       >
-                        Kill
+                        {t("common:kill")}
                       </EditorButton>
                       {sandbox.vnc_http_url && isSafeVncUrl(sandbox.vnc_http_url) && (
                         <EditorButton
@@ -268,7 +275,7 @@ const SandboxesPanel: React.FC = () => {
                             )
                           }
                         >
-                          Open VNC
+                          {t("common:openVnc")}
                         </EditorButton>
                       )}
                     </FlexRow>
@@ -281,7 +288,7 @@ const SandboxesPanel: React.FC = () => {
                 <FlexColumn gap={2}>
                   <FlexRow gap={1} align="center" justify="space-between">
                     <Text size="normal" weight={600}>
-                      Sandbox Live View
+                      {t("common:sandboxLiveView")}
                     </Text>
                     {vncIframeUrl && (
                       <EditorButton
@@ -289,14 +296,16 @@ const SandboxesPanel: React.FC = () => {
                         variant="outlined"
                         onClick={enterVncFullscreen}
                       >
-                        Fullscreen
+                        {t("common:fullscreen")}
                       </EditorButton>
                     )}
                   </FlexRow>
                   {vncIframeUrl ? (
                     <iframe
                       ref={vncIframeRef}
-                      title={`Live VNC view for sandbox: ${selectedSandbox.name}`}
+                      title={t("common:liveVncTitle", {
+                        name: selectedSandbox.name
+                      })}
                       src={vncIframeUrl}
                       sandbox="allow-scripts allow-same-origin"
                       allow="fullscreen; clipboard-read; clipboard-write"
@@ -317,17 +326,19 @@ const SandboxesPanel: React.FC = () => {
                     />
                   ) : (
                     <Caption size="small">
-                      VNC is not available for this sandbox.
+                      {t("common:vncUnavailable")}
                     </Caption>
                   )}
                   <FlexColumn gap={1}>
                     <Text size="normal" weight={600}>
-                      Tool Calls
+                      {t("common:toolCalls")}
                     </Text>
                     {toolCallsQuery.isLoading ? (
                       <LoadingSpinner size="small" />
                     ) : toolCalls.length === 0 ? (
-                      <Caption size="small">No tool calls yet.</Caption>
+                      <Caption size="small">
+                        {t("common:noToolCallsYet")}
+                      </Caption>
                     ) : (
                       <FlexColumn
                         sx={{

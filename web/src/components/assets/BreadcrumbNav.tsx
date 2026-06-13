@@ -10,6 +10,7 @@ import { useAssetGridStore } from "../../stores/AssetGridStore";
 import useAssets from "../../serverState/useAssets";
 import useAuth from "../../stores/useAuth";
 import { FolderTree, AssetTreeNode } from "../../stores/AssetStore";
+import { useTranslation } from "react-i18next";
 
 const styles = (theme: Theme) =>
   css({
@@ -56,15 +57,16 @@ const styles = (theme: Theme) =>
 function buildBreadcrumbPath(
   folderTree: FolderTree | undefined,
   currentFolderId: string | null,
-  rootId: string
+  rootId: string,
+  rootName: string
 ): Array<{ id: string; name: string }> {
   if (!folderTree || !currentFolderId) {
-    return [{ id: rootId, name: "Assets" }];
+    return [{ id: rootId, name: rootName }];
   }
 
   // If we're at root, just show root
   if (currentFolderId === rootId) {
-    return [{ id: rootId, name: "Assets" }];
+    return [{ id: rootId, name: rootName }];
   }
 
   // Build a lookup map from the tree
@@ -95,23 +97,25 @@ function buildBreadcrumbPath(
   }
 
   // Always prepend root
-  path.unshift({ id: rootId, name: "Assets" });
+  path.unshift({ id: rootId, name: rootName });
 
   return path;
 }
 
 const BreadcrumbNav: React.FC = () => {
   const theme = useTheme();
+  const { t } = useTranslation("assets");
   const currentFolderId = useAssetGridStore((state) => state.currentFolderId);
   const currentUser = useAuth((state) => state.user);
   const { folderTree, navigateToFolderId } = useAssets();
 
   const rootId = currentUser?.id ?? "root";
+  const rootName = t("rootFolder");
   const breadcrumbStyles = useMemo(() => styles(theme), [theme]);
 
   const breadcrumbs = useMemo(
-    () => buildBreadcrumbPath(folderTree, currentFolderId, rootId),
-    [folderTree, currentFolderId, rootId]
+    () => buildBreadcrumbPath(folderTree, currentFolderId, rootId, rootName),
+    [folderTree, currentFolderId, rootId, rootName]
   );
 
   const handleClick = useCallback(

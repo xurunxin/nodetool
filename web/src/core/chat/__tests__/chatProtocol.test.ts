@@ -177,7 +177,7 @@ describe("chatProtocol", () => {
         get
       );
 
-      expect(capturedState.updateThreadTitle).toHaveBeenCalledWith("thread-1", "New conversation");
+      expect(capturedState.updateThreadTitle).toHaveBeenCalledWith("thread-1", "新会话");
     });
 
     it("truncates long titles to 50 characters", async () => {

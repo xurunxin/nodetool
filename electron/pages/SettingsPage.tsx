@@ -57,7 +57,7 @@ const Settings: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to save auto-updates setting:", error);
-      alert("Failed to save setting. Please try again.");
+      alert("保存设置失败，请重试。");
     } finally {
       setSaving(false);
     }
@@ -74,7 +74,7 @@ const Settings: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to install update:", error);
-      alert("Failed to install update. Please try again.");
+      alert("安装更新失败，请重试。");
       setIsInstalling(false);
     }
   };
@@ -95,7 +95,7 @@ const Settings: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to save model service startup setting:", error);
-      alert("Failed to save setting. Please try again.");
+      alert("保存设置失败，请重试。");
     } finally {
       setServiceSaving(false);
     }
@@ -111,12 +111,12 @@ const Settings: React.FC = () => {
     return (
       <div className="app-wrapper">
         <div className="header-region">
-          <h1>Settings</h1>
+          <h1>设置</h1>
         </div>
         <div className="container">
           <div className="loading-container">
             <div className="spinner"></div>
-            <div>Loading settings...</div>
+            <div>正在加载设置...</div>
           </div>
         </div>
       </div>
@@ -126,7 +126,7 @@ const Settings: React.FC = () => {
   return (
     <div className="app-wrapper">
       <div className="header-region">
-        <h1>Settings</h1>
+        <h1>设置</h1>
       </div>
 
       <div className="container">
@@ -137,12 +137,12 @@ const Settings: React.FC = () => {
               <div className="update-banner-icon">🎉</div>
               <div className="update-banner-text">
                 <div className="update-banner-title">
-                  Update Available: v{updateInfo.version}
+                  有可用更新：v{updateInfo.version}
                 </div>
                 <div className="update-banner-subtitle">
                   {updateInfo.downloaded
-                    ? "Update downloaded and ready to install"
-                    : "A new version is available"}
+                    ? "更新已下载，可立即安装"
+                    : "发现新版本"}
                 </div>
               </div>
             </div>
@@ -151,7 +151,7 @@ const Settings: React.FC = () => {
                 className="btn btn-secondary"
                 onClick={openReleaseNotes}
               >
-                Release Notes
+                发布说明
               </button>
               <button
                 className="btn btn-primary"
@@ -159,10 +159,10 @@ const Settings: React.FC = () => {
                 disabled={isInstalling || !updateInfo.downloaded}
               >
                 {isInstalling
-                  ? "Installing..."
+                  ? "正在安装..."
                   : updateInfo.downloaded
-                  ? "Restart & Install"
-                  : "Downloading..."}
+                  ? "重启并安装"
+                  : "正在下载..."}
               </button>
             </div>
           </div>
@@ -171,18 +171,18 @@ const Settings: React.FC = () => {
         {/* Settings Sections */}
         <div className="settings-section">
           <div className="settings-section-header">
-            <h2>Local Model Services</h2>
+            <h2>本地模型服务</h2>
             <p className="settings-section-description">
-              Control which Electron-managed local model services start when NodeTool launches
+              控制 NodeTool 启动时自动启动哪些由 Electron 托管的本地模型服务
             </p>
           </div>
 
           <div className="settings-card">
             <div className="setting-row">
               <div className="setting-info">
-                <div className="setting-label">Start Llama.cpp on Startup</div>
+                <div className="setting-label">启动时运行 Llama.cpp</div>
                 <div className="setting-description">
-                  Start or attach to `llama-server` when the desktop app starts.
+                  桌面应用启动时启动或连接到 `llama-server`。
                 </div>
               </div>
               <div className="setting-control">
@@ -207,19 +207,18 @@ const Settings: React.FC = () => {
 
         <div className="settings-section">
           <div className="settings-section-header">
-            <h2>Updates</h2>
+            <h2>更新</h2>
             <p className="settings-section-description">
-              Configure how NodeTool handles application updates
+              配置 NodeTool 如何处理应用更新
             </p>
           </div>
 
           <div className="settings-card">
             <div className="setting-row">
               <div className="setting-info">
-                <div className="setting-label">Automatic Updates</div>
+                <div className="setting-label">自动更新</div>
                 <div className="setting-description">
-                  Automatically check for and download updates when the application starts.
-                  When disabled, you can manually check for updates from the Help menu.
+                  应用启动时自动检查并下载更新。关闭后，你仍可从“帮助”菜单手动检查更新。
                 </div>
               </div>
               <div className="setting-control">
@@ -241,7 +240,7 @@ const Settings: React.FC = () => {
         <div className="info-section">
           <div className="info-icon">ℹ️</div>
           <div className="info-text">
-            Settings are saved immediately. Auto-update preference will take effect on the next application restart.
+            设置会立即保存。自动更新偏好将在下次应用重启后生效。
           </div>
         </div>
       </div>

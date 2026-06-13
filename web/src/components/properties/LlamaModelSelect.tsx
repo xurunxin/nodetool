@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useRef, memo } from "react";
 import isEqual from "fast-deep-equal";
+import { useTranslation } from "react-i18next";
 import {
   ListItemText,
   ListItemIcon
@@ -19,6 +20,7 @@ interface LlamaModelSelectProps {
 }
 
 const LlamaModelSelect = ({ onChange, value }: LlamaModelSelectProps) => {
+  const { t } = useTranslation("models");
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const open = Boolean(anchorEl);
@@ -76,8 +78,8 @@ const LlamaModelSelect = ({ onChange, value }: LlamaModelSelectProps) => {
       <ModelSelectButton
         ref={buttonRef}
         active={!!value}
-        label={currentSelectedModelDetails?.name || value || "Select Model"}
-        subLabel="Select Model"
+        label={currentSelectedModelDetails?.name || value || t("selectModel")}
+        subLabel={t("selectModel")}
         onClick={handleClick}
       />
       <EditorMenu
@@ -107,7 +109,7 @@ const LlamaModelSelect = ({ onChange, value }: LlamaModelSelectProps) => {
         ) : ollamaError ? (
           <div style={{ padding: 8, maxWidth: 300 }}>
             <Text size="small" color="error" sx={{ mb: 1 }}>
-              Could not load Ollama models
+              {t("couldNotLoadOllamaModels")}
             </Text>
             <Caption
               color="secondary"
@@ -115,15 +117,14 @@ const LlamaModelSelect = ({ onChange, value }: LlamaModelSelectProps) => {
             >
               {typeof (ollamaError as { detail?: unknown })?.detail === "string"
                 ? (ollamaError as { detail?: string }).detail
-                : "Please check that Ollama is running"}
+                : t("checkOllamaRunning")}
             </Caption>
             {isElectron ? (
               <Caption
                 color="warning"
                 sx={{ display: "block", mt: 1 }}
               >
-                Ollama should be running automatically. Please try restarting
-                the application.
+                {t("restartApplication")}
               </Caption>
             ) : (
               <Caption
@@ -133,13 +134,13 @@ const LlamaModelSelect = ({ onChange, value }: LlamaModelSelectProps) => {
                 rel="noopener noreferrer"
                 sx={{ color: "primary.main", textDecoration: "underline" }}
               >
-                Download Ollama →
+                {t("downloadOllama")}
               </Caption>
             )}
           </div>
         ) : sortedModels.length === 0 ? (
           <EditorMenuItem disabled>
-            <ListItemText primary="No models available" />
+            <ListItemText primary={t("noModelsAvailable")} />
           </EditorMenuItem>
         ) : (
           sortedModels.map((model) => (

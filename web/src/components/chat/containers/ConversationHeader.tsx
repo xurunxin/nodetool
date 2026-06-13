@@ -1,9 +1,11 @@
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { FlexColumn, FlexRow, Text } from "../../ui_primitives";
 import type { Message } from "../../../stores/ApiTypes";
 import useGlobalChatStore from "../../../stores/GlobalChatStore";
 import { deriveThreadStats } from "../thread/deriveThreadStats";
 import { formatDuration } from "../../../utils/formatUtils";
+import { getLocalizedThreadTitle } from "../utils/threadUtils";
 
 interface ConversationHeaderProps {
   messages: Message[];
@@ -35,6 +37,7 @@ const Stat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
 );
 
 const ConversationHeaderBase: React.FC<ConversationHeaderProps> = ({ messages }) => {
+  const { t } = useTranslation("chat");
   const title = useGlobalChatStore((s) =>
     s.currentThreadId ? s.threads[s.currentThreadId]?.title ?? null : null
   );
@@ -45,6 +48,9 @@ const ConversationHeaderBase: React.FC<ConversationHeaderProps> = ({ messages })
     stats.runtimeMs != null ? formatDuration(stats.runtimeMs) : null;
   const lastRunLabel = stats.lastRunAt ? formatClockTime(stats.lastRunAt) : null;
   const spendLabel = stats.spend != null ? formatSpend(stats.spend) : null;
+  const displayTitle = title
+    ? getLocalizedThreadTitle(title, t("newConversation"))
+    : null;
 
   const hasStats =
     !!stats.model ||
@@ -53,7 +59,7 @@ const ConversationHeaderBase: React.FC<ConversationHeaderProps> = ({ messages })
     !!spendLabel ||
     !!lastRunLabel;
 
-  if (!title && !hasStats) {
+  if (!displayTitle && !hasStats) {
     return null;
   }
 
@@ -73,18 +79,20 @@ const ConversationHeaderBase: React.FC<ConversationHeaderProps> = ({ messages })
         borderColor: "divider"
       }}
     >
-      {title && (
+      {displayTitle && (
         <Text size="big" weight={500} truncate sx={{ color: "text.primary" }}>
-          {title}
+          {displayTitle}
         </Text>
       )}
       {hasStats && (
         <FlexRow gap={2} align="center" wrap sx={{ minWidth: 0 }}>
-          {stats.model && <Stat label="model" value={stats.model} />}
-          {stats.provider && <Stat label="provider" value={stats.provider} />}
-          {runtimeLabel && <Stat label="runtime" value={runtimeLabel} />}
-          {spendLabel && <Stat label="spend" value={spendLabel} />}
-          {lastRunLabel && <Stat label="last run" value={lastRunLabel} />}
+          {stats.model && <Stat label={t("headerModel")} value={stats.model} />}
+          {stats.provider && (
+            <Stat label={t("headerProvider")} value={stats.provider} />
+          )}
+          {runtimeLabel && <Stat label={t("headerRuntime")} value={runtimeLabel} />}
+          {spendLabel && <Stat label={t("headerSpend")} value={spendLabel} />}
+          {lastRunLabel && <Stat label={t("headerLastRun")} value={lastRunLabel} />}
         </FlexRow>
       )}
     </FlexColumn>

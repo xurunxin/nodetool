@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   List,
   ListItemButton,
@@ -520,6 +521,7 @@ const ProviderList: React.FC<ProviderListProps> = ({
   iconOnly = false
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation(["models", "common"]);
   const selected = storeHook((s) => s.selectedProvider);
   const setSelected = storeHook((s) => s.setSelectedProvider);
   const [menuAnchor, setMenuAnchor] = React.useState<null | HTMLElement>(null);
@@ -629,7 +631,7 @@ const ProviderList: React.FC<ProviderListProps> = ({
       )}
       {isError && (
         <div className="model-menu__providers-error is-error" style={{ padding: 8 }}>
-          Error loading providers
+          {t("models:errorLoadingProviders")}
         </div>
       )}
       <ListItemButton
@@ -648,7 +650,7 @@ const ProviderList: React.FC<ProviderListProps> = ({
         {iconOnly ? (
           <Tooltip
             className="model-menu__all-providers-tooltip"
-            title="All providers"
+            title={t("models:allProviders")}
             placement="right"
           >
             <FlexColumn align="center" gap={0.5} sx={{ py: 0.5 }}>
@@ -665,14 +667,14 @@ const ProviderList: React.FC<ProviderListProps> = ({
                   whiteSpace: "nowrap"
                 }}
               >
-                All
+                {t("models:all")}
               </Caption>
             </FlexColumn>
           </Tooltip>
         ) : (
           <ListItemText
             className="model-menu__all-providers-text"
-            primary="All providers"
+            primary={t("models:allProviders")}
             primaryTypographyProps={{
               sx: { fontSize: (theme) => theme.vars.fontSizeSmall }
             }}
@@ -715,10 +717,10 @@ const ProviderList: React.FC<ProviderListProps> = ({
                 {badges.map((b) => {
                   const tooltipTitle =
                     b.label === "HF"
-                      ? "HuggingFace: Models from the Hugging Face Hub."
+                      ? t("models:huggingFaceProviderTooltip")
                       : b.label === "Local"
-                        ? "Local: Runs locally on your machine."
-                        : "API: Remote provider; runs via API without local download. Requires API key.";
+                        ? t("models:localProviderTooltip")
+                        : t("models:apiProviderTooltip");
                   return (
                     <Tooltip
                       className="model-menu__provider-badge-tooltip"
@@ -920,7 +922,10 @@ const ProviderList: React.FC<ProviderListProps> = ({
                         sx={{ mr: 1 }}
                         onClick={handleStopPropagation}
                       >
-                        <Tooltip className="model-menu__provider-missing-key-tooltip" title="API key required">
+                        <Tooltip
+                          className="model-menu__provider-missing-key-tooltip"
+                          title={t("models:apiKeyRequired")}
+                        >
                           <InfoOutlinedIcon
                             className="model-menu__provider-missing-key-icon"
                             sx={{
@@ -929,7 +934,10 @@ const ProviderList: React.FC<ProviderListProps> = ({
                             }}
                           />
                         </Tooltip>
-                        <Tooltip className="model-menu__provider-add-key-tooltip" title="Open Settings to add API key">
+                        <Tooltip
+                          className="model-menu__provider-add-key-tooltip"
+                          title={t("models:openSettingsToAddApiKey")}
+                        >
                           <EditorButton
                             className="model-menu__provider-add-key-button"
                             density="compact"
@@ -942,7 +950,7 @@ const ProviderList: React.FC<ProviderListProps> = ({
                             }}
                             onClick={handleOpenSettings}
                           >
-                            Add key
+                            {t("models:addKey")}
                           </EditorButton>
                         </Tooltip>
                       </FlexRow>
@@ -957,7 +965,11 @@ const ProviderList: React.FC<ProviderListProps> = ({
                       {renderBadges()}
                       <Tooltip
                         className="model-menu__provider-toggle-tooltip"
-                        title={enabled ? "Disable provider" : "Enable provider"}
+                        title={
+                          enabled
+                            ? t("models:disableProvider")
+                            : t("models:enableProvider")
+                        }
                       >
                         <Box
                           data-provider={p}
@@ -999,15 +1011,15 @@ const ProviderList: React.FC<ProviderListProps> = ({
           disabled={!menuProvider || !getProviderUrl(menuProvider)}
           onClick={handleOpenWebsite}
         >
-          Open provider website
+          {t("models:openProviderWebsite")}
         </EditorMenuItem>
         <EditorMenuItem
           className="model-menu__provider-context-menu-item model-menu__provider-context-menu-item--toggle"
           onClick={handleToggleProvider}
         >
           {menuProvider && isProviderEnabled(menuProvider)
-            ? "Disable provider"
-            : "Enable provider"}
+            ? t("models:disableProvider")
+            : t("models:enableProvider")}
         </EditorMenuItem>
       </EditorMenu>
     </List>

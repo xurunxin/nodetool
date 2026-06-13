@@ -21,6 +21,7 @@ import React, {
   useRef,
   useState
 } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -139,6 +140,7 @@ const VariableInsertBar: React.FC<{
   showLabel: boolean;
   onAdd: () => void;
 }> = ({ variableNames, showLabel, onAdd }) => {
+  const { t } = useTranslation("nodeMenu");
   const [editor] = useLexicalComposerContext();
   const insertVariable = useCallback(
     (name: string) => {
@@ -150,19 +152,19 @@ const VariableInsertBar: React.FC<{
   );
   return (
     <div className="variable-bar">
-      {showLabel && <span className="variable-bar-label">Variables</span>}
+      {showLabel && <span className="variable-bar-label">{t("variables")}</span>}
       {variableNames.map((name) => (
         <button
           key={name}
           type="button"
           className="variable-insert-chip nodrag"
           onClick={() => insertVariable(name)}
-          aria-label={`Insert variable ${name}`}
+          aria-label={t("insertVariable", { name })}
         >
           {`{{ ${name} }}`}
         </button>
       ))}
-      <DynamicInputButton itemLabel="variable" onAdd={onAdd} />
+      <DynamicInputButton itemLabel={t("variable")} onAdd={onAdd} />
     </div>
   );
 };
@@ -186,6 +188,7 @@ const PromptComposerBodyInner: React.FC<PromptComposerBodyProps> = ({
   status,
   isOutputNode
 }) => {
+  const { t } = useTranslation("nodeMenu");
   const theme = useTheme();
   const cssStyles = useMemo(() => styles(theme), [theme]);
 
@@ -296,14 +299,14 @@ const PromptComposerBodyInner: React.FC<PromptComposerBodyProps> = ({
               contentEditable={
                 <ContentEditable
                   className="composer-input"
-                  aria-label="Prompt"
+                  aria-label={t("prompt")}
                   spellCheck={false}
                   onClick={(e) => e.stopPropagation()}
                 />
               }
               placeholder={
                 <div className="composer-placeholder">
-                  Write a prompt… @ to mention an asset
+                  {t("writePromptMentionAsset")}
                 </div>
               }
               ErrorBoundary={LexicalErrorBoundary}

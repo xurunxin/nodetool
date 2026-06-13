@@ -11,6 +11,7 @@
  */
 
 import React, { memo, useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -164,6 +165,7 @@ const SimpleFilterBodyInner: React.FC<SimpleFilterBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(() => styles(theme), [theme]);
 
   const [tab, setTab] = useState<SimpleFilterTab>("after");
@@ -202,13 +204,13 @@ const SimpleFilterBodyInner: React.FC<SimpleFilterBodyProps> = ({
           <ImagePreview
             tab="before"
             value={beforeValue}
-            placeholder="Connect an image"
+            placeholder={t("connectAnImage")}
           />
         ) : (
           <ImagePreview
             tab="after"
             value={afterValue}
-            placeholder="Run the node to see the result"
+            placeholder={t("runNodeToSeeResult")}
           />
         )}
       </div>
@@ -221,21 +223,21 @@ const SimpleFilterBodyInner: React.FC<SimpleFilterBodyProps> = ({
             value={tab}
             exclusive
             onChange={handleTabChange}
-            aria-label="Preview tab"
+            aria-label={t("previewTab")}
           >
             <ToggleOption
               className="tab-option tab-option-before"
               value="before"
-              aria-label="Before"
+              aria-label={t("beforeTab")}
             >
-              Before
+              {t("beforeTab")}
             </ToggleOption>
             <ToggleOption
               className="tab-option tab-option-after"
               value="after"
-              aria-label="After"
+              aria-label={t("afterTab")}
             >
-              After
+              {t("afterTab")}
             </ToggleOption>
           </ToggleGroup>
         </FlexRow>

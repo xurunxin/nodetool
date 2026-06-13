@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { memo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { EditorButton, Tooltip } from "../ui_primitives";
@@ -14,17 +15,18 @@ const SettingsButton: React.FC<SettingsButtonProps> = ({
   buttonText = "",
   className
 }) => {
+  const { t } = useTranslation("navigation");
   const navigate = useNavigate();
   const handleClick = useCallback(() => {
     navigate("/settings");
   }, [navigate]);
 
   return (
-    <Tooltip title="Settings" delay={TOOLTIP_ENTER_DELAY}>
+    <Tooltip title={t("settings")} delay={TOOLTIP_ENTER_DELAY}>
       <EditorButton
         tabIndex={-1}
         className={`settings-button command-icon${className ? ` ${className}` : ""}`}
-        aria-label="Open settings"
+        aria-label={t("openSettings")}
         onClick={handleClick}
       >
         <SettingsIcon />

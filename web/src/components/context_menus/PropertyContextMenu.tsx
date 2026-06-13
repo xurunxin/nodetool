@@ -1,4 +1,5 @@
 import React, { memo } from "react";
+import { useTranslation } from "react-i18next";
 //mui
 import { MenuItem } from "@mui/material";
 import { Text, Divider, ContextMenu } from "../ui_primitives";
@@ -38,6 +39,7 @@ function resolvePropertyMenuTargetNodeIds(
 }
 
 const PropertyContextMenuComponent: React.FC = () => {
+  const { t } = useTranslation("nodeMenu");
   const { writeClipboard } = useClipboard();
   const addNotification = useNotificationStore(
     (state) => state.addNotification
@@ -167,19 +169,19 @@ const PropertyContextMenuComponent: React.FC = () => {
           await writeClipboard(serialized, true);
           addNotification({
             type: "success",
-            content: "Value copied to clipboard"
+            content: t("valueCopiedToClipboard")
           });
         } catch {
           // Clipboard write failed, notify user
           addNotification({
             type: "error",
-            content: "Failed to copy to clipboard"
+            content: t("failedToCopyToClipboard")
           });
         }
       } else {
         addNotification({
           type: "warning",
-          content: "No value to copy"
+          content: t("noValueToCopy")
         });
       }
     }
@@ -247,7 +249,7 @@ const PropertyContextMenuComponent: React.FC = () => {
       position={menuPosition}
     >
       <MenuItem disabled>
-        <Text>Property</Text>
+        <Text>{t("property")}</Text>
       </MenuItem>
 
       {description && description.length > 0 && (
@@ -274,14 +276,14 @@ const PropertyContextMenuComponent: React.FC = () => {
       <Divider />
       <ContextMenuItem
         onClick={handleCopyValue}
-        label="Copy Value"
+        label={t("copyValue")}
         addButtonClassName="copy-value"
         IconComponent={<ContentCopyIcon />}
-        tooltip="Copy property value to clipboard"
+        tooltip={t("copyPropertyValueToClipboard")}
       />
       <ContextMenuItem
         onClick={handleReset}
-        label="Reset To Default Value"
+        label={t("resetToDefaultValue")}
         addButtonClassName="reset"
         IconComponent={<SettingsBackupRestoreIcon />}
         tooltip={getShortcutTooltip("resetDefault")}
@@ -293,34 +295,34 @@ const PropertyContextMenuComponent: React.FC = () => {
             onClick={handleToggleExposedInput}
             label={
               isExposedHandle
-                ? "Hide Input Handle (Top)"
-                : "Show As Input Handle (Top)"
+                ? t("hideInputHandleTop")
+                : t("showAsInputHandleTop")
             }
             addButtonClassName="toggle-exposed-input"
             IconComponent={<ArrowForwardIcon />}
             tooltip={
               isExposedHandle
                 ? isConnected
-                  ? "Hide top input handle (disconnects edge)"
-                  : "Hide top input handle"
-                : "Show as handle on the left/top of the node (no label)"
+                  ? t("hideTopInputHandleDisconnectsEdge")
+                  : t("hideTopInputHandle")
+                : t("showAsHandleLeftTopNoLabel")
             }
           />
           <ContextMenuItem
             onClick={handleToggleExposedInputLabeled}
             label={
               isExposedLabeled
-                ? "Hide Labeled Input (Bottom)"
-                : "Show Labeled Input (Bottom)"
+                ? t("hideLabeledInputBottom")
+                : t("showLabeledInputBottom")
             }
             addButtonClassName="toggle-exposed-input-labeled"
             IconComponent={<ArrowForwardIcon />}
             tooltip={
               isExposedLabeled
                 ? isConnected
-                  ? "Hide labeled input at bottom (disconnects edge)"
-                  : "Hide labeled input at bottom"
-                : "Show input at bottom with parameter title and editor"
+                  ? t("hideLabeledInputBottomDisconnectsEdge")
+                  : t("hideLabeledInputBottomTooltip")
+                : t("showInputBottomWithParameterEditor")
             }
           />
         </>
@@ -330,10 +332,10 @@ const PropertyContextMenuComponent: React.FC = () => {
       {isDynamicProperty && (
         <ContextMenuItem
           onClick={handleRemoveDynamicProperty}
-          label="Remove Dynamic Property"
+          label={t("removeDynamicProperty")}
           addButtonClassName="remove-dynamic-property"
           IconComponent={<DeleteIcon />}
-          tooltip="Remove this property from being dynamic"
+          tooltip={t("removeDynamicPropertyTooltip")}
         />
       )}
     </ContextMenu>

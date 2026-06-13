@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { memo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -123,6 +124,7 @@ const MediaAspectRatioMenu: React.FC<MediaAspectRatioMenuProps> = ({
   options,
   onChange
 }) => {
+  const { t } = useTranslation("chat");
   const theme = useTheme();
   return (
     <Popover
@@ -137,9 +139,9 @@ const MediaAspectRatioMenu: React.FC<MediaAspectRatioMenuProps> = ({
         boxShadow: "0 12px 40px rgba(0,0,0,0.45)"
       }}
     >
-      <div css={styles(theme)} role="dialog" aria-label="Aspect ratio">
+      <div css={styles(theme)} role="dialog" aria-label={t("aspectRatio")}>
         <Caption className="aspect-header" size="small">
-          Aspect Ratio
+          {t("aspectRatio")}
         </Caption>
         <div className="aspect-grid">
           {options.map((opt) => {

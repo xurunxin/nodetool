@@ -8,6 +8,7 @@ import type { Theme } from "@mui/material/styles";
 import { ImageComparer } from "../widgets";
 import { useAssetGridStore } from "../../stores/AssetGridStore";
 import { useCombo } from "../../stores/KeyPressedStore";
+import { useTranslation } from "react-i18next";
 
 const styles = (theme: Theme) =>
   css({
@@ -63,6 +64,7 @@ const styles = (theme: Theme) =>
 
 const ImageCompareDialog: React.FC = () => {
   const theme = useTheme();
+  const { t } = useTranslation("assets");
   const compareAssets = useAssetGridStore((state) => state.compareAssets);
   const closeCompareView = useAssetGridStore((state) => state.closeCompareView);
 
@@ -101,7 +103,7 @@ const ImageCompareDialog: React.FC = () => {
           <CloseButton
             className="button close"
             onClick={closeCompareView}
-            tooltip="Close"
+            tooltip={t("close")}
             nodrag={false}
           />
         </div>
@@ -120,4 +122,3 @@ const ImageCompareDialog: React.FC = () => {
 };
 
 export default ImageCompareDialog;
-

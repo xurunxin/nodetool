@@ -80,10 +80,10 @@ const PackageUpdatesNotification: React.FC<PackageUpdatesNotificationProps> = ({
   return (
     <div style={containerStyle}>
       <div style={headerStyle}>
-        <p style={titleStyle}>New Nodetool packs available</p>
+        <p style={titleStyle}>有可用的 Nodetool 包更新</p>
         <button
           type="button"
-          aria-label="Dismiss package update notice"
+          aria-label="关闭包更新提示"
           style={closeButtonStyle}
           onClick={onDismiss}
         >
@@ -101,7 +101,7 @@ const PackageUpdatesNotification: React.FC<PackageUpdatesNotificationProps> = ({
         ))}
       </ul>
       <button type="button" style={buttonStyle} onClick={handleManageClick}>
-        Open Package Manager
+        打开包管理器
       </button>
     </div>
   );

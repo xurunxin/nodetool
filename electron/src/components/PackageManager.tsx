@@ -68,7 +68,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
 
       await loadRuntimeStatuses();
     } catch (err) {
-      setError("Failed to load packages. Please try again.");
+      setError("加载包失败，请重试。");
     } finally {
       setLoading(false);
     }
@@ -135,11 +135,11 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
         if (result.success) {
           await loadRuntimeStatuses();
         } else {
-          setError(result.message || "Installation failed");
+          setError(result.message || "安装失败");
         }
       } catch (err) {
         console.error("Runtime installation error:", err);
-        setError("Installation failed. Please try again.");
+        setError("安装失败，请重试。");
       } finally {
         setInstalling((prev) => {
           const newSet = new Set(prev);
@@ -163,7 +163,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
       } catch (err) {
         console.error("Failed to toggle built-in pack:", err);
         setError(
-          `Failed to ${pack.enabled ? "disable" : "enable"} ${pack.name}. Please try again.`
+          `无法${pack.enabled ? "禁用" : "启用"} ${pack.name}，请重试。`
         );
       }
     },
@@ -186,7 +186,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
         const result = await window.api.packages.install(repoId);
         if (result.success) {
           alert(
-            "Package installed successfully. The server will restart to apply changes."
+            "包安装成功。服务器将重启以应用更改。"
           );
           await loadPackages();
           try {
@@ -195,11 +195,11 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
             console.warn("Restart server failed:", e);
           }
         } else {
-          setError(result.message || "Installation failed");
+          setError(result.message || "安装失败");
         }
       } catch (err) {
         console.error("Installation error:", err);
-        setError("Installation failed. Please try again.");
+        setError("安装失败，请重试。");
       } finally {
         setInstalling((prev) => {
           const newSet = new Set(prev);
@@ -219,11 +219,11 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
         if (result.success) {
           await loadPackages();
         } else {
-          setError(result.message || "Uninstallation failed");
+          setError(result.message || "卸载失败");
         }
       } catch (err) {
         console.error("Uninstallation error:", err);
-        setError("Uninstallation failed. Please try again.");
+        setError("卸载失败，请重试。");
       } finally {
         setInstalling((prev) => {
           const newSet = new Set(prev);
@@ -242,7 +242,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
         const result = await window.api.packages.update(repoId);
         if (result.success) {
           alert(
-            "Package updated successfully. The server will restart to apply changes."
+            "包更新成功。服务器将重启以应用更改。"
           );
           await loadPackages();
           try {
@@ -251,11 +251,11 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
             console.warn("Restart server failed:", e);
           }
         } else {
-          setError(result.message || "Update failed");
+          setError(result.message || "更新失败");
         }
       } catch (err) {
         console.error("Update error:", err);
-        setError("Update failed. Please try again.");
+        setError("更新失败，请重试。");
       } finally {
         setInstalling((prev) => {
           const newSet = new Set(prev);
@@ -291,7 +291,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
   if (loading) {
     return (
       <div className="package-manager">
-        <div className="loading-message">Loading packages...</div>
+        <div className="loading-message">正在加载包...</div>
       </div>
     );
   }
@@ -299,9 +299,9 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
   return (
     <div className="package-manager">
       <div className="package-manager-header">
-        <h1>NodeTool Package Manager</h1>
+        <h1>NodeTool 包管理器</h1>
         <p style={{ color: "#999", margin: "8px 0 0" }}>
-          Install runtimes and packages to extend NodeTool's capabilities.
+          安装运行时和包，扩展 NodeTool 的能力。
         </p>
       </div>
 
@@ -317,9 +317,9 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
       <div className="package-sections">
         {/* Runtime Packages Section */}
         <div className="package-section">
-          <h2>Runtime Packages</h2>
+          <h2>运行时包</h2>
           <p className="section-description" style={{ color: "#999", margin: "4px 0 12px", fontSize: "13px" }}>
-            Core runtimes for AI capabilities. Install what you need.
+            AI 能力所需的核心运行时。按需安装即可。
           </p>
 
           {/* Install location selector */}
@@ -336,7 +336,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
             }}
           >
             <span style={{ color: "#999", whiteSpace: "nowrap" }}>
-              Install location:
+              安装位置：
             </span>
             <code
               style={{
@@ -364,7 +364,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
                 whiteSpace: "nowrap",
               }}
             >
-              Change
+              更改
             </button>
           </div>
 
@@ -380,7 +380,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
                       <h3>{pkg.name}</h3>
                       {pkg.installed && (
                         <span className="status-badge up-to-date">
-                          INSTALLED
+                          已安装
                         </span>
                       )}
                     </div>
@@ -389,7 +389,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
                   <div className="package-actions">
                     {pkg.installed ? (
                       <button className="installed-indicator" disabled>
-                        Installed
+                        已安装
                       </button>
                     ) : (
                       <button
@@ -401,8 +401,8 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
                         }
                       >
                         {isProcessing(pkg.id) || pkg.installing
-                          ? "Installing..."
-                          : "Install"}
+                          ? "正在安装..."
+                          : "安装"}
                       </button>
                     )}
                   </div>
@@ -415,14 +415,13 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
         {/* Included Node Packs Section */}
         {builtinPacks.length > 0 && (
           <div className="package-section">
-            <h2>Included Node Packs</h2>
+            <h2>内置节点包</h2>
             <p
               className="section-description"
               style={{ color: "#999", margin: "4px 0 12px", fontSize: "13px" }}
             >
-              These node packs ship with NodeTool, but only the essentials are
-              enabled out of the box. Enable the providers you use to add
-              their nodes to the editor.
+              这些节点包随 NodeTool 提供，但默认只启用基础包。启用你使用的服务商后，
+              对应节点会添加到编辑器中。
             </p>
 
             {builtinRestartNeeded && (
@@ -441,13 +440,13 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
                 }}
               >
                 <span style={{ flex: 1 }}>
-                  Changes take effect after the server restarts.
+                  更改将在服务器重启后生效。
                 </span>
                 <button
                   className="install-button"
                   onClick={handleRestartForBuiltins}
                 >
-                  Restart Server
+                  重启服务器
                 </button>
               </div>
             )}
@@ -463,10 +462,10 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
                     <div className="package-header-row">
                       <h3>{pack.name}</h3>
                       {pack.enabled ? (
-                        <span className="status-badge up-to-date">ENABLED</span>
+                        <span className="status-badge up-to-date">已启用</span>
                       ) : (
                         <span className="status-badge update-available">
-                          DISABLED
+                          已禁用
                         </span>
                       )}
                     </div>
@@ -477,23 +476,23 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
                       <button
                         className="installed-indicator"
                         disabled
-                        title="Core nodes — always enabled"
+                        title="核心节点 - 始终启用"
                       >
-                        Always On
+                        始终开启
                       </button>
                     ) : pack.enabled ? (
                       <button
                         className="uninstall-button"
                         onClick={() => handleToggleBuiltin(pack)}
                       >
-                        Disable
+                        禁用
                       </button>
                     ) : (
                       <button
                         className="install-button"
                         onClick={() => handleToggleBuiltin(pack)}
                       >
-                        Enable
+                        启用
                       </button>
                     )}
                   </div>
@@ -506,20 +505,20 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
         {/* Installed Packages Section */}
         {installedPackages.length > 0 && (
           <div className="package-section">
-            <h2>Installed Packages ({installedPackages.length})</h2>
+            <h2>已安装包（{installedPackages.length}）</h2>
             <div className="package-list">
               {installedPackages.map((pkg) => (
                 <div key={pkg.repo_id} className="package-item installed">
                   <div className="package-info">
                     <div className="package-header-row">
                       <h3>{pkg.name}</h3>
-                      <span className="status-badge up-to-date">INSTALLED</span>
+                      <span className="status-badge up-to-date">已安装</span>
                     </div>
                     <div className="version-info">
                       <p className="package-version">v{pkg.version}</p>
                       {pkg.hasUpdate && pkg.latestVersion && (
                         <p className="update-available">
-                          Update available: v{pkg.latestVersion}
+                          可更新：v{pkg.latestVersion}
                         </p>
                       )}
                     </div>
@@ -532,7 +531,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
                         onClick={() => handleUpdate(pkg.repo_id)}
                         disabled={isProcessing(pkg.repo_id)}
                       >
-                        {isProcessing(pkg.repo_id) ? "Updating..." : "Update"}
+                        {isProcessing(pkg.repo_id) ? "正在更新..." : "更新"}
                       </button>
                     )}
                     <button
@@ -541,8 +540,8 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
                       disabled={isProcessing(pkg.repo_id)}
                     >
                       {isProcessing(pkg.repo_id)
-                        ? "Uninstalling..."
-                        : "Uninstall"}
+                        ? "正在卸载..."
+                        : "卸载"}
                     </button>
                   </div>
                 </div>
@@ -553,9 +552,9 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
 
         {/* Available Packages Section */}
         <div className="package-section">
-          <h2>Available Packs ({availablePackages.length})</h2>
+          <h2>可用包（{availablePackages.length}）</h2>
           {availablePackages.length === 0 ? (
-            <p className="no-packages">No packages available</p>
+            <p className="no-packages">暂无可用包</p>
           ) : (
             <div className="package-list">
               {availablePackages.map((pkg) => {
@@ -574,12 +573,12 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
                         <h3>{pkg.name}</h3>
                         {isUpToDate && (
                           <span className="status-badge up-to-date">
-                            UP-TO-DATE
+                            最新
                           </span>
                         )}
                         {hasUpdate && (
                           <span className="status-badge update-available">
-                            UPDATE AVAILABLE
+                            有更新
                           </span>
                         )}
                       </div>
@@ -606,12 +605,12 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
                               disabled={isProcessing(pkg.repo_id)}
                             >
                               {isProcessing(pkg.repo_id)
-                                ? "Updating..."
-                                : "Update"}
+                                ? "正在更新..."
+                                : "更新"}
                             </button>
                           )}
                           <button className="installed-indicator" disabled>
-                            Installed
+                            已安装
                           </button>
                         </>
                       ) : (
@@ -621,8 +620,8 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
                           disabled={isProcessing(pkg.repo_id)}
                         >
                           {isProcessing(pkg.repo_id)
-                            ? "Installing..."
-                            : "Install"}
+                            ? "正在安装..."
+                            : "安装"}
                         </button>
                       )}
                     </div>
@@ -642,7 +641,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
         <div className="package-console-header">
           <div className="package-console-title">
             <span className="package-console-indicator" />
-            Console output
+            控制台输出
             {consoleLogs.length > 0 && (
               <span className="package-console-count">
                 ({consoleLogs.length})
@@ -656,14 +655,14 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
               onClick={handleClearConsole}
               disabled={consoleLogs.length === 0}
             >
-              Clear
+              清除
             </button>
             <button
               type="button"
               className="package-console-button"
               onClick={handleToggleConsole}
             >
-              {isConsoleCollapsed ? "Show" : "Hide"}
+              {isConsoleCollapsed ? "显示" : "隐藏"}
             </button>
           </div>
         </div>
@@ -673,12 +672,11 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
             ref={consoleBodyRef}
             role="log"
             aria-live="polite"
-            aria-label="Package manager console output"
+            aria-label="包管理器控制台输出"
           >
             {consoleLogs.length === 0 ? (
               <div className="package-console-empty">
-                Console output will appear here when you install, update, or
-                uninstall a package.
+                安装、更新或卸载包时，控制台输出会显示在这里。
               </div>
             ) : (
               consoleLogs.map((line, i) => (
@@ -715,7 +713,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({ onSkip }) => {
             fontSize: "14px",
           }}
         >
-          Continue to App
+          继续进入应用
         </button>
       </div>
     </div>

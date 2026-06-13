@@ -267,7 +267,7 @@ const generateTitleFromFirstUserMessage = (
     contentText = firstText?.text || "";
   }
 
-  const titleBase = contentText || "New conversation";
+  const titleBase = contentText || "新会话";
   return titleBase.substring(0, 50) + (titleBase.length > 50 ? "..." : "");
 };
 

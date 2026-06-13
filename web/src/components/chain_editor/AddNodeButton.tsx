@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import React from "react";
 import { useTheme } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 import { EditorButton } from "../editor_ui";
 import { ToolbarIconButton, Box, MOTION } from "../ui_primitives";
 import AddIcon from "@mui/icons-material/Add";
@@ -13,6 +14,7 @@ interface AddNodeButtonProps {
 
 export const AddNodeButton: React.FC<AddNodeButtonProps> = ({ onClick, isHero = false }) => {
   const theme = useTheme();
+  const { t } = useTranslation("workflows");
 
   if (isHero) {
     return (
@@ -30,7 +32,7 @@ export const AddNodeButton: React.FC<AddNodeButtonProps> = ({ onClick, isHero = 
           textTransform: "none",
         }}
       >
-        Add First Node
+        {t("addFirstNode")}
       </EditorButton>
     );
   }
@@ -40,8 +42,8 @@ export const AddNodeButton: React.FC<AddNodeButtonProps> = ({ onClick, isHero = 
       <Box sx={{ width: 2, height: 8, backgroundColor: theme.vars.palette.divider }} />
       <ToolbarIconButton
         size="small"
-        ariaLabel="Add node"
-        tooltip="Add node"
+        ariaLabel={t("addNode")}
+        tooltip={t("addNode")}
         onClick={onClick}
         icon={<AddIcon sx={{ fontSize: 16, color: theme.vars.palette.primary.main }} />}
         sx={{

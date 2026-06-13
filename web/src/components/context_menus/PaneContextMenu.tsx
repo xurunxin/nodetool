@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useReactFlow } from "@xyflow/react";
 
 import { EditorButton, Text, Divider, FlexRow, ContextMenu } from "../ui_primitives";
@@ -32,6 +33,7 @@ import { SUBGRAPH_NODE_TYPE } from "../node/SubgraphNode";
 import { shallow } from "zustand/shallow";
 
 const PaneContextMenu: React.FC = () => {
+  const { t } = useTranslation("nodeMenu");
   const { handlePaste } = useCopyPaste();
   const reactFlowInstance = useReactFlow();
   const { isClipboardValid } = useClipboard();
@@ -134,48 +136,48 @@ const PaneContextMenu: React.FC = () => {
   const constantNodeOptions = useMemo(
     () =>
       [
-        { label: "Bool", nodeTypes: ["nodetool.constant.Bool"] },
-        { label: "Data Frame", nodeTypes: ["nodetool.constant.DataFrame"] },
-        { label: "Date", nodeTypes: ["nodetool.constant.Date"] },
-        { label: "Date Time", nodeTypes: ["nodetool.constant.DateTime"] },
-        { label: "Dict", nodeTypes: ["nodetool.constant.Dict"] },
-        { label: "Document", nodeTypes: ["nodetool.constant.Document"] },
-        { label: "Float", nodeTypes: ["nodetool.constant.Float"] },
-        { label: "Image", nodeTypes: ["nodetool.constant.Image"] },
-        { label: "Integer", nodeTypes: ["nodetool.constant.Integer"] },
-        { label: "JSON", nodeTypes: ["nodetool.constant.JSON"] },
-        { label: "List", nodeTypes: ["nodetool.constant.List"] },
-        { label: "Audio", nodeTypes: ["nodetool.constant.Audio"] },
+        { label: t("nodeTypes.bool"), nodeTypes: ["nodetool.constant.Bool"] },
+        { label: t("nodeTypes.dataFrame"), nodeTypes: ["nodetool.constant.DataFrame"] },
+        { label: t("nodeTypes.date"), nodeTypes: ["nodetool.constant.Date"] },
+        { label: t("nodeTypes.dateTime"), nodeTypes: ["nodetool.constant.DateTime"] },
+        { label: t("nodeTypes.dict"), nodeTypes: ["nodetool.constant.Dict"] },
+        { label: t("nodeTypes.document"), nodeTypes: ["nodetool.constant.Document"] },
+        { label: t("nodeTypes.float"), nodeTypes: ["nodetool.constant.Float"] },
+        { label: t("nodeTypes.image"), nodeTypes: ["nodetool.constant.Image"] },
+        { label: t("nodeTypes.integer"), nodeTypes: ["nodetool.constant.Integer"] },
+        { label: t("nodeTypes.json"), nodeTypes: ["nodetool.constant.JSON"] },
+        { label: t("nodeTypes.list"), nodeTypes: ["nodetool.constant.List"] },
+        { label: t("nodeTypes.audio"), nodeTypes: ["nodetool.constant.Audio"] },
         {
-          label: "Model 3D",
+          label: t("nodeTypes.model3d"),
           nodeTypes: [
             "nodetool.constant.Model3D",
             "nodetool.constant.Model3d",
             "nodetool.constant.Model_3D"
           ]
         },
-        { label: "Select", nodeTypes: ["nodetool.constant.Select"] },
-        { label: "String", nodeTypes: ["nodetool.constant.String"] },
-        { label: "Video", nodeTypes: ["nodetool.constant.Video"] }
+        { label: t("nodeTypes.select"), nodeTypes: ["nodetool.constant.Select"] },
+        { label: t("nodeTypes.string"), nodeTypes: ["nodetool.constant.String"] },
+        { label: t("nodeTypes.video"), nodeTypes: ["nodetool.constant.Video"] }
       ].sort((a, b) => a.label.localeCompare(b.label)),
-    []
+    [t]
   );
 
   const inputNodeOptions = useMemo(
     () =>
       [
-        { label: "String", nodeTypes: ["nodetool.input.StringInput"] },
-        { label: "Integer", nodeTypes: ["nodetool.input.IntegerInput"] },
-        { label: "Float", nodeTypes: ["nodetool.input.FloatInput"] },
-        { label: "Boolean", nodeTypes: ["nodetool.input.BooleanInput"] },
-        { label: "Image", nodeTypes: ["nodetool.input.ImageInput"] },
-        { label: "Audio", nodeTypes: ["nodetool.input.AudioInput"] },
-        { label: "Video", nodeTypes: ["nodetool.input.VideoInput"] },
-        { label: "Document", nodeTypes: ["nodetool.input.DocumentInput"] },
-        { label: "Data Frame", nodeTypes: ["nodetool.input.DataFrameInput"] },
-        { label: "Select", nodeTypes: ["nodetool.input.SelectInput"] }
+        { label: t("nodeTypes.string"), nodeTypes: ["nodetool.input.StringInput"] },
+        { label: t("nodeTypes.integer"), nodeTypes: ["nodetool.input.IntegerInput"] },
+        { label: t("nodeTypes.float"), nodeTypes: ["nodetool.input.FloatInput"] },
+        { label: t("nodeTypes.boolean"), nodeTypes: ["nodetool.input.BooleanInput"] },
+        { label: t("nodeTypes.image"), nodeTypes: ["nodetool.input.ImageInput"] },
+        { label: t("nodeTypes.audio"), nodeTypes: ["nodetool.input.AudioInput"] },
+        { label: t("nodeTypes.video"), nodeTypes: ["nodetool.input.VideoInput"] },
+        { label: t("nodeTypes.document"), nodeTypes: ["nodetool.input.DocumentInput"] },
+        { label: t("nodeTypes.dataFrame"), nodeTypes: ["nodetool.input.DataFrameInput"] },
+        { label: t("nodeTypes.select"), nodeTypes: ["nodetool.input.SelectInput"] }
       ].sort((a, b) => a.label.localeCompare(b.label)),
-    []
+    [t]
   );
 
   const resolveNodeType = useCallback(
@@ -301,7 +303,7 @@ const PaneContextMenu: React.FC = () => {
       >
         <ContextMenuItem
           onClick={handlePasteAndClose}
-          label="Paste"
+          label={t("paste")}
           addButtonClassName={`action ${!isClipboardValid ? "disabled" : ""}`}
           IconComponent={<SouthEastIcon />}
           tooltip={
@@ -310,8 +312,9 @@ const PaneContextMenu: React.FC = () => {
                 {getShortcutTooltip("paste-selection")}
                 <br />
                 <span className="attention">
-                  no valid node data <br />
-                  in clipboard
+                  {t("noValidNodeData")}
+                  <br />
+                  {t("inClipboard")}
                 </span>
               </span>
             ) : (
@@ -321,7 +324,7 @@ const PaneContextMenu: React.FC = () => {
         />
         <ContextMenuItem
           onClick={handleFitViewAndClose}
-          label="Fit Screen"
+          label={t("fitScreen")}
           IconComponent={<FitScreenIcon />}
           tooltip={getShortcutTooltip("fit-view")}
         />
@@ -343,7 +346,7 @@ const PaneContextMenu: React.FC = () => {
             <StarIcon
               sx={{ fontSize: "var(--fontSizeNormal)", color: "warning.main" }}
             />
-            <Text>Favorites</Text>
+            <Text>{t("favorites")}</Text>
           </FlexRow>,
           ...favorites.map((favorite) => {
             const displayName = getNodeDisplayName(favorite.nodeType);
@@ -357,7 +360,7 @@ const PaneContextMenu: React.FC = () => {
                     sx={{ fontSize: "var(--fontSizeNormal)", color: "warning.main", opacity: 0.7 }}
                   />
                 }
-                tooltip={`Add ${displayName} node`}
+                tooltip={t("addNodeTooltip", { name: displayName })}
               />
             );
           })
@@ -372,7 +375,7 @@ const PaneContextMenu: React.FC = () => {
               density="normal"
             >
               <DataObjectIcon />
-              <span className="label">Add Constant Node</span>
+              <span className="label">{t("addConstantNode")}</span>
             </EditorButton>
           }
         />
@@ -385,32 +388,32 @@ const PaneContextMenu: React.FC = () => {
               density="normal"
             >
               <InputIcon />
-              <span className="label">Add Input Node</span>
+              <span className="label">{t("addInputNode")}</span>
             </EditorButton>
           }
         />
         <Divider />
         <ContextMenuItem
           onClick={handleAddCommentAndClose}
-          label="Add Comment"
+          label={t("addComment")}
           IconComponent={<AddCommentIcon />}
-          tooltip={"Hold C key and drag"}
+          tooltip={t("holdCKeyAndDrag")}
         />
         <ContextMenuItem
           onClick={handleAddGroupAndClose}
-          label="Add Group"
+          label={t("addGroup")}
           IconComponent={<GroupWorkIcon />}
-          tooltip={"Add a group node"}
+          tooltip={t("addGroupNodeTooltip")}
         />
         <ContextMenuItem
           onClick={handleCreateNode(WORKFLOW_NODE_TYPE)}
-          label="Add Workflow"
-          tooltip={"Add a workflow node"}
+          label={t("addWorkflow")}
+          tooltip={t("addWorkflowNodeTooltip")}
         />
         <ContextMenuItem
           onClick={handleCreateNode(SUBGRAPH_NODE_TYPE)}
-          label="Add Subgraph"
-          tooltip={"Add an inline subgraph node"}
+          label={t("addSubgraph")}
+          tooltip={t("addInlineSubgraphNodeTooltip")}
         />
       </ContextMenu>
       <ContextMenu

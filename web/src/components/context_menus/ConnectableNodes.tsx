@@ -22,6 +22,7 @@ import { useNodes } from "../../contexts/NodeContext";
 import { useRecentNodesStore } from "../../stores/RecentNodesStore";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 
 const NODE_ROW_HEIGHT = 34;
 
@@ -147,6 +148,7 @@ const getPreferredConnectableInput = (
 };
 
 const ConnectableNodes: React.FC = React.memo(function ConnectableNodes() {
+  const { t } = useTranslation("nodeMenu");
   const theme = useTheme();
   const [searchTerm, setSearchTerm] = useState("");
   const reactFlowInstance = useReactFlow();
@@ -347,14 +349,14 @@ const ConnectableNodes: React.FC = React.memo(function ConnectableNodes() {
             className="connectable-nodes-search"
             size="small"
             fullWidth
-            placeholder="Search nodes..."
+            placeholder={t("searchNodes")}
             value={searchTerm}
             onChange={handleSearchChange}
             onClick={(e) => e.stopPropagation()}
             onKeyDown={handleSearchKeyDown}
             autoFocus={isVisible}
             inputRef={searchInputRef}
-            aria-label="Search nodes"
+            aria-label={t("searchNodes")}
             sx={{
                 "& .MuiOutlinedInput-root": {
                     backgroundColor: "action.disabledBackground",
@@ -377,7 +379,7 @@ const ConnectableNodes: React.FC = React.memo(function ConnectableNodes() {
                 endAdornment: searchTerm ? (
                   <InputAdornment position="end">
                     <ToolbarIconButton
-                      aria-label="clear search"
+                      aria-label={t("clearSearch")}
                       onClick={handleClearSearch}
                       size="small"
                       icon={<ClearIcon sx={{ fontSize: 16 }} />}
@@ -400,7 +402,7 @@ const ConnectableNodes: React.FC = React.memo(function ConnectableNodes() {
         {totalCount === 0 ? (
           <Box sx={{ p: 3, textAlign: "center", color: "text.secondary" }}>
             <Text size="small">
-              No nodes match &quot;{searchTerm}&quot;.
+              {t("noNodesMatch", { searchTerm })}
             </Text>
           </Box>
         ) : (

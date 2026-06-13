@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { memo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -12,6 +13,7 @@ import useGlobalChatStore from "../../stores/GlobalChatStore";
 import ChatThreadView from "../chat/thread/ChatThreadView";
 import type { Message } from "../../stores/ApiTypes";
 import { TOOLTIP_ENTER_DELAY } from "../../config/constants";
+import { getLocalizedThreadTitle } from "../chat/utils/threadUtils";
 
 type ThreadStatus = React.ComponentProps<typeof ChatThreadView>["status"];
 
@@ -92,6 +94,7 @@ const ConversationOverlay: React.FC<ConversationOverlayProps> = ({
   onCollapse
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("chat");
 
   const messages = useGlobalChatStore((state) =>
     state.currentThreadId
@@ -122,6 +125,9 @@ const ConversationOverlay: React.FC<ConversationOverlayProps> = ({
       : null
   );
   const createNewThread = useGlobalChatStore((state) => state.createNewThread);
+  const displayTitle = title
+    ? getLocalizedThreadTitle(title, t("newConversation"))
+    : t("conversation");
 
   // ChatThreadView's status union excludes "stopping" — map it like GlobalChat.
   const status: ThreadStatus =
@@ -140,25 +146,25 @@ const ConversationOverlay: React.FC<ConversationOverlayProps> = ({
             whiteSpace: "nowrap"
           }}
         >
-          {title || "Conversation"}
+          {displayTitle}
         </Text>
         <FlexRow gap={0.5} align="center" sx={{ ml: "auto" }}>
-          <Tooltip title="New conversation" delay={TOOLTIP_ENTER_DELAY}>
+          <Tooltip title={t("newConversation")} delay={TOOLTIP_ENTER_DELAY}>
             <button
               type="button"
               className="convo-icon-btn"
               onClick={() => void createNewThread()}
-              aria-label="New conversation"
+              aria-label={t("newConversation")}
             >
               <AddCommentOutlinedIcon />
             </button>
           </Tooltip>
-          <Tooltip title="Hide conversation" delay={TOOLTIP_ENTER_DELAY}>
+          <Tooltip title={t("hideConversation")} delay={TOOLTIP_ENTER_DELAY}>
             <button
               type="button"
               className="convo-icon-btn"
               onClick={onCollapse}
-              aria-label="Hide conversation"
+              aria-label={t("hideConversation")}
             >
               <KeyboardArrowDownIcon />
             </button>

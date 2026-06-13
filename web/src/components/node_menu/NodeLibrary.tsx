@@ -10,6 +10,7 @@ import {
   useRef,
   useState
 } from "react";
+import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
@@ -288,6 +289,7 @@ interface NodeLibraryProps {
  */
 const NodeLibrary = memo<NodeLibraryProps>(
   ({ activeSubcategory, onSubcategoryChange, isMobile = false }) => {
+    const { t } = useTranslation("nodeMenu");
     const theme = useTheme();
     const [query, setQuery] = useState("");
     const [hoveredType, setHoveredType] = useState<string | null>(null);
@@ -384,12 +386,17 @@ const NodeLibrary = memo<NodeLibraryProps>(
     );
 
     const handleListLeave = useCallback(() => setHoveredType(null), []);
+    const getCategoryLabel = useCallback(
+      (id: NodeCategoryId, fallback: string) =>
+        t(`categories.${id}`, { defaultValue: fallback }),
+      [t]
+    );
 
     return (
       <div css={styles(theme, isMobile)} className="nl-root">
         <div className="nl-header">
           <Text className="nl-title" component="h2">
-            Node library
+            {t("nodeLibrary")}
           </Text>
           <span className="nl-count">{nodes.length}</span>
         </div>
@@ -401,15 +408,15 @@ const NodeLibrary = memo<NodeLibraryProps>(
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search nodes…"
-            aria-label="Search nodes"
+            placeholder={t("searchNodes")}
+            aria-label={t("searchNodes")}
           />
           {query && (
             <button
               type="button"
               className="nl-search-clear"
               onClick={() => setQuery("")}
-              aria-label="Clear search"
+              aria-label={t("clearSearch")}
             >
               <ClearIcon />
             </button>
@@ -418,7 +425,7 @@ const NodeLibrary = memo<NodeLibraryProps>(
 
         <div className="nl-body">
           <div className="nl-browse">
-            <nav className="nl-rail" role="tablist" aria-label="Node categories">
+            <nav className="nl-rail" role="tablist" aria-label={t("nodeCategories")}>
               {NODE_SUBCATEGORIES.map((sub) => (
                 <button
                   key={sub.id}
@@ -429,7 +436,9 @@ const NodeLibrary = memo<NodeLibraryProps>(
                   onClick={() => onSubcategoryChange(sub.id)}
                 >
                   <span className="nl-cat-icon">{sub.icon}</span>
-                  <span className="nl-cat-label">{sub.label}</span>
+                  <span className="nl-cat-label">
+                    {getCategoryLabel(sub.id, sub.label)}
+                  </span>
                   <span className="nl-cat-count">{counts[sub.id] ?? 0}</span>
                 </button>
               ))}
@@ -437,7 +446,7 @@ const NodeLibrary = memo<NodeLibraryProps>(
 
             {nodes.length === 0 ? (
               <div className="nl-list">
-                <div className="nl-empty">No matching nodes</div>
+                <div className="nl-empty">{t("noMatchingNodes")}</div>
               </div>
             ) : (
               <div
@@ -484,7 +493,7 @@ const NodeLibrary = memo<NodeLibraryProps>(
             ) : (
               <div className="nl-info-empty">
                 <Text component="span">
-                  Drag a node to place it on the workspace. Hover for details
+                  {t("dragNodeHint")}
                 </Text>
               </div>
             )}
@@ -492,10 +501,10 @@ const NodeLibrary = memo<NodeLibraryProps>(
         </div>
 
         <div className="nl-footer">
-          <span>{category.label}</span>
+          <span>{getCategoryLabel(category.id, category.label)}</span>
           {!isMobile && (
             <span className="nl-footer-hint">
-              <span className="nl-kbd">drag</span> to add
+              <span className="nl-kbd">{t("drag")}</span> {t("toAdd")}
             </span>
           )}
         </div>

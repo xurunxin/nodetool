@@ -32,8 +32,8 @@ let trayInstance: Electron.Tray | null = null;
 
 function formatNodeToolStatus(connected: boolean, port?: number): string {
   return connected
-    ? `NodeTool: Running${port ? ` on ${port}` : ""}`
-    : "NodeTool: Stopped";
+    ? `NodeTool: 运行中${port ? `，端口 ${port}` : ""}`
+    : "NodeTool: 已停止";
 }
 
 function formatModelServiceStatus(
@@ -43,12 +43,12 @@ function formatModelServiceStatus(
   port?: number
 ): string {
   if (running) {
-    return `${name}: Running${port ? ` on ${port}` : ""} (managed)`;
+    return `${name}: 运行中${port ? `，端口 ${port}` : ""}（托管）`;
   }
   if (externalManaged) {
-    return `${name}: Running externally${port ? ` on ${port}` : ""}`;
+    return `${name}: 外部运行中${port ? `，端口 ${port}` : ""}`;
   }
-  return `${name}: Stopped`;
+  return `${name}: 已停止`;
 }
 
 async function detectLlamaStatus(
@@ -269,10 +269,10 @@ function getCloseBehaviorMenuItems(settings: Record<string, unknown>): Electron.
   return [
     { type: "separator" },
     {
-      label: "On Close Behavior",
+      label: "关闭窗口时",
       submenu: [
         {
-          label: "Ask Every Time",
+          label: "每次询问",
           type: "radio",
           checked: !currentAction || currentAction === "ask",
           click: () => {
@@ -282,7 +282,7 @@ function getCloseBehaviorMenuItems(settings: Record<string, unknown>): Electron.
           },
         },
         {
-          label: "Quit Application",
+          label: "退出应用",
           type: "radio",
           checked: currentAction === "quit",
           click: () => {
@@ -292,7 +292,7 @@ function getCloseBehaviorMenuItems(settings: Record<string, unknown>): Electron.
           },
         },
         {
-          label: "Keep Running in Background",
+          label: "在后台继续运行",
           type: "radio",
           checked: currentAction === "background",
           click: () => {
@@ -315,7 +315,7 @@ function buildWorkflowsSubmenu(workflows: Workflow[]): Electron.MenuItemConstruc
   if (workflows.length === 0) {
     return [
       {
-        label: "No workflows available",
+        label: "暂无可用工作流",
         enabled: false,
       },
     ];
@@ -382,7 +382,7 @@ async function updateTrayMenu(): Promise<void> {
       enabled: false,
     },
     {
-      label: "Managed Model Services",
+      label: "托管模型服务",
       submenu: [
         {
           label: "Llama.cpp",
@@ -394,7 +394,7 @@ async function updateTrayMenu(): Promise<void> {
             ...(llamaCppInstalledInEnv
               ? [
                   {
-                    label: "Start Llama.cpp",
+                    label: "启动 Llama.cpp",
                     enabled: !llamaRunningResolved,
                     click: async () => {
                       try {
@@ -409,7 +409,7 @@ async function updateTrayMenu(): Promise<void> {
                     },
                   },
                   {
-                    label: "Stop Llama.cpp",
+                    label: "停止 Llama.cpp",
                     enabled: llamaRunningResolved,
                     click: async () => {
                       try {
@@ -426,7 +426,7 @@ async function updateTrayMenu(): Promise<void> {
                 ]
               : [
                   {
-                    label: "Install Llama.cpp",
+                    label: "安装 Llama.cpp",
                     click: async () => {
                       try {
                         logMessage("Installing Llama.cpp from tray...", "info");
@@ -446,7 +446,7 @@ async function updateTrayMenu(): Promise<void> {
         },
         { type: "separator" },
         {
-          label: "Start Llama.cpp on App Startup",
+          label: "应用启动时启动 Llama.cpp",
           type: "checkbox",
           checked: startupSettings.startLlamaCppOnStartup,
           click: () => {
@@ -463,7 +463,7 @@ async function updateTrayMenu(): Promise<void> {
       ],
     },
     {
-      label: "Start Service",
+      label: "启动服务",
       enabled: !connected,
       click: async () => {
         await initializeBackendServer();
@@ -471,7 +471,7 @@ async function updateTrayMenu(): Promise<void> {
       },
     },
     {
-      label: "Stop Service",
+      label: "停止服务",
       enabled: connected,
       click: async () => {
         try {
@@ -486,12 +486,12 @@ async function updateTrayMenu(): Promise<void> {
     },
     { type: "separator" },
     {
-      label: "Show NodeTool",
+      label: "显示 NodeTool",
       enabled: true,
       click: async () => focusNodeTool(),
     },
     {
-      label: "Chat",
+      label: "聊天",
       enabled: connected,
       click: () => {
         logMessage("Opening standalone chat window");
@@ -499,36 +499,36 @@ async function updateTrayMenu(): Promise<void> {
       },
     },
     {
-      label: "Mini Apps",
+      label: "迷你应用",
       enabled: connected && workflows.length > 0,
       submenu: buildWorkflowsSubmenu(workflows),
     },
     {
-      label: "Package Manager",
+      label: "包管理器",
       click: () => createPackageManagerWindow(),
     },
     { type: "separator" },
     {
-      label: "Log Viewer",
+      label: "日志查看器",
       click: () => createLogViewerWindow(),
     },
     {
-      label: "Settings",
+      label: "设置",
       click: () => createSettingsWindow(),
     },
     {
-      label: "Open Log File",
+      label: "打开日志文件",
       click: () => {
         shell.openPath(LOG_FILE);
       },
     },
     ...getCloseBehaviorMenuItems(settings),
     { type: "separator" },
-    { label: "Quit NodeTool", role: "quit" },
+    { label: "退出 NodeTool", role: "quit" },
   ]);
 
   trayInstance.setContextMenu(contextMenu);
-  trayInstance.setToolTip("NodeTool Desktop");
+  trayInstance.setToolTip("NodeTool 桌面版");
 }
 
 export { createTray, updateTrayMenu };

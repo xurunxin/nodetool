@@ -8,6 +8,7 @@
  */
 
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -169,6 +170,7 @@ const HSLAdjustBodyInner: React.FC<HSLAdjustBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(() => styles(theme), [theme]);
 
   const properties = nodeMetadata.properties ?? [];
@@ -219,19 +221,19 @@ const HSLAdjustBodyInner: React.FC<HSLAdjustBodyProps> = ({
       </div>
 
       <div className="controls">
-        <span className="ctrl-label">Range</span>
+        <span className="ctrl-label">{t("range")}</span>
         <Select
           className="range-select nodrag"
           size="small"
           variant="standard"
           value={colorRange}
           onChange={handleRangeChange}
-          aria-label="Color range"
+          aria-label={t("colorRange")}
           disableUnderline
         >
           {COLOR_RANGES.map((r) => (
             <MenuItem key={r} value={r} dense sx={{ textTransform: "capitalize" }}>
-              {r}
+              {t(r)}
             </MenuItem>
           ))}
         </Select>

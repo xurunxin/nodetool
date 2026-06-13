@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import React, { memo, useMemo } from "react";
 import { css } from "@emotion/react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
@@ -105,8 +106,8 @@ const styles = (theme: Theme) =>
     }
   });
 
-function titleFromPrompt(prompt: string | null | undefined): string {
-  if (!prompt) return "Generated";
+function titleFromPrompt(prompt: string | null | undefined, fallback: string): string {
+  if (!prompt) return fallback;
   const words = prompt.trim().split(/\s+/).slice(0, 4).join(" ");
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
@@ -120,6 +121,7 @@ const MediaOutputGroup: React.FC<MediaOutputGroupProps> = ({
   message,
   mediaContents
 }) => {
+  const { t } = useTranslation("chat");
   const theme = useTheme();
   const gen = message.media_generation ?? null;
 
@@ -136,7 +138,7 @@ const MediaOutputGroup: React.FC<MediaOutputGroupProps> = ({
     return null;
   }, [message.content]);
 
-  const title = titleFromPrompt(prompt);
+  const title = titleFromPrompt(prompt, t("generated"));
 
   const count = mediaContents.length;
   const gridClass =
@@ -193,7 +195,7 @@ const MediaOutputGroup: React.FC<MediaOutputGroupProps> = ({
             typeof gen.duration === "number" && (
               <span className="media-meta-chip">
                 <AccessTimeIcon fontSize="small" />
-                {gen.duration}s
+                {t("secondsShort", { count: gen.duration })}
               </span>
             )}
           {gen?.mode === "image_edit" &&
@@ -208,7 +210,7 @@ const MediaOutputGroup: React.FC<MediaOutputGroupProps> = ({
             typeof gen.num_inference_steps === "number" && (
               <span className="media-meta-chip">
                 <LayersIcon fontSize="small" />
-                {gen.num_inference_steps} steps
+                {t("stepsCount", { count: gen.num_inference_steps })}
               </span>
             )}
           {gen?.mode === "audio" && gen.voice && (
@@ -248,7 +250,7 @@ const MediaOutputGroup: React.FC<MediaOutputGroupProps> = ({
                   controls
                   preload="metadata"
                   playsInline
-                  aria-label="Generated video"
+                  aria-label={t("generatedVideo")}
                   style={{ width: "100%", height: "100%" }}
                 />
               </div>
@@ -263,7 +265,7 @@ const MediaOutputGroup: React.FC<MediaOutputGroupProps> = ({
                   src={src}
                   controls
                   preload="metadata"
-                  aria-label="Generated audio"
+                  aria-label={t("generatedAudio")}
                   style={{ width: "100%", padding: "12px" }}
                 />
               </div>

@@ -22,6 +22,7 @@ import {
   createAssetDragImage
 } from "../../lib/dragdrop";
 import { useDragDropStore } from "../../lib/dragdrop/store";
+import { useTranslation } from "react-i18next";
 
 interface GlobalSearchResultsProps {
   results: AssetWithPath[];
@@ -197,6 +198,7 @@ const GlobalSearchResults: React.FC<GlobalSearchResultsProps> = ({
   containerWidth = 1200
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("assets");
   const { selectedAssetIds, handleSelectAsset } = useAssetSelection(results);
   const openContextMenu = useContextMenuStore((state) => state.openContextMenu);
   const globalSearchQuery = useAssetGridStore(
@@ -370,12 +372,12 @@ const GlobalSearchResults: React.FC<GlobalSearchResultsProps> = ({
         <div className="global-search-results-container search-results-container">
           <div className="global-search-results-header search-results-header">
             <Text className="global-search-results-title search-results-title">
-              Search Results
+              {t("searchResults")}
             </Text>
             <Text className="global-search-results-count search-results-count">
               {isSearching
-                ? `Searching for "${globalSearchQuery}"…`
-                : `No results for "${globalSearchQuery}"`}
+                ? t("searchingFor", { query: globalSearchQuery })
+                : t("noResultsForQuery", { query: globalSearchQuery })}
             </Text>
           </div>
           <div
@@ -390,10 +392,10 @@ const GlobalSearchResults: React.FC<GlobalSearchResultsProps> = ({
                   className="search-spinner"
                   style={spinnerStyle}
                 ></div>
-                <Text>Searching…</Text>
+                <Text>{t("searching")}</Text>
               </div>
             ) : (
-              <Text>No assets found matching your search.</Text>
+              <Text>{t("noAssetsFoundMatchingSearch")}</Text>
             )}
           </div>
         </div>
@@ -410,11 +412,13 @@ const GlobalSearchResults: React.FC<GlobalSearchResultsProps> = ({
       <div className="global-search-results-container search-results-container">
         <div className="global-search-results-header search-results-header">
           <Text className="global-search-results-title search-results-title">
-            Search Results
+            {t("searchResults")}
           </Text>
           <Text className="global-search-results-count search-results-count">
-            {results.length} result{results.length !== 1 ? "s" : ""} for &quot;
-            {globalSearchQuery}&quot;
+            {t("resultCount", {
+              count: results.length,
+              query: globalSearchQuery
+            })}
           </Text>
         </div>
 
@@ -455,7 +459,9 @@ const GlobalSearchResults: React.FC<GlobalSearchResultsProps> = ({
                       backgroundImage: `url(${asset.thumb_url || asset.get_url
                         })`
                     }}
-                    title={`${asset.content_type} thumbnail`}
+                    title={t("thumbnailTitle", {
+                      type: asset.content_type
+                    })}
                     data-testid="global-search-result-thumbnail"
                   />
                 ) : (
@@ -516,7 +522,7 @@ const GlobalSearchResults: React.FC<GlobalSearchResultsProps> = ({
                       </span>
                     </div>
                     {onNavigateToFolder && (
-                      <Tooltip title="Go to folder">
+                      <Tooltip title={t("goToFolder")}>
                         <EditorButton
                           className="global-search-navigate-btn folder-navigate-btn"
                           density="compact"

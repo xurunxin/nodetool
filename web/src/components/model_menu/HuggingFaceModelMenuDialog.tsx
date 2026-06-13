@@ -104,8 +104,6 @@ function HuggingFaceModelMenuDialog({
       onClose={onClose}
       modelData={sortedModelData}
       onModelChange={onModelChange}
-      title="Select HuggingFace Model"
-      searchPlaceholder="Search HuggingFace models..."
       storeHook={useHuggingFaceImageModelMenuStore}
       recommendedModels={recommendedModels}
       modelPacks={modelPacks}
@@ -114,5 +112,4 @@ function HuggingFaceModelMenuDialog({
 }
 
 export default memo(HuggingFaceModelMenuDialog);
-
 

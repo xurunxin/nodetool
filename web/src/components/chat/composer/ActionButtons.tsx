@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import React, { useCallback, memo } from "react";
@@ -40,6 +41,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = memo(({
   isDisabled,
   hasContent
 }) => {
+  const { t } = useTranslation("chat");
   // Show stop button ONLY when generation is actively running
   const showStopButton = (isLoading || isStreaming) && onStop;
   const theme = useTheme();
@@ -52,7 +54,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = memo(({
   return (
     <div className="chat-action-buttons" css={styles(theme)}>
       {showStopButton && (
-        <Tooltip delay={TOOLTIP_ENTER_DELAY} title="Stop Generation">
+        <Tooltip delay={TOOLTIP_ENTER_DELAY} title={t("stopGeneration")}>
           <span className="button-wrapper">
             <StopGenerationButton onClick={handleStop} />
           </span>
@@ -63,7 +65,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = memo(({
           delay={TOOLTIP_ENTER_DELAY}
           title={
             <div style={{ textAlign: "center" }}>
-              <Text>Send Message</Text>
+              <Text>{t("sendMessage")}</Text>
               <Text>[Enter]</Text>
             </div>
           }

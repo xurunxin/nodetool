@@ -6,23 +6,43 @@ interface SidebarSection {
   defaultCollapsed?: boolean;
 }
 
-export const getAboutSidebarSections = (): SidebarSection[] => {
+export interface AboutSidebarLabels {
+  application: string;
+  operatingSystem: string;
+  featuresVersions: string;
+  resources: string;
+  installationPaths: string;
+  links: string;
+}
+
+const DEFAULT_ABOUT_SIDEBAR_LABELS: AboutSidebarLabels = {
+  application: "Application",
+  operatingSystem: "Operating System",
+  featuresVersions: "Features & Versions",
+  resources: "Resources",
+  installationPaths: "Installation Paths",
+  links: "Links"
+};
+
+export const getAboutSidebarSections = (
+  labels: AboutSidebarLabels = DEFAULT_ABOUT_SIDEBAR_LABELS
+): SidebarSection[] => {
   return [
     {
-      category: "Application",
+      category: labels.application,
       items: [
-        { id: "application", label: "Application" },
-        { id: "operating-system", label: "Operating System" },
-        { id: "features", label: "Features & Versions" }
+        { id: "application", label: labels.application },
+        { id: "operating-system", label: labels.operatingSystem },
+        { id: "features", label: labels.featuresVersions }
       ]
     },
     {
-      category: "Resources",
+      category: labels.resources,
       items: [
         ...(!isProduction
-          ? [{ id: "installation-paths", label: "Installation Paths" }]
+          ? [{ id: "installation-paths", label: labels.installationPaths }]
           : []),
-        { id: "links", label: "Links" }
+        { id: "links", label: labels.links }
       ]
     }
   ];

@@ -60,6 +60,7 @@ import { useBespokePropertyWriter } from "../../../hooks/nodes/useBespokePropert
 import { useNodeOutput, useUpstreamValues } from "../../../hooks/nodes/useNodeIO";
 import { useDynamicProperty } from "../../../hooks/nodes/useDynamicProperty";
 import { COMPOSITOR_NODE_TYPE } from "../../../constants/nodeTypes";
+import { useTranslation } from "react-i18next";
 
 /** Canonical blend modes are owned by `@nodetool-ai/gpu`. */
 export type CompositorBlendMode = BlendMode;
@@ -171,6 +172,7 @@ const CompositorBodyInner: React.FC<CompositorBodyProps> = ({
   status,
   isOutputNode
 }) => {
+  const { t } = useTranslation("nodeMenu");
   const theme = useTheme();
   const cssStyles = useMemo(() => styles(theme), [theme]);
   const nodeStoreRef = useNodeStoreRef();
@@ -386,10 +388,10 @@ const CompositorBodyInner: React.FC<CompositorBodyProps> = ({
       <HandleColumn id={id} properties={handleProperties} />
       <div className="preview-area">
         {previewSrc ? (
-          <img src={previewSrc} alt="Composited output" />
+          <img src={previewSrc} alt={t("compositedOutput")} />
         ) : (
           <CheckerDropzone
-            message="Add layers, then run"
+            message={t("addLayersThenRun")}
             icon={<ImageIcon />}
           />
         )}
@@ -397,7 +399,7 @@ const CompositorBodyInner: React.FC<CompositorBodyProps> = ({
 
       <FlexColumn className="layers" gap={0.5}>
         {imageKeys.length === 0 ? (
-          <div className="empty-state">No layers yet - add one below.</div>
+          <div className="empty-state">{t("noLayersYetAddOneBelow")}</div>
         ) : (
           imageKeys.map((_, reverseIndex) => {
             const idx = imageKeys.length - 1 - reverseIndex;

@@ -41,8 +41,6 @@ function LanguageModelMenuDialog({
       onClose={onClose}
       modelData={modelData}
       onModelChange={onModelChange}
-      title="Select Language Model"
-      searchPlaceholder="Search language models..."
       storeHook={useLanguageModelMenuStore}
       recommendedModels={recommendedModels}
       modelPacks={modelPacks}
@@ -51,4 +49,3 @@ function LanguageModelMenuDialog({
 }
 
 export default memo(LanguageModelMenuDialog);
-

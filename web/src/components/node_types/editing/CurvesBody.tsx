@@ -9,6 +9,7 @@
  */
 
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -159,6 +160,7 @@ const CurvesBodyInner: React.FC<CurvesBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(
     () => [styles(theme), adjustmentSliderStyles(theme)],
     [theme]
@@ -201,12 +203,12 @@ const CurvesBodyInner: React.FC<CurvesBodyProps> = ({
 
       <div className="section">
         <FlexRow className="section-header" align="center" justify="space-between">
-          <span className="section-title">Tonal</span>
+          <span className="section-title">{t("tonal")}</span>
           <StateIconButton
             size="small"
             icon={<RestartAltIcon fontSize="small" />}
-            tooltip="Reset all curves"
-            ariaLabel="Reset all curves"
+            tooltip={t("resetAllCurves")}
+            ariaLabel={t("resetAllCurves")}
             onClick={handleReset}
           />
         </FlexRow>
@@ -229,7 +231,7 @@ const CurvesBodyInner: React.FC<CurvesBodyProps> = ({
 
       <div className="section">
         <FlexRow className="section-header" align="center" justify="space-between">
-          <span className="section-title">RGB Midtones</span>
+          <span className="section-title">{t("rgbMidtones")}</span>
         </FlexRow>
         <div className="controls">
           {RGB_SLIDERS.map((spec) => {

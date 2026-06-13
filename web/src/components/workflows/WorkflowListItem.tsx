@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { memo, useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Workflow } from "../../stores/ApiTypes";
 import isEqual from "fast-deep-equal";
 import { WorkflowMiniPreview } from "../version/WorkflowMiniPreview";
@@ -41,6 +42,7 @@ const WorkflowListItem: React.FC<WorkflowListItemProps> = ({
   onRename,
   onOpenAsApp
 }: WorkflowListItemProps) => {
+  const { t } = useTranslation(["workflows", "common"]);
   const openContextMenu = useContextMenuStore((state) => state.openContextMenu);
   const setActions = useWorkflowActionsStore((state) => state.setActions);
   const clearActions = useWorkflowActionsStore((state) => state.clearActions);
@@ -262,7 +264,7 @@ const WorkflowListItem: React.FC<WorkflowListItemProps> = ({
             ref={inputRef}
             type="text"
             defaultValue={workflow.name}
-            aria-label="Workflow name"
+            aria-label={t("workflows:workflowName")}
             autoFocus
             onFocus={handleInputFocus}
             onBlur={handleNameBlur}
@@ -277,7 +279,7 @@ const WorkflowListItem: React.FC<WorkflowListItemProps> = ({
             weight={600}
             sx={{ lineHeight: 1.35 }}
             onDoubleClick={handleNameDoubleClick}
-            title="Double-click to rename"
+            title={t("workflows:doubleClickToRename")}
           >
             {workflow.name}
           </Text>
@@ -287,7 +289,7 @@ const WorkflowListItem: React.FC<WorkflowListItemProps> = ({
             className="open-button"
             variant="contained"
             onClick={handleOpen}
-            title="Open workflow"
+            title={t("workflows:openWorkflow")}
             density="compact"
             sx={{
               padding: "3px 10px",
@@ -308,20 +310,20 @@ const WorkflowListItem: React.FC<WorkflowListItemProps> = ({
               }
             }}
           >
-            OPEN
+            {t("common:open")}
           </EditorButton>
           <FavoriteButton
             isFavorite={isFavorite}
             onToggle={handleToggleFavorite}
-            addTooltip="Add to favorites"
-            removeTooltip="Remove from favorites"
+            addTooltip={t("common:addToFavorites")}
+            removeTooltip={t("common:removeFromFavorites")}
             buttonSize="small"
             className="favorite-button"
             stopPropagation={false}
           />
           <EditButton
             onClick={handleEdit}
-            tooltip="Edit workflow settings"
+            tooltip={t("workflows:editWorkflowSettings")}
             buttonSize="small"
             className="edit-button"
             nodrag={false}

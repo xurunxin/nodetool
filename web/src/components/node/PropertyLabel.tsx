@@ -1,7 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
 import React, { memo, useContext, useMemo } from "react";
-import { titleizeString } from "../../utils/titleizeString";
 import isEqual from "fast-deep-equal";
 import { Tooltip } from "../ui_primitives";
 import { TOOLTIP_ENTER_DELAY } from "../../config/constants";
@@ -16,6 +15,10 @@ import {
 } from "../../contexts/InspectorPropertyHeaderContext";
 import { FlexRow } from "../ui_primitives";
 import { PropertyHandleTooltipContext } from "../../contexts/PropertyHandleTooltipContext";
+import {
+  localizeDescription,
+  localizePropertyName
+} from "../../i18n/nodeMetadataLocalization";
 
 interface PropertyLabelProps {
   id: string;
@@ -61,8 +64,12 @@ const PropertyLabel: React.FC<PropertyLabelProps> = ({
     if (isDynamicProperty) {
       return name;
     }
-    return titleizeString(name);
+    return localizePropertyName(name);
   }, [name, isDynamicProperty]);
+  const localizedDescription = useMemo(
+    () => localizeDescription(description),
+    [description]
+  );
 
   const isInspector = scope === "inspector";
   const headerActions = useInspectorHeaderActions();
@@ -88,6 +95,7 @@ const PropertyLabel: React.FC<PropertyLabelProps> = ({
     <HandleTooltip
       typeMetadata={resolvedHandleTooltipType}
       paramName={name}
+      displayName={formattedName}
       handlePosition={handleTooltipPosition}
       variant="property"
     >
@@ -95,7 +103,7 @@ const PropertyLabel: React.FC<PropertyLabelProps> = ({
     </HandleTooltip>
   ) : (
     <Tooltip
-      title={showTooltip ? description || "" : ""}
+      title={showTooltip ? localizedDescription : ""}
       delay={TOOLTIP_ENTER_DELAY * 2}
       nextDelay={TOOLTIP_ENTER_DELAY}
       placement="left"
@@ -152,7 +160,7 @@ const PropertyLabel: React.FC<PropertyLabelProps> = ({
       ) : (
         labelWithTooltip
       )}
-      {shouldShowInlineDescription && description && (
+      {shouldShowInlineDescription && localizedDescription && (
         <span
           css={css({
             display: "block",
@@ -164,7 +172,7 @@ const PropertyLabel: React.FC<PropertyLabelProps> = ({
             userSelect: "none",
           })}
         >
-          {description}
+          {localizedDescription}
         </span>
       )}
     </>

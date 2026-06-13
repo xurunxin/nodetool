@@ -34,8 +34,6 @@ function ImageModelMenuDialog({
       onClose={onClose}
       modelData={modelData}
       onModelChange={onModelChange}
-      title="Select Image Model"
-      searchPlaceholder="Search image models..."
       storeHook={useImageModelMenuStore}
       recommendedModels={recommendedModels}
       modelPacks={modelPacks}

@@ -30,8 +30,13 @@ import { filterTypesByOutputType } from "../node_menu/typeFilterUtils";
 import { rankSearchNodes } from "../../utils/nodeSearch";
 import { useRecentNodesStore } from "../../stores/RecentNodesStore";
 import NodeItem from "../node_menu/NodeItem";
+import { useTranslation } from "react-i18next";
+import { localizeDataTypeLabel } from "../../i18n/nodeMetadataLocalization";
 
 const NODE_ROW_HEIGHT = 28;
+
+const localizeTypeLabel = (type: string | undefined) =>
+  localizeDataTypeLabel(labelForType(type || ""));
 
 /**
  * Maps a type to the corresponding input and constant node type paths.
@@ -162,6 +167,7 @@ const getListConstantPathForElementType = (
   LIST_CONSTANT_PATHS[elementTypeName] ?? null;
 
 const InputContextMenu: React.FC = () => {
+  const { t } = useTranslation("nodeMenu");
   const theme = useTheme();
   const getMetadata = useMetadataStore((state) => state.getMetadata);
   const allMetadata = useMetadataStore((state) => state.metadata);
@@ -845,11 +851,12 @@ const InputContextMenu: React.FC = () => {
   }
 
   const constantLabel = specializedListLabel
-    ? `Create ${specializedListLabel}`
-    : "Constant";
+    ? t("createNodeLabel", { label: specializedListLabel })
+    : t("constant");
   const inputLabel = specializedListLabel
-    ? `Create ${specializedListLabel} Input`
-    : "Input";
+    ? t("createTypedInput", { type: specializedListLabel })
+    : t("input");
+  const collectElementLabel = localizeTypeLabel(collectElementType?.type);
 
   return (
     <ContextMenu
@@ -881,12 +888,12 @@ const InputContextMenu: React.FC = () => {
           inputRef={searchInputRef}
           size="small"
           fullWidth
-          placeholder="Search nodes..."
+            placeholder={t("searchNodes")}
           value={searchTerm}
           onChange={handleSearchChange}
           onClick={(event) => event.stopPropagation()}
           onKeyDown={handleSearchKeyDown}
-          aria-label="Search connectable nodes"
+            aria-label={t("searchConnectableNodes")}
           sx={{
             "& .MuiOutlinedInput-root": {
               backgroundColor: "action.disabledBackground",
@@ -920,7 +927,7 @@ const InputContextMenu: React.FC = () => {
               endAdornment: searchTerm ? (
                 <InputAdornment position="end">
                   <ToolbarIconButton
-                    aria-label="clear search"
+                      aria-label={t("clearSearch")}
                     onClick={handleClearSearch}
                     size="small"
                     icon={<ClearIcon sx={{ fontSize: 16 }} />}
@@ -946,7 +953,7 @@ const InputContextMenu: React.FC = () => {
                 <PushPinIcon />
               </span>
               <Text size="small">
-                {`Create ${labelForType(collectElementType?.type || "")} Constant`}
+                {t("createTypedConstant", { type: collectElementLabel })}
               </Text>
             </Box>
           )}
@@ -962,7 +969,7 @@ const InputContextMenu: React.FC = () => {
                 <InputIcon />
               </span>
               <Text size="small">
-                {`Create ${labelForType(collectElementType?.type || "")} Input`}
+                {t("createTypedInput", { type: collectElementLabel })}
               </Text>
             </Box>
           )}
@@ -1005,7 +1012,7 @@ const InputContextMenu: React.FC = () => {
               <span className="icon-bg">
                 <EditNoteIcon />
               </span>
-              <Text size="small">Prompt</Text>
+              <Text size="small">{t("prompt")}</Text>
             </Box>
           )}
         </Box>

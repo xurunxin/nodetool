@@ -53,6 +53,7 @@ import { useDelayedVisibility } from "../../hooks/useDelayedVisibility";
 
 import { useNodeFocusStore } from "../../stores/NodeFocusStore";
 import { useNodes } from "../../contexts/NodeContext";
+import { useTranslation } from "react-i18next";
 import {
   CONTROL_HANDLE_ID,
   isAgentNodeType
@@ -392,6 +393,7 @@ const getHeaderColors = (
 };
 
 const BaseNode: React.FC<NodeProps<Node<NodeData>>> = (props) => {
+  const { t } = useTranslation("nodeMenu");
   const theme = useTheme();
   const isDarkMode = useIsDarkMode();
   const { id, type, data, selected, parentId, dragging } = props;
@@ -838,7 +840,7 @@ const BaseNode: React.FC<NodeProps<Node<NodeData>>> = (props) => {
 
       {isFocused && (
         <div style={focusedIndicatorStyle}>
-          FOCUSED
+          {t("focused")}
         </div>
       )}
 
@@ -852,7 +854,7 @@ const BaseNode: React.FC<NodeProps<Node<NodeData>>> = (props) => {
       {showConcurrencyBadge && (
         <div
           style={ambientBadgeStyle}
-          title={`Running in ${concurrentRunCount} runs at once`}
+          title={t("runningInRunsAtOnce", { count: concurrentRunCount })}
         >
           {concurrentRunCount}
         </div>

@@ -5,6 +5,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import GlobalSearchResults from "../../../components/assets/GlobalSearchResults";
 import { AssetWithPath } from "../../../stores/ApiTypes";
 import mockTheme from "../../../__mocks__/themeMock";
+import i18n from "../../../i18n";
 
 jest.mock("../../../stores/BASE_URL", () => ({
   BASE_URL: "http://localhost:7777"
@@ -60,6 +61,10 @@ const renderWithTheme = (component: React.ReactElement) => {
 };
 
 describe("GlobalSearchResults - Stability", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
   const mockAssets: AssetWithPath[] = [
     {
       id: "1",

@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
 import { useMemo, useState, useCallback, memo } from "react";
+import { useTranslation } from "react-i18next";
 import { ToggleGroup, ToggleOption, ToolbarIconButton, Box } from "../ui_primitives";
 import FullscreenIcon from "@mui/icons-material/Fullscreen";
 import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
@@ -36,14 +37,15 @@ const containerStyles = (theme: Theme) =>
 
 const SEVERITIES: Severity[] = ["info", "warning", "error"];
 
-const SEVERITY_LABELS: Record<Severity, string> = {
-  info: "Info",
-  warning: "Warn",
-  error: "Error"
+const SEVERITY_LABEL_KEYS: Record<Severity, "info" | "warning" | "error"> = {
+  info: "info",
+  warning: "warning",
+  error: "error"
 };
 
 const LogPanel: React.FC = memo(function LogPanel() {
   const theme = useTheme();
+  const { t } = useTranslation(["navigation", "common"]);
   const currentWorkflowId = useWorkflowManager((s) => s.currentWorkflowId);
   const openWorkflows = useWorkflowManager((s) => s.openWorkflows);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -107,7 +109,7 @@ const LogPanel: React.FC = memo(function LogPanel() {
       className={isFullscreen ? "fullscreen" : undefined}
     >
       <PanelToolbar
-        title="Logs"
+        title={t("navigation:logs")}
         count={filteredRows.length}
         actions={
           <ToolbarIconButton
@@ -118,9 +120,13 @@ const LogPanel: React.FC = memo(function LogPanel() {
                 <FullscreenIcon fontSize="small" />
               )
             }
-            tooltip={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+            tooltip={
+              isFullscreen
+                ? t("common:exitFullscreen")
+                : t("common:fullscreen")
+            }
             onClick={handleFullscreenToggle}
-            ariaLabel="Toggle fullscreen"
+            ariaLabel={t("common:toggleFullscreen")}
           />
         }
       >
@@ -128,11 +134,15 @@ const LogPanel: React.FC = memo(function LogPanel() {
           value={selectedSeverities}
           onChange={handleSeverityChange}
           compact
-          aria-label="Filter by severity"
+          aria-label={t("common:filterBySeverity")}
         >
           {SEVERITIES.map((s) => (
-            <ToggleOption key={s} value={s} aria-label={s}>
-              {SEVERITY_LABELS[s]}
+            <ToggleOption
+              key={s}
+              value={s}
+              aria-label={t(`common:${SEVERITY_LABEL_KEYS[s]}`)}
+            >
+              {t(`common:${SEVERITY_LABEL_KEYS[s]}`)}
             </ToggleOption>
           ))}
         </ToggleGroup>

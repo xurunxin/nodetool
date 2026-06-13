@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import ReactMarkdown, { type Options } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -54,6 +55,7 @@ const ChatMarkdown: React.FC<ChatMarkdownProps> = React.memo(({
   content,
   onInsertCode
 }) => {
+  const { t } = useTranslation("chat");
   const components = useMemo(
     () => ({
       code: (props: React.ComponentPropsWithoutRef<"code">) => <CodeBlock {...props} onInsert={onInsertCode} />,
@@ -71,7 +73,7 @@ const ChatMarkdown: React.FC<ChatMarkdownProps> = React.memo(({
         if (isAudio && href) {
           return (
             <span css={audioSpanCss}>
-              <audio controls src={href} css={audioCss} aria-label="Audio content" />
+              <audio controls src={href} css={audioCss} aria-label={t("audioContent")} />
               <a {...props} target="_blank" rel="noopener noreferrer">
                 {children}
               </a>
@@ -81,7 +83,7 @@ const ChatMarkdown: React.FC<ChatMarkdownProps> = React.memo(({
         return <a {...props} target="_blank" rel="noopener noreferrer" />;
       }
     }),
-    [onInsertCode]
+    [onInsertCode, t]
   );
 
   return (

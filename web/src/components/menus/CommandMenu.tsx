@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { Command, CommandInput } from "cmdk";
 import { Workflow, WorkflowList } from "../../stores/ApiTypes";
 import { useCallback, useEffect, useState, useRef, memo } from "react";
+import { useTranslation } from "react-i18next";
 import { Dialog } from "../ui_primitives";
 import { getMousePosition } from "../../utils/MousePosition";
 import useAlignNodes from "../../hooks/useAlignNodes";
@@ -106,6 +107,7 @@ const styles = () =>
   });
 
 const WorkflowCommands = memo(function WorkflowCommands() {
+  const { t } = useTranslation("commandMenu");
   const executeAndClose = useCommandMenu((state) => state.executeAndClose);
   // Optimization: use shallow equality to prevent the CommandMenu from
   // re-rendering 60 times a second on unrelated node position updates
@@ -303,43 +305,43 @@ const WorkflowCommands = memo(function WorkflowCommands() {
         style={{ display: "none" }}
         onChange={handleBundleFileChange}
       />
-    <Command.Group heading="Workflow">
+    <Command.Group heading={t("workflow")}>
       <Command.Item onSelect={() => executeAndClose(runWorkflow)}>
-        <PlayArrowRoundedIcon /> Run Workflow
+        <PlayArrowRoundedIcon /> {t("runWorkflow")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(handleSave)}>
-        <SaveRoundedIcon /> Save Workflow
+        <SaveRoundedIcon /> {t("saveWorkflow")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(handleNewWorkflow)}>
-        <AddRoundedIcon /> New Workflow
+        <AddRoundedIcon /> {t("newWorkflow")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(handleCloseWorkflow)}>
-        <CloseRoundedIcon /> Close Workflow
+        <CloseRoundedIcon /> {t("closeWorkflow")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(downloadWorkflow)}>
-        <FileDownloadRoundedIcon /> Download Workflow as JSON
+        <FileDownloadRoundedIcon /> {t("downloadWorkflowJson")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(handleImportWorkflow)}>
-        <FileUploadRoundedIcon /> Import Workflow from JSON
+        <FileUploadRoundedIcon /> {t("importWorkflowJson")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(exportBundle)}>
-        <FolderZipRoundedIcon /> Export Workflow as Bundle (.nodetool)
+        <FolderZipRoundedIcon /> {t("exportWorkflowBundle")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(handleImportBundle)}>
-        <FolderZipRoundedIcon /> Import Workflow from Bundle (.nodetool)
+        <FolderZipRoundedIcon /> {t("importWorkflowBundle")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(copyWorkflow)}>
-        <ContentCopyRoundedIcon /> Copy Workflow as JSON
+        <ContentCopyRoundedIcon /> {t("copyWorkflowJson")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(cancel)}>
-        <CancelRoundedIcon /> Cancel Workflow
+        <CancelRoundedIcon /> {t("cancelWorkflow")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(autoLayout)}>
-        <AutoFixHighRoundedIcon /> Auto Layout
+        <AutoFixHighRoundedIcon /> {t("autoLayout")}
       </Command.Item>
       {isDevelopment && (
         <Command.Item onSelect={() => executeAndClose(() => saveExample(""))}>
-          <SaveRoundedIcon /> Save as Example
+          <SaveRoundedIcon /> {t("saveAsExample")}
         </Command.Item>
       )}
     </Command.Group>
@@ -356,6 +358,7 @@ const EditCommands = memo(function EditCommands({
   undo,
   redo
 }: HistoryActions) {
+  const { t } = useTranslation("commandMenu");
   const executeAndClose = useCommandMenu((state) => state.executeAndClose);
   const { handleCopy, handlePaste, handleCut } = useCopyPaste();
   // Combine multiple useNodes subscriptions into a single selector with shallow equality
@@ -384,94 +387,96 @@ const EditCommands = memo(function EditCommands({
   }, [surroundWithGroup, selectedNodes]);
 
   return (
-    <Command.Group heading="Edit">
+    <Command.Group heading={t("edit")}>
       <Command.Item onSelect={() => executeAndClose(undo)}>
-        <UndoRoundedIcon /> Undo
+        <UndoRoundedIcon /> {t("undo")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(redo)}>
-        <RedoRoundedIcon /> Redo
+        <RedoRoundedIcon /> {t("redo")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(handleCopy)}>
-        <FileCopyRoundedIcon /> Copy
+        <FileCopyRoundedIcon /> {t("copy")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(handleCut)}>
-        <ContentCutRoundedIcon /> Cut
+        <ContentCutRoundedIcon /> {t("cut")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(handlePaste)}>
-        <ContentPasteRoundedIcon /> Paste
+        <ContentPasteRoundedIcon /> {t("paste")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(selectAllNodes)}>
-        <SelectAllRoundedIcon /> Select All
+        <SelectAllRoundedIcon /> {t("selectAll")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(selectionActions.deleteSelected)}>
-        <DeleteRoundedIcon /> Delete Selected
+        <DeleteRoundedIcon /> {t("deleteSelected")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(duplicateNodes)}>
-        <ContentCopyRoundedIcon /> Duplicate
+        <ContentCopyRoundedIcon /> {t("duplicate")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(duplicateNodesVertical)}>
-        <ContentCopyRoundedIcon /> Duplicate Vertical
+        <ContentCopyRoundedIcon /> {t("duplicateVertical")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(handleGroup)}>
-        <GroupWorkRoundedIcon /> Group Selected
+        <GroupWorkRoundedIcon /> {t("groupSelected")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(toggleBypassSelected)}>
-        <BlockRoundedIcon /> Bypass Node
+        <BlockRoundedIcon /> {t("bypassNode")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(openFind)}>
-        <SearchRoundedIcon /> Find in Workflow
+        <SearchRoundedIcon /> {t("findInWorkflow")}
       </Command.Item>
     </Command.Group>
   );
 });
 
 const LayoutCommands = memo(function LayoutCommands() {
+  const { t } = useTranslation("commandMenu");
   const executeAndClose = useCommandMenu((state) => state.executeAndClose);
   const alignNodes = useAlignNodes();
   const selectionActions = useSelectionActions();
 
   return (
-    <Command.Group heading="Layout & Alignment">
+    <Command.Group heading={t("layoutAndAlignment")}>
       <Command.Item
         onSelect={() =>
           executeAndClose(() => alignNodes({ arrangeSpacing: false }))
         }
       >
-        <AlignVerticalCenterRoundedIcon /> Align Nodes
+        <AlignVerticalCenterRoundedIcon /> {t("alignNodes")}
       </Command.Item>
       <Command.Item
         onSelect={() =>
           executeAndClose(() => alignNodes({ arrangeSpacing: true }))
         }
       >
-        <SpaceBarRoundedIcon /> Align Nodes with Spacing
+        <SpaceBarRoundedIcon /> {t("alignNodesWithSpacing")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(selectionActions.alignLeft)}>
-        <AlignHorizontalLeftRoundedIcon /> Align Left
+        <AlignHorizontalLeftRoundedIcon /> {t("alignLeft")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(selectionActions.alignCenter)}>
-        <AlignHorizontalCenterRoundedIcon /> Align Center
+        <AlignHorizontalCenterRoundedIcon /> {t("alignCenter")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(selectionActions.alignRight)}>
-        <AlignHorizontalRightRoundedIcon /> Align Right
+        <AlignHorizontalRightRoundedIcon /> {t("alignRight")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(selectionActions.alignTop)}>
-        <VerticalAlignTopRoundedIcon /> Align Top
+        <VerticalAlignTopRoundedIcon /> {t("alignTop")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(selectionActions.alignMiddle)}>
-        <VerticalAlignCenterRoundedIcon /> Align Middle
+        <VerticalAlignCenterRoundedIcon /> {t("alignMiddle")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(selectionActions.alignBottom)}>
-        <VerticalAlignBottomRoundedIcon /> Align Bottom
+        <VerticalAlignBottomRoundedIcon /> {t("alignBottom")}
       </Command.Item>
       <Command.Item onSelect={() => executeAndClose(selectionActions.distributeHorizontal)}>
-        <ViewColumnRoundedIcon /> Distribute Horizontally
+        <ViewColumnRoundedIcon /> {t("distributeHorizontally")}
       </Command.Item>
     </Command.Group>
   );
 });
 
 const ViewCommands = memo(function ViewCommands() {
+  const { t } = useTranslation("commandMenu");
   const executeAndClose = useCommandMenu((state) => state.executeAndClose);
   const visible = useMiniMapStore((state) => state.visible);
   const toggleVisible = useMiniMapStore((state) => state.toggleVisible);
@@ -479,84 +484,86 @@ const ViewCommands = memo(function ViewCommands() {
   const reactFlow = useReactFlow();
 
   return (
-    <Command.Group heading="View">
+    <Command.Group heading={t("view")}>
       <Command.Item
         onSelect={() => executeAndClose(toggleVisible)}
       >
         {visible ? <MapOutlinedIcon /> : <MapRoundedIcon />}
-        {visible ? "Hide Mini Map" : "Show Mini Map"}
+        {visible ? t("hideMiniMap") : t("showMiniMap")}
       </Command.Item>
       <Command.Item
         onSelect={() => executeAndClose(() => handleFitView({ padding: 0.5 }))}
       >
-        <FitScreenRoundedIcon /> Fit View
+        <FitScreenRoundedIcon /> {t("fitView")}
       </Command.Item>
       <Command.Item
         onSelect={() => executeAndClose(() => reactFlow.zoomIn({ duration: 200 }))}
       >
-        <ZoomInRoundedIcon /> Zoom In
+        <ZoomInRoundedIcon /> {t("zoomIn")}
       </Command.Item>
       <Command.Item
         onSelect={() => executeAndClose(() => reactFlow.zoomOut({ duration: 200 }))}
       >
-        <ZoomOutRoundedIcon /> Zoom Out
+        <ZoomOutRoundedIcon /> {t("zoomOut")}
       </Command.Item>
       <Command.Item
         onSelect={() => executeAndClose(() => reactFlow.zoomTo(0.5, { duration: 200 }))}
       >
-        <RestartAltRoundedIcon /> Reset Zoom (50%)
+        <RestartAltRoundedIcon /> {t("resetZoom50")}
       </Command.Item>
       <Command.Item
         onSelect={() => executeAndClose(() => reactFlow.zoomTo(1, { duration: 200 }))}
       >
-        <ZoomInRoundedIcon /> Zoom to 100%
+        <ZoomInRoundedIcon /> {t("zoomTo100")}
       </Command.Item>
       <Command.Item
         onSelect={() => executeAndClose(() => reactFlow.zoomTo(2, { duration: 200 }))}
       >
-        <ZoomInRoundedIcon /> Zoom to 200%
+        <ZoomInRoundedIcon /> {t("zoomTo200")}
       </Command.Item>
     </Command.Group>
   );
 });
 
 const PanelCommands = memo(function PanelCommands() {
+  const { t } = useTranslation("commandMenu");
   const executeAndClose = useCommandMenu((state) => state.executeAndClose);
   const rightPanelToggle = useRightPanelStore((state) => state.handleViewChange);
   const leftPanelToggle = usePanelStore((state) => state.handleViewChange);
 
   return (
-    <Command.Group heading="Panels">
+    <Command.Group heading={t("panels")}>
       <Command.Item
         onSelect={() => executeAndClose(() => rightPanelToggle("inspector"))}
       >
-        <InfoRoundedIcon /> Toggle Inspector
+        <InfoRoundedIcon /> {t("toggleInspector")}
       </Command.Item>
       <Command.Item
         onSelect={() => executeAndClose(() => leftPanelToggle("settings"))}
       >
-        <SettingsRoundedIcon /> Toggle Workflow Settings
+        <SettingsRoundedIcon /> {t("toggleWorkflowSettings")}
       </Command.Item>
       <Command.Item
         onSelect={() => executeAndClose(() => leftPanelToggle("agent"))}
       >
-        <ChatRoundedIcon /> Toggle Agent
+        <ChatRoundedIcon /> {t("toggleAgent")}
       </Command.Item>
       <Command.Item
         onSelect={() => executeAndClose(() => leftPanelToggle("assets"))}
       >
-        <PermMediaRoundedIcon /> Toggle Assets
+        <PermMediaRoundedIcon /> {t("toggleAssets")}
       </Command.Item>
       <Command.Item
         onSelect={() => executeAndClose(() => leftPanelToggle("workflows"))}
       >
-        <AccountTreeRoundedIcon /> Toggle Workflows Panel
+        <AccountTreeRoundedIcon /> {t("toggleWorkflowsPanel")}
       </Command.Item>
     </Command.Group>
   );
 });
 
 const OpenWorkflowCommands = memo(function OpenWorkflowCommands() {
+  const { t } = useTranslation("commandMenu");
   const executeAndClose = useCommandMenu((state) => state.executeAndClose);
   const navigate = useNavigate();
   const load = useWorkflowManager((state) => state.load);
@@ -576,7 +583,7 @@ const OpenWorkflowCommands = memo(function OpenWorkflowCommands() {
   if (!workflows) { return null; }
 
   return (
-    <Command.Group heading="Workflows">
+    <Command.Group heading={t("workflows")}>
       {workflows.workflows.map((workflow) => (
         <Command.Item
           key={workflow.id}
@@ -605,6 +612,7 @@ const CommandMenu: React.FC<CommandMenuProps> = ({
   redo,
   reactFlowWrapper
 }) => {
+  const { t } = useTranslation("commandMenu");
   const [pastePosition, setPastePosition] = useState({ x: 0, y: 0 });
   const input = useRef<HTMLInputElement>(null);
   const focusInputTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -669,10 +677,10 @@ const CommandMenu: React.FC<CommandMenuProps> = ({
       className="command-menu-dialog"
       css={styles()}
     >
-      <Command label="Command Menu" className="command-menu">
-        <CommandInput ref={input} />
+      <Command label={t("commandMenu")} className="command-menu">
+        <CommandInput ref={input} placeholder={t("searchCommands")} />
         <Command.List>
-          <Command.Empty>No results found.</Command.Empty>
+          <Command.Empty>{t("noResultsFound")}</Command.Empty>
           <WorkflowCommands />
           <EditCommands undo={undo} redo={redo} />
           <LayoutCommands />

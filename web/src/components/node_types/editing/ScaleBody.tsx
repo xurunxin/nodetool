@@ -8,6 +8,7 @@
  */
 
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -148,6 +149,7 @@ const ScaleBodyInner: React.FC<ScaleBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(() => styles(theme), [theme]);
 
   const properties = nodeMetadata.properties ?? [];
@@ -196,7 +198,7 @@ const ScaleBodyInner: React.FC<ScaleBodyProps> = ({
       </div>
 
       <div className="controls">
-        <span className="ctrl-label">Scale</span>
+        <span className="ctrl-label">{t("scale")}</span>
         <NodeSlider
           min={SCALE_MIN}
           max={SCALE_MAX}

@@ -207,9 +207,9 @@ const LogViewer: React.FC = () => {
   }, [handleMouseUp]);
 
   const statusBarText = useMemo(() => {
-    let text = `Showing ${filteredLogs.length} of ${logs.length} logs`;
-    if (selectedIndices.size > 0) text += ` • ${selectedIndices.size} selected`;
-    if (copied) text += " • Copied to clipboard!";
+    let text = `显示 ${filteredLogs.length} / ${logs.length} 条日志`;
+    if (selectedIndices.size > 0) text += ` • 已选择 ${selectedIndices.size} 条`;
+    if (copied) text += " • 已复制到剪贴板";
     return text;
   }, [filteredLogs.length, logs.length, selectedIndices.size, copied]);
 
@@ -220,23 +220,23 @@ const LogViewer: React.FC = () => {
             <input
               type="text"
               className="search-input"
-              placeholder="Search logs..."
+              placeholder="搜索日志..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
           <div className="filter-container">
-            <label>Level:</label>
+            <label>级别：</label>
             <select
               className="filter-select"
               value={logLevel}
               onChange={(e) => setLogLevel(e.target.value as "all" | "info" | "warn" | "error")}
             >
-              <option value="all">All</option>
-              <option value="info">Info</option>
-              <option value="warn">Warning</option>
-              <option value="error">Error</option>
+              <option value="all">全部</option>
+              <option value="info">信息</option>
+              <option value="warn">警告</option>
+              <option value="error">错误</option>
             </select>
           </div>
 
@@ -247,18 +247,18 @@ const LogViewer: React.FC = () => {
                 checked={autoScroll}
                 onChange={(e) => setAutoScroll(e.target.checked)}
               />
-              Auto-scroll
+              自动滚动
             </label>
             {selectedIndices.size > 0 && (
               <button className="btn btn-outline" onClick={clearSelection}>
-                Clear Selection ({selectedIndices.size})
+                清除选择（{selectedIndices.size}）
               </button>
             )}
             <button className={`btn btn-secondary ${allCopied ? 'copied' : ''}`} onClick={handleCopyLogs}>
-              {allCopied ? '✓ Copied!' : 'Copy All'}
+              {allCopied ? '已复制' : '复制全部'}
             </button>
             <button className="btn btn-danger" onClick={handleClearLogs}>
-              Clear
+              清空
             </button>
           </div>
         </div>
@@ -266,7 +266,7 @@ const LogViewer: React.FC = () => {
         <div className="logs-container" ref={logsContainerRef} onScroll={handleScroll}>
           {filteredLogs.length === 0 ? (
             <div className="empty-state">
-              <div>No logs to display</div>
+              <div>暂无可显示的日志</div>
             </div>
           ) : (
             filteredLogs.map((log, index) => (
@@ -276,7 +276,7 @@ const LogViewer: React.FC = () => {
                 onMouseDown={(e) => handleLogMouseDown(e, index)}
                 onMouseEnter={() => handleLogMouseEnter(index)}
                 onClick={(e) => handleLogClick(index, e)}
-                title="Click to select • Shift+Click for range • Cmd/Ctrl+Click to toggle • Drag to select range"
+                title="点击选择 • Shift+点击选择范围 • Cmd/Ctrl+点击切换 • 拖动选择范围"
               >
                 <span className="log-text">{log}</span>
               </div>
@@ -287,7 +287,7 @@ const LogViewer: React.FC = () => {
 
         <div className="status-bar">
           <span>{statusBarText}</span>
-          <span>{autoScroll ? "Auto-scroll: ON" : "Auto-scroll: OFF"}</span>
+          <span>{autoScroll ? "自动滚动：开启" : "自动滚动：关闭"}</span>
         </div>
     </div>
   );

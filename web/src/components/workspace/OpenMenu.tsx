@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
@@ -129,6 +130,7 @@ const TEXT_FILE_TEMPLATES: readonly TextFileTemplate[] = [
  * home/launcher screen — the only way to open existing documents until then.
  */
 const OpenMenu = ({ anchorEl, open, onClose }: OpenMenuProps) => {
+  const { t } = useTranslation(["workspace", "common"]);
   const [view, setView] = useState<MenuView>("root");
   const [assetQuery, setAssetQuery] = useState("");
   const [wfFilter, setWfFilter] = useState("");
@@ -149,13 +151,16 @@ const OpenMenu = ({ anchorEl, open, onClose }: OpenMenuProps) => {
   const handleNew = useCallback(async () => {
     const workflow = await createNew();
     openTab({
-      type: "workflow",
-      ref: workflow.id,
-      mode: "edit",
-      title: workflow.name
+        type: "workflow",
+        ref: workflow.id,
+        mode: "edit",
+      title:
+        workflow.name === "New Workflow"
+          ? t("workspace:newWorkflow")
+          : workflow.name
     });
     close();
-  }, [createNew, openTab, close]);
+  }, [createNew, openTab, close, t]);
 
   const handleNewImage = useCallback(async () => {
     try {
@@ -164,13 +169,13 @@ const OpenMenu = ({ anchorEl, open, onClose }: OpenMenuProps) => {
         type: "image",
         ref: asset.id,
         mode: "edit",
-        title: asset.name || "Untitled image"
+        title: asset.name || t("workspace:untitledImage")
       });
       close();
     } catch (error) {
       console.error("Failed to create image", error);
     }
-  }, [createAsset, openTab, close]);
+  }, [createAsset, openTab, close, t]);
 
   const handleNewText = useCallback(
     async (template: TextFileTemplate) => {
@@ -204,13 +209,13 @@ const OpenMenu = ({ anchorEl, open, onClose }: OpenMenuProps) => {
         type: "timeline",
         ref: sequence.id,
         mode: "edit",
-        title: sequence.name || "Untitled video"
+        title: sequence.name || t("workspace:untitledVideo")
       });
       close();
     } catch (error) {
       console.error("Failed to create video", error);
     }
-  }, [createTimeline, openTab, close]);
+  }, [createTimeline, openTab, close, t]);
 
   const handleNewModel = useCallback(async () => {
     try {
@@ -219,13 +224,13 @@ const OpenMenu = ({ anchorEl, open, onClose }: OpenMenuProps) => {
         type: "model3d",
         ref: asset.id,
         mode: "edit",
-        title: asset.name || "Untitled model"
+        title: asset.name || t("workspace:untitledModel")
       });
       close();
     } catch (error) {
       console.error("Failed to create 3D model", error);
     }
-  }, [createAsset, openTab, close]);
+  }, [createAsset, openTab, close, t]);
 
   const { data: workflowList, isLoading: workflowsLoading } =
     useQuery<WorkflowList>({
@@ -278,11 +283,11 @@ const OpenMenu = ({ anchorEl, open, onClose }: OpenMenuProps) => {
         type,
         ref: asset.id,
         mode: "view",
-        title: asset.name || "Untitled"
+        title: asset.name || t("workspace:untitled")
       });
       close();
     },
-    [openTab, close]
+    [openTab, close, t]
   );
 
   return (
@@ -298,39 +303,39 @@ const OpenMenu = ({ anchorEl, open, onClose }: OpenMenuProps) => {
         {view === "root" && (
           <>
             <MenuItemPrimitive
-              label="New workflow"
+              label={t("workspace:newWorkflow")}
               icon={<AddRoundedIcon fontSize="small" />}
               onClick={() => void handleNew()}
             />
             <MenuItemPrimitive
-              label="New text file…"
+              label={t("workspace:newTextFile")}
               icon={<ArticleOutlinedIcon fontSize="small" />}
               hasSubmenu
               onClick={() => setView("texts")}
             />
             <MenuItemPrimitive
-              label="New image"
+              label={t("workspace:newImage")}
               icon={<ImageOutlinedIcon fontSize="small" />}
               onClick={() => void handleNewImage()}
             />
             <MenuItemPrimitive
-              label="New video"
+              label={t("workspace:newVideo")}
               icon={<MovieOutlinedIcon fontSize="small" />}
               onClick={() => void handleNewVideo()}
             />
             <MenuItemPrimitive
-              label="New 3D model"
+              label={t("workspace:new3dModel")}
               icon={<ViewInArOutlinedIcon fontSize="small" />}
               onClick={() => void handleNewModel()}
               dividerAfter
             />
             <MenuItemPrimitive
-              label="Open workflow…"
+              label={t("workspace:openWorkflow")}
               hasSubmenu
               onClick={() => setView("workflows")}
             />
             <MenuItemPrimitive
-              label="Open asset…"
+              label={t("workspace:openAsset")}
               hasSubmenu
               onClick={() => setView("assets")}
             />
@@ -340,7 +345,7 @@ const OpenMenu = ({ anchorEl, open, onClose }: OpenMenuProps) => {
         {view === "texts" && (
           <>
             <MenuItemPrimitive
-              label="Back"
+              label={t("common:back")}
               icon={<ArrowBackRoundedIcon fontSize="small" />}
               onClick={() => setView("root")}
               dividerAfter
@@ -358,7 +363,7 @@ const OpenMenu = ({ anchorEl, open, onClose }: OpenMenuProps) => {
         {view === "workflows" && (
           <>
             <MenuItemPrimitive
-              label="Back"
+              label={t("common:back")}
               icon={<ArrowBackRoundedIcon fontSize="small" />}
               onClick={() => setView("root")}
               dividerAfter
@@ -367,7 +372,7 @@ const OpenMenu = ({ anchorEl, open, onClose }: OpenMenuProps) => {
               <TextInput
                 autoFocus
                 fullWidth
-                placeholder="Filter workflows"
+                placeholder={t("workspace:filterWorkflows")}
                 value={wfFilter}
                 onChange={(e) => setWfFilter(e.target.value)}
               />
@@ -379,14 +384,16 @@ const OpenMenu = ({ anchorEl, open, onClose }: OpenMenuProps) => {
             )}
             {!workflowsLoading && workflows.length === 0 && (
               <Caption color="secondary" sx={{ px: 2, py: 1.5 }}>
-                No workflows found.
+                {t("workspace:noWorkflowsFound")}
               </Caption>
             )}
             {workflows.map((w) => (
               <MenuItemPrimitive
                 key={w.id}
-                label={w.name || "Untitled"}
-                onClick={() => openWorkflow(w.id, w.name || "Untitled")}
+                label={w.name || t("workspace:untitled")}
+                onClick={() =>
+                  openWorkflow(w.id, w.name || t("workspace:untitled"))
+                }
               />
             ))}
           </>
@@ -395,7 +402,7 @@ const OpenMenu = ({ anchorEl, open, onClose }: OpenMenuProps) => {
         {view === "assets" && (
           <>
             <MenuItemPrimitive
-              label="Back"
+              label={t("common:back")}
               icon={<ArrowBackRoundedIcon fontSize="small" />}
               onClick={() => setView("root")}
               dividerAfter
@@ -404,14 +411,14 @@ const OpenMenu = ({ anchorEl, open, onClose }: OpenMenuProps) => {
               <TextInput
                 autoFocus
                 fullWidth
-                placeholder="Search assets (2+ chars)"
+                placeholder={t("workspace:searchAssetsHint")}
                 value={assetQuery}
                 onChange={(e) => setAssetQuery(e.target.value)}
               />
             </FlexRow>
             {trimmedAssetQuery.length < 2 && (
               <Caption color="secondary" sx={{ px: 2, py: 1.5 }}>
-                Type at least 2 characters to search.
+                {t("workspace:typeAtLeastTwoChars")}
               </Caption>
             )}
             {trimmedAssetQuery.length >= 2 && assetsFetching && (
@@ -423,13 +430,13 @@ const OpenMenu = ({ anchorEl, open, onClose }: OpenMenuProps) => {
               !assetsFetching &&
               openableAssets.length === 0 && (
                 <Caption color="secondary" sx={{ px: 2, py: 1.5 }}>
-                  No openable assets match.
+                  {t("workspace:noOpenableAssetsMatch")}
                 </Caption>
               )}
             {openableAssets.map(({ asset, type }) => (
               <MenuItemPrimitive
                 key={asset.id}
-                label={asset.name || "Untitled"}
+                label={asset.name || t("workspace:untitled")}
                 secondary={type}
                 onClick={() => openAsset(asset, type)}
               />

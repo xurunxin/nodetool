@@ -23,10 +23,10 @@ const LogContainer: React.FC<LogContainerProps> = ({ logs, isExpanded, onToggle 
     <div id="log-container" className={isExpanded ? 'expanded' : 'collapsed'}>
       <div id="log-controls">
         <button id="log-toggle" className="log-button" onClick={onToggle}>
-          <span>{isExpanded ? '▼ Hide Log' : '▲ Show Log'}</span>
+          <span>{isExpanded ? '▼ 隐藏日志' : '▲ 显示日志'}</span>
         </button>
         <button id="open-log-file" className="log-button" onClick={handleOpenLogFile}>
-          <span aria-label="Open Log File">📁</span>
+          <span aria-label="打开日志文件">📁</span>
         </button>
       </div>
       <div id="log" ref={logElementRef}>

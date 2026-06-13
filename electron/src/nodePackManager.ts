@@ -39,13 +39,13 @@ const SPEC_RE = /^(@[a-z0-9][\w.-]*\/)?[a-z0-9][\w.-]*(@[\w.\-^~><=*]+)?$/i;
 
 function assertValidSpec(spec: string): void {
   if (typeof spec !== "string" || !SPEC_RE.test(spec)) {
-    throw new Error(`Invalid npm pack spec: ${String(spec)}`);
+    throw new Error(`npm 节点包规格无效：${String(spec)}`);
   }
 }
 
 function assertValidName(name: string): void {
   if (typeof name !== "string" || !NAME_RE.test(name)) {
-    throw new Error(`Invalid npm pack name: ${String(name)}`);
+    throw new Error(`npm 节点包名称无效：${String(name)}`);
   }
 }
 
@@ -65,7 +65,7 @@ function resolveNpm(): string {
     }
   }
   throw new Error(
-    "npm not found in PATH. Install Node.js (which includes npm) to manage node packs."
+    "PATH 中找不到 npm。请安装包含 npm 的 Node.js 后再管理节点包。"
   );
 }
 
@@ -117,7 +117,7 @@ async function runNpm(args: string[]): Promise<void> {
     });
     child.on("exit", (code) => {
       if (code === 0) resolve();
-      else reject(new Error(`npm exited with code ${code}: ${stderr.trim()}`));
+      else reject(new Error(`npm 已退出，退出码 ${code}：${stderr.trim()}`));
     });
     child.on("error", reject);
   });
@@ -134,7 +134,7 @@ export async function installNodePack(
     await runNpm(["install", spec]);
     return {
       success: true,
-      message: `Installed ${spec}. Restart the server to load it.`
+      message: `${spec} 已安装。请重启服务器以加载它。`
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -152,7 +152,7 @@ export async function uninstallNodePack(
     await runNpm(["uninstall", name]);
     return {
       success: true,
-      message: `Uninstalled ${name}. Restart the server to apply.`
+      message: `${name} 已卸载。请重启服务器以应用更改。`
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

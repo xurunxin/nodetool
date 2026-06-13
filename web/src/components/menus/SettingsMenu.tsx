@@ -610,7 +610,14 @@ function SettingsPage() {
                         : settingsTab === TAB_INTEGRATIONS
                           ? integrationsSidebarSections
                           : settingsTab === aboutTabIndex
-                            ? getAboutSidebarSections()
+                            ? getAboutSidebarSections({
+                                application: t("aboutApplicationSection"),
+                                operatingSystem: t("aboutOperatingSystem"),
+                                featuresVersions: t("aboutFeaturesVersions"),
+                                resources: t("aboutResources"),
+                                installationPaths: t("aboutInstallationPaths"),
+                                links: t("aboutLinks")
+                              })
                             : []
                     }
                     onSectionClick={scrollToSection}
@@ -807,7 +814,7 @@ function SettingsPage() {
                           autoComplete="off"
                           slotProps={{ htmlInput: { min: 20, max: 1000, step: 10 } }}
                           id="audio-buffer-ms-input"
-                          label="Audio Buffer (ms)"
+                          label={t("audioBufferMs")}
                           value={settings.audioBufferMs ?? 100}
                           onChange={(e) =>
                             updateSettings({
@@ -821,10 +828,7 @@ function SettingsPage() {
                           size="small"
                         />
                         <Text className="description">
-                          Playback buffer for realtime audio (modular synth
-                          patches). Lower values reduce knob-to-ear latency;
-                          higher values prevent dropouts when the editor is
-                          busy.
+                          {t("audioBufferMsDescription")}
                         </Text>
                       </SearchItem>
 

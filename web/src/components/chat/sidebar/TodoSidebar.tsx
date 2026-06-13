@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import AutorenewIcon from "@mui/icons-material/Autorenew";
@@ -90,6 +91,7 @@ const STATUS_ICONS = {
 
 export const TodoSidebar: React.FC<TodoSidebarProps> = memo(({ todos }) => {
   const theme = useTheme();
+  const { t } = useTranslation("chat");
   const counts = todos.reduce(
     (acc, t) => {
       acc[t.status] += 1;
@@ -106,7 +108,7 @@ export const TodoSidebar: React.FC<TodoSidebarProps> = memo(({ todos }) => {
           weight={600}
           sx={{ letterSpacing: 0.6, textTransform: "uppercase" }}
         >
-          Tasks
+          {t("tasks")}
         </Text>
         {todos.length > 0 && (
           <Text size="smaller" sx={{ opacity: 0.6 }}>
@@ -118,7 +120,7 @@ export const TodoSidebar: React.FC<TodoSidebarProps> = memo(({ todos }) => {
         {todos.length === 0 ? (
           <div className="empty-state">
             <Text size="small">
-              No tasks yet. The agent will list its plan here as it works.
+              {t("noTasksYet")}
             </Text>
           </div>
         ) : (

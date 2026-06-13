@@ -31,8 +31,6 @@ function TTSModelMenuDialog({
       onClose={onClose}
       modelData={modelData}
       onModelChange={onModelChange}
-      title="Select TTS Model"
-      searchPlaceholder="Search text-to-speech models..."
       storeHook={useTTSModelMenuStore}
       recommendedModels={recommendedModels}
       modelPacks={modelPacks}

@@ -21,6 +21,7 @@ import React, {
   useRef,
   useState
 } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -275,6 +276,7 @@ const LevelsBodyInner: React.FC<LevelsBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(() => styles(theme), [theme]);
 
   const properties = nodeMetadata.properties ?? [];
@@ -483,7 +485,7 @@ const LevelsBodyInner: React.FC<LevelsBodyProps> = ({
           value={histView}
           exclusive
           onChange={handleHistViewChange}
-          aria-label="Histogram channel"
+          aria-label={t("histogramChannel")}
         >
           {HIST_VIEW_OPTIONS.map((o) => (
             <ToggleOption key={o.value} value={o.value} aria-label={o.label}>
@@ -501,7 +503,7 @@ const LevelsBodyInner: React.FC<LevelsBodyProps> = ({
             value={channel}
             exclusive
             onChange={handleChannelChange}
-            aria-label="Channel"
+            aria-label={t("channel")}
           >
             {CHANNEL_OPTIONS.map((o) => (
               <ToggleOption key={o.value} value={o.value} aria-label={o.label}>
@@ -512,7 +514,7 @@ const LevelsBodyInner: React.FC<LevelsBodyProps> = ({
         </FlexRow>
 
         <FlexRow className="slider-row" align="center" gap={0.5}>
-          <span className="slider-label">Black</span>
+          <span className="slider-label">{t("black")}</span>
           <NodeSlider
             min={0}
             max={255}
@@ -520,12 +522,12 @@ const LevelsBodyInner: React.FC<LevelsBodyProps> = ({
             value={channelProps.black}
             onChange={handleBlackChange}
             onChangeCommitted={commit}
-            aria-label="Black point"
+            aria-label={t("blackPoint")}
           />
           <span className="slider-readout">{channelProps.black}</span>
         </FlexRow>
         <FlexRow className="slider-row" align="center" gap={0.5}>
-          <span className="slider-label">Gamma</span>
+          <span className="slider-label">{t("gamma")}</span>
           <NodeSlider
             min={0.1}
             max={10}
@@ -533,12 +535,12 @@ const LevelsBodyInner: React.FC<LevelsBodyProps> = ({
             value={channelProps.gamma}
             onChange={handleGammaChange}
             onChangeCommitted={commit}
-            aria-label="Gamma"
+            aria-label={t("gamma")}
           />
           <span className="slider-readout">{channelProps.gamma.toFixed(2)}</span>
         </FlexRow>
         <FlexRow className="slider-row" align="center" gap={0.5}>
-          <span className="slider-label">White</span>
+          <span className="slider-label">{t("white")}</span>
           <NodeSlider
             min={0}
             max={255}
@@ -546,7 +548,7 @@ const LevelsBodyInner: React.FC<LevelsBodyProps> = ({
             value={channelProps.white}
             onChange={handleWhiteChange}
             onChangeCommitted={commit}
-            aria-label="White point"
+            aria-label={t("whitePoint")}
           />
           <span className="slider-readout">{channelProps.white}</span>
         </FlexRow>

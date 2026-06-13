@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { memo, useCallback, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -11,8 +12,6 @@ import type { PermissionMode } from "../../../stores/ApiTypes";
 
 interface ModeItem {
   id: PermissionMode;
-  label: string;
-  description: string;
   /** Theme palette key driving the status dot color. */
   tone: "info" | "warning" | "success";
 }
@@ -20,20 +19,14 @@ interface ModeItem {
 const MODES: ModeItem[] = [
   {
     id: "plan",
-    label: "Plan",
-    description: "Read & propose only. No actions.",
     tone: "info"
   },
   {
     id: "default",
-    label: "Default",
-    description: "Reads run; actions ask first.",
     tone: "warning"
   },
   {
     id: "auto",
-    label: "Auto",
-    description: "Everything runs, no prompts.",
     tone: "success"
   }
 ];
@@ -99,6 +92,7 @@ const dotCss = (color: string) =>
  * `permissionMode` directly from GlobalChatStore.
  */
 const PermissionSelector: React.FC = () => {
+  const { t } = useTranslation("chat");
   const theme = useTheme();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -127,7 +121,9 @@ const PermissionSelector: React.FC = () => {
         ref={buttonRef}
         className="permission-selector-trigger"
         icon={<span css={dotCss(dotColor(theme, activeMode.tone))} />}
-        title={`Permission: ${activeMode.label}`}
+        title={t("permissionModeTitle", {
+          mode: t(`permissionModes.${activeMode.id}.label`)
+        })}
         active={open}
         showChevron
         onClick={() => setOpen(true)}
@@ -147,10 +143,10 @@ const PermissionSelector: React.FC = () => {
         <div
           css={menuStyles(theme)}
           role="menu"
-          aria-label="Permission mode"
+          aria-label={t("permissionMode")}
         >
           <Caption className="permission-menu-header" size="small">
-            Permission mode
+            {t("permissionMode")}
           </Caption>
           {MODES.map((m) => {
             const selected = m.id === mode;
@@ -179,10 +175,10 @@ const PermissionSelector: React.FC = () => {
                     weight={600}
                     sx={{ color: "inherit", lineHeight: 1.25 }}
                   >
-                    {m.label}
+                    {t(`permissionModes.${m.id}.label`)}
                   </Text>
                   <Caption size="tiny" color="secondary" sx={{ lineHeight: 1.3 }}>
-                    {m.description}
+                    {t(`permissionModes.${m.id}.description`)}
                   </Caption>
                 </FlexColumn>
                 {selected && (

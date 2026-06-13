@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import React, { useCallback, memo } from "react";
@@ -38,6 +39,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = memo(({
   onInsert,
   ...props
 }) => {
+  const { t } = useTranslation("chat");
   const _theme = useTheme();
   const codeContent = String(children).trimEnd();
   const match = /language-(\w+)/.exec(className || "");
@@ -86,7 +88,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = memo(({
                 type="button"
                 className="button"
                 onClick={handleInsert}
-                title="Insert into editor"
+                title={t("insertIntoEditor")}
                 style={{
                   padding: "6px 10px",
                   fontSize: "var(--fontSizeSmaller)",
@@ -97,7 +99,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = memo(({
                   cursor: "pointer"
                 }}
               >
-                Insert into editor
+                {t("insertIntoEditor")}
               </button>
             )}
             <CopyButton value={codeContent} />

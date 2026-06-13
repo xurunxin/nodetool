@@ -10,12 +10,14 @@ import { useReactFlow } from "@xyflow/react";
 import useMetadataStore from "../../stores/MetadataStore";
 import DeleteIcon from "@mui/icons-material/Delete";
 import RouteIcon from "@mui/icons-material/Route";
+import { useTranslation } from "react-i18next";
 
 interface EdgeContextMenuProps {
   edgeId?: string;
 }
 
 const EdgeContextMenuComponent: React.FC<EdgeContextMenuProps> = () => {
+  const { t } = useTranslation("nodeMenu");
   const menuPosition = useContextMenuStore((state) => state.menuPosition);
   const closeContextMenu = useContextMenuStore(
     (state) => state.closeContextMenu
@@ -126,13 +128,13 @@ const EdgeContextMenuComponent: React.FC<EdgeContextMenuProps> = () => {
       <ContextMenuItem
         onClick={handleInsertReroute}
         IconComponent={<RouteIcon />}
-        label="Insert Reroute"
-        tooltip="Insert a reroute node at this position"
+        label={t("insertReroute")}
+        tooltip={t("insertRerouteTooltip")}
       />
       <ContextMenuItem
         onClick={handleDeleteEdge}
         IconComponent={<DeleteIcon />}
-        label="Delete Edge"
+        label={t("deleteEdge")}
         tooltip={
           <span
             style={{
@@ -141,11 +143,13 @@ const EdgeContextMenuComponent: React.FC<EdgeContextMenuProps> = () => {
               alignItems: "center"
             }}
           >
-            <span>Delete this connection</span>
+            <span>{t("deleteConnection")}</span>
             <span style={{ textAlign: "center" }}>
-              <kbd>Middle Mouse Button</kbd> or select the edge and press{" "}
-              <kbd>Delete</kbd> or <kbd>Backspace</kbd>. Select many edges by
-              holding <kbd>CTRL</kbd> or <kbd>Meta</kbd> while clicking.
+              <kbd>{t("middleMouseButton")}</kbd>{" "}
+              {t("orSelectEdgeAndPress")} <kbd>{t("deleteKey")}</kbd>{" "}
+              {t("orKey")} <kbd>{t("backspaceKey")}</kbd>.{" "}
+              {t("selectManyEdgesHint")} <kbd>{t("ctrlKey")}</kbd>{" "}
+              {t("orKey")} <kbd>{t("commandKey")}</kbd> {t("whileClicking")}.
             </span>
           </span>
         }

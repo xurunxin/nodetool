@@ -10,6 +10,7 @@ import {
   Restore as RestoreIcon,
   Compare as CompareIcon
 } from "@mui/icons-material";
+import { useTranslation } from "react-i18next";
 import { Caption, Chip, DeleteButton, LoadingSpinner, Text, Tooltip, ToolbarIconButton } from "../ui_primitives";
 import { SaveType } from "../../stores/VersionHistoryStore";
 import { formatDistanceToNow, format } from "date-fns";
@@ -27,21 +28,6 @@ interface VersionListItemProps {
   onCompare: (versionId: string) => void;
   isRestoring?: boolean;
 }
-
-const getSaveTypeLabel = (saveType: SaveType): string => {
-  switch (saveType) {
-    case "manual":
-      return "manual";
-    case "autosave":
-      return "auto";
-    case "restore":
-      return "restored";
-    case "checkpoint":
-      return "checkpoint";
-    default:
-      return saveType;
-  }
-};
 
 const formatBytes = (bytes: number): string => {
   if (bytes < 1024) {
@@ -64,6 +50,26 @@ const VersionListItem = React.memo(function VersionListItem({
   onCompare,
   isRestoring = false
 }: VersionListItemProps) {
+  const { t } = useTranslation("common");
+
+  const getSaveTypeLabel = useCallback(
+    (saveType: SaveType): string => {
+      switch (saveType) {
+        case "manual":
+          return t("manual");
+        case "autosave":
+          return t("auto");
+        case "restore":
+          return t("restored");
+        case "checkpoint":
+          return t("checkpoint");
+        default:
+          return saveType;
+      }
+    },
+    [t]
+  );
+
   const handleClick = useCallback(() => {
     if (compareMode) {
       onCompare(version.id);
@@ -209,7 +215,7 @@ const VersionListItem = React.memo(function VersionListItem({
           <ToolbarIconButton
             size="small"
             onClick={handleClick}
-            tooltip="Select for comparison"
+            tooltip={t("selectForComparison")}
             icon={<CompareIcon sx={{ fontSize: 14 }} />}
             sx={{ padding: "2px" }}
             nodrag={false}
@@ -221,14 +227,14 @@ const VersionListItem = React.memo(function VersionListItem({
             <ToolbarIconButton
               size="small"
               onClick={handleRestore}
-              tooltip="Restore this version"
+              tooltip={t("restoreThisVersion")}
               icon={<RestoreIcon sx={{ fontSize: 14 }} />}
               sx={{ padding: "2px" }}
               nodrag={false}
             />
             <DeleteButton
               onClick={handleDelete}
-              tooltip="Delete version"
+              tooltip={t("deleteVersion")}
               sx={{ padding: "2px", "& .MuiSvgIcon-root": { fontSize: 14 } }}
             />
           </>

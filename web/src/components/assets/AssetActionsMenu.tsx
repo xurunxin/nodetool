@@ -2,6 +2,7 @@
 import { css } from "@emotion/react";
 
 import React, { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import TuneIcon from "@mui/icons-material/Tune";
 import FolderIcon from "@mui/icons-material/Folder";
 import FolderOffIcon from "@mui/icons-material/FolderOff";
@@ -85,6 +86,7 @@ interface AssetActionsMenuProps {
 }
 
 const AssetActionsMenu: React.FC<AssetActionsMenuProps> = ({ maxItemSize, onUploadFiles }) => {
+  const { t } = useTranslation("assets");
   const setSelectedAssetIds = useAssetGridStore(
     (state) => state.setSelectedAssetIds
   );
@@ -125,7 +127,7 @@ const AssetActionsMenu: React.FC<AssetActionsMenuProps> = ({ maxItemSize, onUplo
   );
 
   const activeWorkflowName = workflowFilter
-    ? (workflowData?.workflows?.find((w: Workflow) => w.id === workflowFilter)?.name ?? "Workflow")
+    ? (workflowData?.workflows?.find((w: Workflow) => w.id === workflowFilter)?.name ?? t("workflow"))
     : null;
 
   const handleTypeFilterChange = useCallback(
@@ -147,8 +149,7 @@ const AssetActionsMenu: React.FC<AssetActionsMenuProps> = ({ maxItemSize, onUplo
   const theme = useTheme();
 
   const typeFilterActive = typeFilter !== "all";
-  const typeFilterLabel =
-    TYPE_FILTERS.find((f) => f.key === typeFilter)?.label ?? "All";
+  const typeFilterLabel = t(`typeFilters.${typeFilter}`);
 
   return (
     <Box className="asset-menu" sx={{ width: "100%" }}>
@@ -165,20 +166,20 @@ const AssetActionsMenu: React.FC<AssetActionsMenuProps> = ({ maxItemSize, onUplo
       >
         <ToolbarIconButton
           icon={<TuneIcon />}
-          tooltip={expanded ? "Hide filters" : "Show filters"}
+          tooltip={expanded ? t("hideFilters") : t("showFilters")}
           onClick={() => setExpanded((prev) => !prev)}
           tooltipPlacement="top"
           nodrag={false}
         />
         <ToolbarIconButton
           icon={foldersVisible ? <FolderIcon /> : <FolderOffIcon />}
-          tooltip={foldersVisible ? "Hide folders" : "Show folders"}
+          tooltip={foldersVisible ? t("hideFolders") : t("showFolders")}
           onClick={toggleFoldersVisible}
           tooltipPlacement="top"
           nodrag={false}
         />
         <ToolbarIconButton
-          tooltip="Filter by type"
+          tooltip={t("filterByType")}
           onClick={(e) => setTypeFilterAnchor(e.currentTarget)}
           tooltipPlacement="top"
           nodrag={false}
@@ -205,7 +206,11 @@ const AssetActionsMenu: React.FC<AssetActionsMenuProps> = ({ maxItemSize, onUplo
           </FlexRow>
         </ToolbarIconButton>
         <ToolbarIconButton
-          tooltip={workflowFilter ? `Workflow: ${activeWorkflowName}` : "Filter by workflow"}
+          tooltip={
+            workflowFilter
+              ? t("workflowFilterActive", { name: activeWorkflowName })
+              : t("filterByWorkflow")
+          }
           onClick={(e) => setWorkflowFilterAnchor(e.currentTarget)}
           tooltipPlacement="top"
           nodrag={false}
@@ -229,14 +234,14 @@ const AssetActionsMenu: React.FC<AssetActionsMenuProps> = ({ maxItemSize, onUplo
                 whiteSpace: "nowrap"
               }}
             >
-              {activeWorkflowName ?? "Workflow"}
+              {activeWorkflowName ?? t("workflow")}
             </span>
             <ArrowDropDownIcon />
           </FlexRow>
         </ToolbarIconButton>
         <ToolbarIconButton
           icon={<CreateNewFolderIcon />}
-          tooltip="Create folder"
+          tooltip={t("createNewFolder")}
           onClick={() => setCreateFolderDialogOpen(true)}
           tooltipPlacement="top"
           nodrag={false}
@@ -244,7 +249,7 @@ const AssetActionsMenu: React.FC<AssetActionsMenuProps> = ({ maxItemSize, onUplo
         <UploadButton
           onFileSelect={(files) => onUploadFiles?.(files)}
           iconVariant="file"
-          tooltip="Upload files"
+          tooltip={t("uploadFiles")}
           multiple
         />
       </FlexRow>
@@ -259,7 +264,7 @@ const AssetActionsMenu: React.FC<AssetActionsMenuProps> = ({ maxItemSize, onUplo
         {TYPE_FILTERS.map((filter) => (
           <MenuItemPrimitive
             key={filter.key}
-            label={filter.label}
+            label={t(`typeFilters.${filter.key}`)}
             icon={TYPE_FILTER_ICONS[filter.key]}
             selected={typeFilter === filter.key}
             onClick={() => {
@@ -285,7 +290,7 @@ const AssetActionsMenu: React.FC<AssetActionsMenuProps> = ({ maxItemSize, onUplo
           <SearchInput
             value={workflowSearch}
             onChange={setWorkflowSearch}
-            placeholder="Search workflows..."
+            placeholder={t("searchWorkflowsHint")}
             autoFocus
             fullWidth
             size="small"
@@ -293,7 +298,7 @@ const AssetActionsMenu: React.FC<AssetActionsMenuProps> = ({ maxItemSize, onUplo
         </Box>
         <Box sx={{ overflowY: "auto", maxHeight: 240 }}>
           <MenuItemPrimitive
-            label="All workflows"
+            label={t("allWorkflows")}
             icon={<FilterAltOffIcon />}
             selected={workflowFilter === null}
             onClick={() => {
@@ -325,7 +330,7 @@ const AssetActionsMenu: React.FC<AssetActionsMenuProps> = ({ maxItemSize, onUplo
           className="asset-menu-with-global-search"
           css={styles(theme)}
         >
-          <SearchErrorBoundary fallbackTitle="Search Input Error">
+          <SearchErrorBoundary fallbackTitle={t("searchInputError")}>
             <AssetSearchInput
               onLocalSearchChange={onLocalSearchChange}
               focusOnTyping={false}

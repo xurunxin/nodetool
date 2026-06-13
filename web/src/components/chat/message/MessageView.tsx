@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Message,
   MessageContent,
@@ -98,6 +99,7 @@ const ToolCallCard: React.FC<{
   result?: { name?: string | null; content: unknown };
   durationMs?: number | null;
 }> = React.memo(({ tc, result, durationMs }) => {
+  const { t } = useTranslation("chat");
   const [open, setOpen] = useState(false);
   const runningToolCallId = useGlobalChatStore((s) => s.currentRunningToolCallId);
   const runningToolMessage = useGlobalChatStore((s) => s.currentToolMessage);
@@ -151,7 +153,7 @@ const ToolCallCard: React.FC<{
     ? subtaskTitle || fallbackName
     : liveMessage || fallbackName;
   const showSeparateMessage = isSubtask && !!liveMessage;
-  const headlineLabel = isSubtask ? "Subtask" : null;
+  const headlineLabel = isSubtask ? t("subtask") : null;
 
   return (
     <div
@@ -207,7 +209,7 @@ const ToolCallCard: React.FC<{
           )}
           {hasDetails && (
             <ToolbarIconButton
-              tooltip={open ? "Hide details" : "Show details"}
+              tooltip={open ? t("hideDetails") : t("showDetails")}
               onClick={handleToggleOpen}
               icon={<ExpandMoreIcon className={`expand-icon${open ? " expanded" : ""}`} />}
               className="tool-expand-button"
@@ -219,7 +221,7 @@ const ToolCallCard: React.FC<{
         <FlexColumn gap={0.5} sx={{ marginTop: "4px" }}>
           {isSubtask && subtaskInstructions && (
             <FlexColumn gap={0.5}>
-              <Caption className="tool-section-title">Instructions</Caption>
+              <Caption className="tool-section-title">{t("instructions")}</Caption>
               <Text size="small" className="subtask-instructions">
                 {subtaskInstructions}
               </Text>
@@ -228,14 +230,14 @@ const ToolCallCard: React.FC<{
           {hasArgs && (
             <FlexColumn gap={0.5}>
               <Caption className="tool-section-title">
-                {isSubtask ? "Other arguments" : "Arguments"}
+                {isSubtask ? t("otherArguments") : t("arguments")}
               </Caption>
               <PrettyJson value={displayArgs} />
             </FlexColumn>
           )}
           {hasResult && (
             <FlexColumn gap={0.5}>
-              <Caption className="tool-section-title">Result</Caption>
+              <Caption className="tool-section-title">{t("result")}</Caption>
               <ToolResult toolName={tc.name} content={resultContent} />
             </FlexColumn>
           )}
@@ -275,6 +277,7 @@ export const MessageView: React.FC<
   executionMessagesById,
   showMeta = false
 }) => {
+  const { t } = useTranslation("common");
   const insertIntoEditor = useEditorInsertion();
 
   const copyText = useMemo(() => {
@@ -507,7 +510,7 @@ export const MessageView: React.FC<
             <CopyButton
               value={copyText}
               buttonSize="small"
-              tooltip="Copy to clipboard"
+              tooltip={t("copyToClipboard")}
             />
           </div>
         )}

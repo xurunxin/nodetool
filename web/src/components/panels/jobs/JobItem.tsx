@@ -24,6 +24,7 @@ import { useJobAssets } from "../../../serverState/useJobAssets";
 import { trpcClient } from "../../../trpc/client";
 import { useQueryClient } from "@tanstack/react-query";
 import isEqual from "fast-deep-equal";
+import { useTranslation } from "react-i18next";
 
 /**
  * Format a duration in milliseconds to a human-readable string
@@ -225,6 +226,7 @@ const AssetThumb = memo(function AssetThumb({ asset }: { asset: Asset }) {
 });
 
 const JobItem = ({ job }: { job: Job }) => {
+  const { t } = useTranslation("workflows");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: workflow } = useWorkflow(job.workflow_id);
@@ -279,7 +281,7 @@ const JobItem = ({ job }: { job: Job }) => {
     [cancelling, job.id, job.workflow_id, queryClient]
   );
 
-  const workflowName = job.name || workflow?.name || "Loading...";
+  const workflowName = job.name || workflow?.name || t("loading");
   const shortId = `#${job.id.slice(0, 4)}`;
   const isActive =
     job.status === "running" ||
@@ -292,40 +294,40 @@ const JobItem = ({ job }: { job: Job }) => {
   const elapsed = job.started_at ? elapsedTime : null;
   const duration = getJobDuration(job.started_at, job.finished_at);
   const assetCount = assets?.length ?? 0;
-  const assetNoun = assets?.[0]?.content_type?.startsWith("video/")
-    ? "video"
+  const assetKind = assets?.[0]?.content_type?.startsWith("video/")
+    ? "jobVideoCount"
     : assets?.[0]?.content_type?.startsWith("image/")
-      ? "image"
-      : "asset";
+      ? "jobImageCount"
+      : "jobAssetCount";
   const countText =
     assetCount > 0
-      ? `${assetCount} ${assetNoun}${assetCount > 1 ? "s" : ""}`
+      ? t(assetKind, { count: assetCount })
       : null;
 
   let metaText: string;
   if (cancelling) {
-    metaText = "Cancelling…";
+    metaText = t("cancelling");
   } else if (isError) {
-    metaText = job.error || "Failed";
+    metaText = job.error || t("failed");
   } else if (job.status === "running") {
-    metaText = ["Running", elapsed].filter(Boolean).join(" · ");
+    metaText = [t("queueRunning"), elapsed].filter(Boolean).join(" · ");
   } else if (
     job.status === "queued" ||
     job.status === "scheduled" ||
     job.status === "starting"
   ) {
-    metaText = ["In queue", clockLabel(job.started_at)].filter(Boolean).join(
+    metaText = [t("inQueue"), clockLabel(job.started_at)].filter(Boolean).join(
       " · "
     );
   } else if (job.status === "cancelled") {
-    metaText = ["Cancelled", clockLabel(job.finished_at)]
+    metaText = [t("queueCancelled"), clockLabel(job.finished_at)]
       .filter(Boolean)
       .join(" · ");
   } else {
     metaText =
       [duration, countText, clockLabel(job.finished_at)]
         .filter(Boolean)
-        .join(" · ") || "Completed";
+        .join(" · ") || t("completed");
   }
 
   return (

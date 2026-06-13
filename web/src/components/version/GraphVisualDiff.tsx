@@ -8,6 +8,7 @@
 
 import React, { useMemo, memo } from "react";
 import { useTheme } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 import { GraphDiff } from "../../utils/graphDiff";
 import { Graph, Node } from "../../stores/ApiTypes";
 import { Caption, FlexColumn, FlexRow, Surface, Tooltip } from "../ui_primitives";
@@ -31,6 +32,7 @@ interface MiniNodeProps {
 
 const MiniNode: React.FC<MiniNodeProps> = memo(function MiniNode({ node, x, y, status, width, height }) {
   const theme = useTheme();
+  const { t } = useTranslation("common");
 
   const colors = useMemo(() => ({
     added: { bg: theme.palette.success.main, border: theme.palette.success.dark, text: theme.palette.success.contrastText },
@@ -61,7 +63,7 @@ const MiniNode: React.FC<MiniNodeProps> = memo(function MiniNode({ node, x, y, s
         fontWeight={status !== "unchanged" ? "bold" : "normal"}
         style={{ pointerEvents: "none" }}
       >
-        {node.type?.split(".").pop() || "Node"}
+        {node.type?.split(".").pop() || t("node")}
       </text>
       {status !== "unchanged" && (
         <circle
@@ -109,6 +111,16 @@ export const GraphVisualDiff: React.FC<GraphVisualDiffProps> = ({
   height = 180
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("common");
+  const statusLabels = useMemo(
+    () => ({
+      added: t("added"),
+      removed: t("removed"),
+      modified: t("modified"),
+      unchanged: t("unchanged")
+    }),
+    [t]
+  );
 
   const nodePositions = useMemo(() => {
     if (!newGraph?.nodes && !oldGraph?.nodes) {
@@ -232,7 +244,7 @@ export const GraphVisualDiff: React.FC<GraphVisualDiffProps> = ({
           justify="center"
         >
           <Caption color="secondary">
-            No changes to display
+            {t("noChangesToDisplay")}
           </Caption>
         </FlexColumn>
       </Surface>
@@ -312,10 +324,10 @@ export const GraphVisualDiff: React.FC<GraphVisualDiffProps> = ({
               title={
                 <FlexColumn gap={0} align="flex-start">
                     <Caption sx={{ fontWeight: 600 }}>
-                      {node.type?.split(".").pop() || "Node"}
+                      {node.type?.split(".").pop() || t("node")}
                     </Caption>
                     <Caption>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                      {statusLabels[status]}
                     </Caption>
                   </FlexColumn>
                 }

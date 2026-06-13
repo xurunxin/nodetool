@@ -14,7 +14,7 @@ export const RUNTIME_PACKAGES: Record<RuntimePackageId, RuntimePackage> = {
     id: "python",
     name: "Python",
     description:
-      "Python interpreter and uv package manager. Required for AI and data processing nodes.",
+      "Python 解释器和 uv 包管理器。AI 节点和数据处理节点需要此运行时。",
     category: "language",
     versionRange: ">=3.11 <3.12",
     condaPackages: ["python=3.11", "uv"],
@@ -31,7 +31,7 @@ export const RUNTIME_PACKAGES: Record<RuntimePackageId, RuntimePackage> = {
     id: "nodejs",
     name: "Node.js",
     description:
-      "JavaScript runtime bundled with Electron. Required for Node.js-based nodes and npm packages.",
+      "Electron 内置的 JavaScript 运行时。Node.js 节点和 npm 包需要此运行时。",
     category: "language",
     versionRange: "*",
     binaries: {
@@ -45,7 +45,7 @@ export const RUNTIME_PACKAGES: Record<RuntimePackageId, RuntimePackage> = {
   bash: new CondaRuntimePackage({
     id: "bash",
     name: "Bash",
-    description: "Bash shell for script execution nodes.",
+    description: "用于脚本执行节点的 Bash shell。",
     category: "language",
     versionRange: "*",
     condaPackages: ["bash"],
@@ -55,7 +55,7 @@ export const RUNTIME_PACKAGES: Record<RuntimePackageId, RuntimePackage> = {
   ruby: new CondaRuntimePackage({
     id: "ruby",
     name: "Ruby",
-    description: "Ruby interpreter for Ruby-based nodes.",
+    description: "用于 Ruby 节点的 Ruby 解释器。",
     category: "language",
     versionRange: "*",
     condaPackages: ["ruby"],
@@ -65,7 +65,7 @@ export const RUNTIME_PACKAGES: Record<RuntimePackageId, RuntimePackage> = {
   lua: new CondaRuntimePackage({
     id: "lua",
     name: "Lua",
-    description: "Lua interpreter for Lua-based nodes.",
+    description: "用于 Lua 节点的 Lua 解释器。",
     category: "language",
     versionRange: "*",
     condaPackages: ["lua"],
@@ -76,7 +76,7 @@ export const RUNTIME_PACKAGES: Record<RuntimePackageId, RuntimePackage> = {
     id: "ffmpeg",
     name: "FFmpeg & Codecs",
     description:
-      "Audio/video processing toolkit. Required for video nodes and the FFmpeg Agent.",
+      "音频和视频处理工具集。视频节点和 FFmpeg 智能体需要此工具。",
     category: "tool",
     versionRange: ">=6 <7",
     condaPackages: [
@@ -103,7 +103,7 @@ export const RUNTIME_PACKAGES: Record<RuntimePackageId, RuntimePackage> = {
     id: "pandoc",
     name: "Pandoc",
     description:
-      "Universal document converter for text and file format conversion.",
+      "通用文档转换器，用于文本和文件格式转换。",
     category: "tool",
     versionRange: "*",
     condaPackages: ["pandoc"],
@@ -114,7 +114,7 @@ export const RUNTIME_PACKAGES: Record<RuntimePackageId, RuntimePackage> = {
     id: "pdftotext",
     name: "PDF Tools (Poppler)",
     description:
-      "PDF text extraction using pdftotext from poppler. Required for PDF-to-text conversion.",
+      "使用 Poppler 的 pdftotext 提取 PDF 文本。PDF 转文本需要此工具。",
     category: "tool",
     versionRange: "*",
     condaPackages: ["poppler"],
@@ -124,7 +124,7 @@ export const RUNTIME_PACKAGES: Record<RuntimePackageId, RuntimePackage> = {
   "yt-dlp": new CondaRuntimePackage({
     id: "yt-dlp",
     name: "yt-dlp",
-    description: "Video/audio downloader from YouTube and other sites.",
+    description: "用于从 YouTube 和其他站点下载视频或音频。",
     category: "tool",
     versionRange: "*",
     condaPackages: ["yt-dlp"],
@@ -135,7 +135,7 @@ export const RUNTIME_PACKAGES: Record<RuntimePackageId, RuntimePackage> = {
     id: "transformers-js",
     name: "Transformers.js",
     description:
-      "Optional Hugging Face Transformers.js runtime (includes the ONNX Runtime) for local JavaScript AI nodes.",
+      "本地 JavaScript AI 节点可选的 Hugging Face Transformers.js 运行时，包含 ONNX Runtime。",
     category: "library",
     versionRange: "4.x",
     npmPackages: ["@huggingface/transformers@4.2.0", "kokoro-js@1.2.1"],
@@ -146,7 +146,7 @@ export const RUNTIME_PACKAGES: Record<RuntimePackageId, RuntimePackage> = {
     id: "tensorflow-js",
     name: "TensorFlow.js Models",
     description:
-      "Optional TensorFlow.js model packages for image classification, object detection, and Q&A nodes.",
+      "图像分类、目标检测和问答节点可选的 TensorFlow.js 模型包。",
     category: "library",
     versionRange: "4.x",
     npmPackages: [

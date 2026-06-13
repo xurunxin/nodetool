@@ -8,6 +8,7 @@
  */
 
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -134,6 +135,7 @@ const ResizeBodyInner: React.FC<ResizeBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(() => styles(theme), [theme]);
 
   const properties = nodeMetadata.properties ?? [];
@@ -229,7 +231,7 @@ const ResizeBodyInner: React.FC<ResizeBodyProps> = ({
               id={`resize-width-${id}`}
               nodeId={id}
               name="width"
-              description={widthProperty.description ?? "Target width"}
+              description={widthProperty.description ?? t("targetWidth")}
               value={widthValue}
               min={widthProperty.min ?? 1}
               max={widthProperty.max ?? 8192}
@@ -247,8 +249,8 @@ const ResizeBodyInner: React.FC<ResizeBodyProps> = ({
           isActive={chainLocked}
           icon={<LinkOffIcon fontSize="small" />}
           activeIcon={<LinkIcon fontSize="small" />}
-          tooltip={chainLocked ? "Unlock aspect ratio" : "Lock aspect ratio"}
-          ariaLabel={chainLocked ? "Unlock aspect ratio" : "Lock aspect ratio"}
+          tooltip={chainLocked ? t("unlockAspectRatio") : t("lockAspectRatio")}
+          ariaLabel={chainLocked ? t("unlockAspectRatio") : t("lockAspectRatio")}
           onClick={() => setChainLocked((v) => !v)}
         />
         <div className="dim-field">
@@ -257,7 +259,7 @@ const ResizeBodyInner: React.FC<ResizeBodyProps> = ({
               id={`resize-height-${id}`}
               nodeId={id}
               name="height"
-              description={heightProperty.description ?? "Target height"}
+              description={heightProperty.description ?? t("targetHeight")}
               value={heightValue}
               min={heightProperty.min ?? 1}
               max={heightProperty.max ?? 8192}

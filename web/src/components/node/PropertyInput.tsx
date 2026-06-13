@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
 import React, { useCallback, createElement, memo, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { shallow } from "zustand/shallow";
 import { Property } from "../../stores/ApiTypes";
 import { PropertyHandleTooltipContext } from "../../contexts/PropertyHandleTooltipContext";
@@ -203,6 +204,7 @@ const PropertyInput: React.FC<PropertyInputProps> = ({
   onValueChange
 }: PropertyInputProps) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const containerCss = useMemo(
     () => propertyInputContainerStyles(theme),
     [theme]
@@ -456,7 +458,7 @@ const PropertyInput: React.FC<PropertyInputProps> = ({
       inputField = (
         <form onSubmit={handleNameSubmit} className="property-input-form">
           <input
-            aria-label="Property name"
+            aria-label={t("propertyName")}
             value={editedName}
             onChange={handleNameChange}
             onBlur={handleNameSubmit}
@@ -468,7 +470,7 @@ const PropertyInput: React.FC<PropertyInputProps> = ({
       inputField = createElement(componentType, propertyProps);
     }
   } else {
-    inputField = <div>Unsupported property type</div>;
+    inputField = <div>{t("unsupportedPropertyType")}</div>;
   }
   const handleDoubleClick = React.useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {

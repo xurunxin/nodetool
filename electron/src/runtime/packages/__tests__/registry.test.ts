@@ -154,7 +154,7 @@ describe("RuntimeRegistry", () => {
     it("throws for unknown package", async () => {
       await expect(
         registry.uninstall("nonexistent" as never)
-      ).rejects.toThrow("Unknown runtime");
+      ).rejects.toThrow("未知运行时");
     });
   });
 
@@ -168,7 +168,7 @@ describe("RuntimeRegistry", () => {
         events.push(ev);
       }
       expect(events).toEqual([
-        { type: "error", message: "Unknown runtime: nonexistent" }
+        { type: "error", message: "未知运行时：nonexistent" }
       ]);
     });
 
@@ -185,7 +185,7 @@ describe("RuntimeRegistry", () => {
       expect(events[0]).toEqual(
         expect.objectContaining({
           type: "error",
-          message: expect.stringContaining("requires test-runtime")
+          message: expect.stringContaining("需要先安装 test-runtime")
         })
       );
     });

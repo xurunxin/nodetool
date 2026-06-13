@@ -1,5 +1,6 @@
 import type { MouseEvent } from "react";
 import { useCallback, memo } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 //mui
 import { MenuItem } from "@mui/material";
@@ -29,6 +30,7 @@ import AssetInfoPanel from "./AssetInfoPanel";
 import { useShallow } from "zustand/react/shallow";
 
 const AssetItemContextMenu = () => {
+  const { t } = useTranslation("assets");
   const menuPosition = useContextMenuStore((state) => state.menuPosition);
   const closeContextMenu = useContextMenuStore((state) => state.closeContextMenu);
 
@@ -103,46 +105,46 @@ const AssetItemContextMenu = () => {
       await copyAssetToClipboard(asset.content_type, asset.get_url, asset.name || undefined);
 
       const contentTypeLabel = asset.content_type.startsWith("image/")
-        ? "Image"
+        ? t("image")
         : asset.content_type.startsWith("video/")
-        ? "Video info"
+        ? t("videoInfo")
         : asset.content_type.startsWith("audio/")
-        ? "Audio info"
-        : "Content";
+        ? t("audioInfo")
+        : t("content");
 
       addNotification({
         type: "success",
-        content: `${contentTypeLabel} copied to clipboard`,
+        content: t("copiedToClipboard", { item: contentTypeLabel }),
         alert: true
       });
     } catch (error) {
       console.error("Failed to copy to clipboard", error);
       addNotification({
         type: "error",
-        content: "Failed to copy to clipboard",
+        content: t("failedToCopyToClipboard"),
         alert: true
       });
     }
-  }, [isSingleClipboardSupported, selectedAssets, addNotification]);
+  }, [isSingleClipboardSupported, selectedAssets, addNotification, t]);
 
   const handleDownloadAssets = async (selectedAssetIds: string[]) => {
     addNotification({
       type: "info",
-      content: "Download started. This may take a while.",
+      content: t("downloadStarted"),
       alert: true
     });
     try {
       await download(selectedAssetIds);
       addNotification({
         type: "success",
-        content: "Download finished successfully.",
+        content: t("downloadFinished"),
         alert: true
       });
     } catch (error) {
       console.error("Download failed", error);
       addNotification({
         type: "error",
-        content: "Download failed. Please check the console for more details.",
+        content: t("downloadFailed"),
         alert: true
       });
     }
@@ -220,94 +222,98 @@ const AssetItemContextMenu = () => {
         <Divider />
         <ContextMenuItem
           onClick={openRenameDialog}
-          label="Rename"
+          label={t("rename")}
           IconComponent={<DriveFileRenameOutlineIcon />}
-          tooltip="Rename selected assets"
+          tooltip={t("renameSelectedAssets")}
         />
         {openableTabType && (
           <ContextMenuItem
             onClick={handleOpenAsTab}
-            label="Open as Tab"
+            label={t("openAsTab")}
             IconComponent={<TabIcon />}
-            tooltip="Open this asset in a new editor tab"
+            tooltip={t("openAssetInNewEditorTab")}
           />
         )}
         {singleVideo && (
           <ContextMenuItem
             onClick={handleEditVideo}
-            label={singleVideo.timeline_id ? "Edit Timeline" : "Create Timeline from Video"}
+            label={
+              singleVideo.timeline_id
+                ? t("editTimeline")
+                : t("createTimelineFromVideo")
+            }
             IconComponent={<MovieEditIcon />}
             tooltip={
               singleVideo.timeline_id
-                ? "Open the timeline this video was rendered from"
-                : "Create a timeline from this video and open it for editing"
+                ? t("openRenderedVideoTimeline")
+                : t("createTimelineFromVideoTooltip")
             }
           />
         )}
         <Divider />
         <ContextMenuItem
           onClick={openMoveDialog}
-          label="Move to existing folder"
+          label={t("moveToExistingFolder")}
           IconComponent={<DriveFileMoveIcon />}
-          tooltip="Move selected assets to an existing folder"
+          tooltip={t("moveSelectedAssetsToExistingFolder")}
         />
         <ContextMenuItem
           onClick={openCreateFolderDialog}
-          label={hasSelectedAssets ? "Move to new folder" : "Create new folder"}
+          label={hasSelectedAssets ? t("moveToNewFolder") : t("createNewFolder")}
           IconComponent={<CreateNewFolderIcon />}
           tooltip={
             hasSelectedAssets
-              ? "Create a new folder and move selected assets into it"
-              : "Create a new folder in the current location"
+              ? t("createFolderAndMoveSelectedAssets")
+              : t("createNewFolderCurrentLocation")
           }
         />
         <Divider />
         <ContextMenuItem
           onClick={downloadSelected}
-          label="Download Selected Assets"
+          label={t("downloadSelectedAssets")}
           IconComponent={<FileDownloadIcon />}
-          tooltip="Download selected assets to your Downloads folder"
+          tooltip={t("downloadSelectedAssetsTooltip")}
         />
         {isElectron && isSingleClipboardSupported && (
           <ContextMenuItem
             onClick={copyToClipboard}
             label={
               selectedAssets[0]?.content_type?.startsWith("image/")
-                ? "Copy Image"
+                ? t("copyImage")
                 : selectedAssets[0]?.content_type?.startsWith("video/")
-                ? "Copy Video Info"
+                ? t("copyVideoInfo")
                 : selectedAssets[0]?.content_type?.startsWith("audio/")
-                ? "Copy Audio Info"
-                : "Copy Content"
+                ? t("copyAudioInfo")
+                : t("copyContent")
             }
             IconComponent={<ContentCopyIcon />}
             tooltip={
               selectedAssets[0]?.content_type?.startsWith("image/")
-                ? "Copy image to clipboard"
+                ? t("copyImageToClipboard")
                 : selectedAssets[0]?.content_type?.startsWith("video/")
-                ? "Copy video URL and metadata to clipboard"
+                ? t("copyVideoInfoToClipboard")
                 : selectedAssets[0]?.content_type?.startsWith("audio/")
-                ? "Copy audio URL and metadata to clipboard"
-                : "Copy content to clipboard"
+                ? t("copyAudioInfoToClipboard")
+                : t("copyContentToClipboard")
             }
           />
         )}
         {isTwoImages && (
           <ContextMenuItem
             onClick={handleCompareImages}
-            label="Compare Images"
+            label={t("compareImages")}
             IconComponent={<CompareIcon />}
-            tooltip="Compare the two selected images side-by-side"
+            tooltip={t("compareImagesTooltip")}
           />
         )}
         <Divider />
         <div style={{ height: ".5em" }} />
         <ContextMenuItem
           onClick={openDeleteDialog}
-          label="Delete"
+          label={t("delete")}
           addButtonClassName="delete"
           IconComponent={<RemoveCircleIcon />}
-          tooltip="Delete selected assets"
+          tooltip={t("deleteSelectedAssets")}
         />
         {singleAsset && <AssetInfoPanel asset={singleAsset} />}
       </ContextMenu>

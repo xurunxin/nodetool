@@ -15,6 +15,7 @@ import { Asset } from "../../stores/ApiTypes";
 import { IconForType } from "../../config/IconForType";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 
 const styles = (_theme: Theme) =>
   css({
@@ -38,6 +39,7 @@ const AssetTree: React.FC<AssetTreeProps> = ({
   onLoading
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("assets");
   const [assetTree, setAssetTree] = useState<AssetTreeNode[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [closedFolders, setClosedFolders] = useState<string[]>([]);
@@ -226,7 +228,7 @@ const AssetTree: React.FC<AssetTreeProps> = ({
                       <ExpandLess />
                     )}
                     <Text size="small" color="secondary">
-                      ({node.totalAssets - 1} items)
+                      {t("treeItemCount", { count: node.totalAssets - 1 })}
                     </Text>
                   </>
                 )}
@@ -244,7 +246,7 @@ const AssetTree: React.FC<AssetTreeProps> = ({
         ))}
       </List>
     );
-  }, [closedFolders, createFolderToggleHandler, getFileIcon, theme.vars.palette.grey]);
+  }, [closedFolders, createFolderToggleHandler, getFileIcon, theme.vars.palette.grey, t]);
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -255,7 +257,7 @@ const AssetTree: React.FC<AssetTreeProps> = ({
       {renderAssetTree(assetTree)}
     </Box>
   ) : (
-    <Text>No assets found</Text>
+    <Text>{t("noAssetsFound")}</Text>
   );
 };
 

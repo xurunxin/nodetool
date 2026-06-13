@@ -156,7 +156,7 @@ describe("packageManager spawn contract", () => {
     // uninstallPackage returns { success: false, message: "..." } when
     // runUvCommand rejects. The ENOENT branch surfaces a reinstall hint.
     expect(result.success).toBe(false);
-    expect(result.message).toMatch(/Reinstall environment|could not run uv/i);
+    expect(result.message).toMatch(/重新安装环境|无法运行/i);
   });
 
   test("non-zero exit code rejects with stderr in message", async () => {

@@ -22,6 +22,7 @@ import type { Asset } from "../../../../stores/ApiTypes";
 import { $createAssetMentionNode } from "./AssetMentionNode";
 import { $insertAssetMention } from "./promptEditorState";
 import { assetToUri } from "./promptTokens";
+import { useTranslation } from "react-i18next";
 
 class AssetTypeaheadOption extends MenuOption {
   asset: Asset;
@@ -128,6 +129,7 @@ const AssetOptionRow: React.FC<{
  */
 const AssetMentionPlugin: React.FC = () => {
   const theme = useTheme();
+  const { t } = useTranslation("assets");
   const [editor] = useLexicalComposerContext();
   const search = useAssetStore((state) => state.search);
   const [queryString, setQueryString] = useState<string | null>(null);
@@ -205,7 +207,7 @@ const AssetMentionPlugin: React.FC = () => {
           <div css={menuStyles(theme)} className="asset-mention-menu nowheel">
             {options.length === 0 ? (
               <div className="asset-empty">
-                {queryString ? "No matching assets" : "Type to search assets"}
+                {queryString ? t("noMatchingAssets") : t("typeToSearchAssets")}
               </div>
             ) : (
               options.map((option, index) => (

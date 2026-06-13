@@ -1,4 +1,5 @@
 import React, { useMemo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { FlexRow, Tooltip, Box } from "../ui_primitives";
 import { useShallow } from "zustand/react/shallow";
 import { useModelDownloadStore } from "../../stores/ModelDownloadStore";
@@ -28,6 +29,7 @@ const moveRight = keyframes`
 `;
 
 const OverallDownloadProgress: React.FC = () => {
+  const { t } = useTranslation("models");
   const { downloads, openDialog } = useModelDownloadStore(
     useShallow((state) => ({
       downloads: state.downloads,
@@ -63,14 +65,15 @@ const OverallDownloadProgress: React.FC = () => {
     },
     [openDialog]
   );
+  const label = t("downloadProgress");
 
   return (
-    <Tooltip title="Download Progress" delay={TOOLTIP_ENTER_DELAY}>
+    <Tooltip title={label} delay={TOOLTIP_ENTER_DELAY}>
       <FlexRow
         className="overall-download-progress"
         role="button"
         tabIndex={0}
-        aria-label="Download Progress"
+        aria-label={label}
         align="center"
         sx={{
           cursor: "pointer",

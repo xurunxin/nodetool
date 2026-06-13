@@ -17,6 +17,8 @@ export const NAMESPACES = [
   "models",
   "chat",
   "settings",
+  "commandMenu",
+  "nodeMenu",
   "errors"
 ] as const;
 

@@ -6,6 +6,7 @@ import {
 import { Caption, Divider, Text, Box, ContextMenu } from "../ui_primitives";
 import { Connection } from "@xyflow/react";
 import useContextMenu from "../../stores/ContextMenuStore";
+import { useTranslation } from "react-i18next";
 
 export interface ConnectionMatchOption {
   id: string;
@@ -21,6 +22,7 @@ export interface ConnectionMatchMenuPayload {
 }
 
 const ConnectionMatchMenu: React.FC = () => {
+  const { t } = useTranslation("nodeMenu");
   const { openMenuType, menuPosition, payload, closeContextMenu } =
     useContextMenu((state) => ({
       openMenuType: state.openMenuType,
@@ -65,7 +67,7 @@ const ConnectionMatchMenu: React.FC = () => {
     >
       <MenuItem disabled>
         <Text size="small" weight={600}>
-          Select Connection
+          {t("selectConnection")}
         </Text>
       </MenuItem>
       {options.map((option) => [

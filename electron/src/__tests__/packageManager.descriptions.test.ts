@@ -46,8 +46,8 @@ describe('package descriptions', () => {
       description: 'Nunchaku quantization library for efficient inference',
     });
 
-    expect(description).toContain('FLUX and Qwen image models');
-    expect(description).toContain('Nunchaku-optimized HuggingFace models');
+    expect(description).toContain('FLUX 和 Qwen 图像模型');
+    expect(description).toContain('Nunchaku 优化的 HuggingFace 模型');
   });
 
   test('overrides nodetool core description with clearer text', () => {
@@ -56,7 +56,7 @@ describe('package descriptions', () => {
       description: 'Core system',
     });
 
-    expect(description).toContain('Essential NodeTool core nodes');
+    expect(description).toContain('NodeTool 核心节点');
   });
 
   test('keeps non-overridden registry descriptions trimmed', () => {

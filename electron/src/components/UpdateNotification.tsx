@@ -38,8 +38,8 @@ const UpdateNotification: React.FC<UpdateNotificationProps> = ({
     >
       <p style={{ margin: 0, color: 'white', marginBottom: '10px' }}>
         {downloaded
-          ? `Version ${version} has been downloaded and will be installed on restart.`
-          : `Version ${version} is available. Downloading in the background...`}
+          ? `版本 ${version} 已下载，将在重启后安装。`
+          : `版本 ${version} 可用，正在后台下载...`}
       </p>
       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
         {!downloaded && (
@@ -53,7 +53,7 @@ const UpdateNotification: React.FC<UpdateNotificationProps> = ({
               display: 'inline-block',
             }}
           >
-            View Release Notes
+            查看发行说明
           </a>
         )}
         {downloaded && (
@@ -72,7 +72,7 @@ const UpdateNotification: React.FC<UpdateNotificationProps> = ({
             onMouseEnter={(e) => (e.currentTarget.style.background = '#3a8eef')}
             onMouseLeave={(e) => (e.currentTarget.style.background = '#4a9eff')}
           >
-            Restart to Update
+            重启并更新
           </button>
         )}
         <button

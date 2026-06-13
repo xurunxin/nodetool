@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type {
   CSSProperties,
   DragEvent as ReactDragEvent,
@@ -157,6 +158,7 @@ const tileStyles = (theme: Theme) =>
   });
 
 const QuickActionTiles = memo(function QuickActionTiles() {
+  const { t } = useTranslation("nodeMenu");
   const theme = useTheme();
   const memoizedStyles = useMemo(() => tileStyles(theme), [theme]);
 
@@ -174,6 +176,18 @@ const QuickActionTiles = memo(function QuickActionTiles() {
   // Route click-to-add via PendingNodeCreateStore so this component is safe
   // to render outside the editor's ReactFlowProvider.
   const requestCreate = usePendingNodeCreateStore((s) => s.requestCreate);
+
+  const getActionLabel = useCallback(
+    (action: QuickActionDefinition) =>
+      t(`quickActions.${action.key}`, { defaultValue: action.label }),
+    [t]
+  );
+
+  const getConstantLabel = useCallback(
+    (action: QuickActionDefinition) =>
+      t(`constantsMap.${action.key}`, { defaultValue: action.label }),
+    [t]
+  );
 
   const handleDragStart = useCallback(
     (event: ReactDragEvent<HTMLDivElement>) => {
@@ -210,14 +224,14 @@ const QuickActionTiles = memo(function QuickActionTiles() {
 
   const onTileClick = useCallback(
     (action: QuickActionDefinition) => {
-      const { nodeType, label } = action;
+      const { nodeType } = action;
       const metadata = getMetadata(nodeType);
 
       if (!metadata) {
         console.warn(`Metadata not found for node type: ${nodeType}`);
         addNotification({
           type: "warning",
-          content: `Unable to find metadata for ${label}.`,
+          content: t("missingMetadata", { name: getActionLabel(action) }),
           timeout: NOTIFICATION_TIMEOUT_MEDIUM
         });
         return;
@@ -225,7 +239,7 @@ const QuickActionTiles = memo(function QuickActionTiles() {
 
       requestCreate(metadata);
     },
-    [getMetadata, addNotification, requestCreate]
+    [getMetadata, addNotification, requestCreate, getActionLabel, t]
   );
 
   const onTileMouseEnter = useCallback(
@@ -290,13 +304,12 @@ const QuickActionTiles = memo(function QuickActionTiles() {
   return (
     <div css={memoizedStyles}>
       <div className="tiles-header">
-        <Text size="normal" weight={600}>AI Nodes</Text>
+        <Text size="normal" weight={600}>{t("aiNodes")}</Text>
       </div>
       <div className="tiles-container">
         {QUICK_ACTION_BUTTONS.map((definition) => {
           const {
             key,
-            label,
             nodeType,
             icon,
             gradient,
@@ -305,14 +318,15 @@ const QuickActionTiles = memo(function QuickActionTiles() {
             hoverShadow = shadow,
             iconColor
           } = definition;
+          const translatedLabel = getActionLabel(definition);
           return (
             <Tooltip
               key={key}
               title={
                 <div>
-                  <div>{label}</div>
+                  <div>{translatedLabel}</div>
                   <div style={tooltipSubtitleStyle}>
-                    Click to place · Shift-click to auto add
+                    {t("clickToPlaceShiftClick")}
                   </div>
                 </div>
               }
@@ -352,20 +366,19 @@ const QuickActionTiles = memo(function QuickActionTiles() {
                 <div className="tile-icon" style={{ color: iconColor }}>
                   {icon}
                 </div>
-                <Text className="tile-label">{label}</Text>
+                <Text className="tile-label">{translatedLabel}</Text>
               </div>
             </Tooltip>
           );
         })}
       </div>
       <div className="tiles-header" style={constantsHeaderStyle}>
-        <Text size="normal" weight={600}>Constants</Text>
+        <Text size="normal" weight={600}>{t("constants")}</Text>
       </div>
       <div className="constants-container">
         {CONSTANT_NODES.map((definition) => {
           const {
             key,
-            label,
             nodeType,
             icon,
             gradient,
@@ -374,14 +387,15 @@ const QuickActionTiles = memo(function QuickActionTiles() {
             hoverShadow = shadow,
             iconColor
           } = definition;
+          const translatedLabel = getConstantLabel(definition);
           return (
             <Tooltip
               key={key}
               title={
                 <div>
-                  <div>{label} Constant</div>
+                  <div>{t("constantTitle", { label: translatedLabel })}</div>
                   <div style={tooltipSubtitleStyle}>
-                    Click to place
+                    {t("clickToPlace")}
                   </div>
                 </div>
               }
@@ -421,7 +435,7 @@ const QuickActionTiles = memo(function QuickActionTiles() {
                 <div className="tile-icon" style={{ color: iconColor }}>
                   {icon}
                 </div>
-                <Text className="tile-label">{label}</Text>
+                <Text className="tile-label">{translatedLabel}</Text>
               </div>
             </Tooltip>
           );

@@ -153,7 +153,7 @@ async function promptForInstallLocation(
     }
 
     if (!mainWindow) {
-      reject(new Error("No active window found"));
+      reject(new Error("未找到活动窗口"));
       return;
     }
 
@@ -211,7 +211,7 @@ async function removeStaleMicromambaLock(
       return;
     }
     logMessage(
-      `Failed to inspect micromamba lock at ${lockPath}: ${
+      `检查 micromamba 锁文件失败（${lockPath}）：${
         error instanceof Error ? error.message : String(error)
       }`,
       "warn"
@@ -398,7 +398,7 @@ async function ensureMicromambaAvailable(): Promise<string> {
 
   // Download micromamba on demand
   logMessage("micromamba not found locally — downloading on demand...");
-  emitBootMessage("Downloading micromamba...");
+  emitBootMessage("正在下载 micromamba...");
   const downloadedExecutable = await downloadMicromamba();
   process.env[MICROMAMBA_ENV_VAR] = downloadedExecutable;
   return downloadedExecutable;
@@ -461,7 +461,7 @@ function downloadFileFromUrl(url: string, dest: string): Promise<void> {
         res.on("error", (err: Error) => { if (!resolved) { resolved = true; reject(err); } });
       });
       req.on("error", (err: Error) => { if (!resolved) { resolved = true; reject(err); } });
-      req.setTimeout(60000, () => { req.destroy(); if (!resolved) { resolved = true; reject(new Error("Download timeout")); } });
+      req.setTimeout(60000, () => { req.destroy(); if (!resolved) { resolved = true; reject(new Error("下载超时")); } });
     };
 
     makeRequest(url);
@@ -471,21 +471,21 @@ function downloadFileFromUrl(url: string, dest: string): Promise<void> {
 async function downloadMicromamba(): Promise<string> {
   const url = resolveMicromambaDownloadUrl();
   if (!url) {
-    throw new Error(`No micromamba download URL for platform ${process.platform}/${process.arch}`);
+    throw new Error(`当前平台没有可用的 micromamba 下载 URL：${process.platform}/${process.arch}`);
   }
 
   const dest = getMicromambaExecutablePath();
   await fs.mkdir(getMicromambaBinDir(), { recursive: true });
 
-  logMessage(`Downloading micromamba from ${url} to ${dest}`);
+  logMessage(`正在从 ${url} 下载 micromamba 到 ${dest}`);
   await downloadFileFromUrl(url, dest);
 
   if (process.platform !== "win32") {
     await fs.chmod(dest, 0o755);
   }
 
-  logMessage(`micromamba downloaded to ${dest}`);
-  emitBootMessage("micromamba ready");
+  logMessage(`micromamba 已下载到 ${dest}`);
+  emitBootMessage("micromamba 已就绪");
   return dest;
 }
 
@@ -495,7 +495,7 @@ async function runMicromambaCommand(
   progressAction: string
 ): Promise<void> {
   if (!micromambaExecutable) {
-    throw new Error("micromamba executable path is empty");
+    throw new Error("micromamba 可执行文件路径为空");
   }
 
   await fs.mkdir(getMicromambaRootPrefix(), { recursive: true });
@@ -527,11 +527,11 @@ async function runMicromambaCommand(
 
   const runOnce = async (): Promise<void> => {
     logMessage(
-      `Running micromamba command: ${micromambaExecutable} ${args.join(" ")}`
+      `正在运行 micromamba 命令：${micromambaExecutable} ${args.join(" ")}`
     );
 
     emitBootMessage(`${progressAction}...`);
-    emitUpdateProgress("Python environment", 10, progressAction, "Resolving");
+    emitUpdateProgress("Python 环境", 10, progressAction, "解析中");
 
     await cleanupMicromambaLocks(true);
 
@@ -610,11 +610,11 @@ async function executeMicromambaCommand(
 
     micromambaProcess.on("exit", (code) => {
       if (code === 0) {
-        emitUpdateProgress("Python environment", 100, progressAction, "Done");
+        emitUpdateProgress("Python 环境", 100, progressAction, "完成");
         resolve();
       } else {
         const error: MicromambaCommandError = new Error(
-          `micromamba exited with code ${code}`
+          `micromamba 退出，退出码 ${code}`
         );
         if (lockErrorDetected) {
           error.lockErrorDetected = true;
@@ -624,7 +624,7 @@ async function executeMicromambaCommand(
     });
 
     micromambaProcess.on("error", (err) => {
-      reject(new Error(`Failed to run micromamba: ${err.message}`));
+      reject(new Error(`运行 micromamba 失败：${err.message}`));
     });
   });
 }
@@ -643,13 +643,13 @@ async function createEnvironmentWithMicromamba(
   packages: string[],
 ): Promise<void> {
   if (!micromambaExecutable) {
-    throw new Error("micromamba executable path is empty");
+    throw new Error("micromamba 可执行文件路径为空");
   }
 
-  emitBootMessage("Creating conda environment with micromamba...");
+  emitBootMessage("正在使用 micromamba 创建 conda 环境...");
 
   if (await fileExists(destinationPrefix)) {
-    logMessage(`Removing existing environment at ${destinationPrefix}`);
+    logMessage(`正在移除已有环境：${destinationPrefix}`);
     await fs.rm(destinationPrefix, { recursive: true, force: true });
   }
 
@@ -671,7 +671,7 @@ async function createEnvironmentWithMicromamba(
   await runMicromambaCommand(
     micromambaExecutable,
     args,
-    "Creating Python environment"
+    "正在创建 Python 环境"
   );
 }
 
@@ -684,10 +684,10 @@ async function provisionCondaEnvironment(
   }
 ): Promise<void> {
   const bootMessage =
-    options?.bootMessage ?? "Setting up conda environment...";
+    options?.bootMessage ?? "正在设置 conda 环境...";
 
   emitBootMessage(bootMessage);
-  logMessage(`Setting up conda environment at: ${location} (Backend: ${modelBackend})`);
+  logMessage(`正在设置 conda 环境：${location}（后端：${modelBackend}）`);
 
   const micromambaExecutable = await ensureMicromambaAvailable();
 
@@ -710,8 +710,8 @@ async function provisionCondaEnvironment(
     await ensureLlamaCppInstalled(condaEnvPath);
   }
 
-  logMessage("Conda environment installation completed successfully");
-  emitBootMessage("Conda environment is ready");
+  logMessage("Conda 环境安装完成");
+  emitBootMessage("Conda 环境已就绪");
 }
 
 /**
@@ -737,8 +737,8 @@ createIpcMainHandler(IpcChannels.SELECT_CUSTOM_LOCATION, async (_event) => {
   const defaultLocation = getDefaultInstallLocation();
   const { filePaths, canceled } = await dialog.showOpenDialog({
     properties: ["openDirectory", "createDirectory"],
-    title: "Select the folder to install the Python environment to",
-    buttonLabel: "Select Folder",
+    title: "选择 Python 环境安装文件夹",
+    buttonLabel: "选择文件夹",
     defaultPath: defaultLocation,
   });
 
@@ -799,7 +799,7 @@ async function installCondaPackages(
   await runMicromambaCommand(
     micromambaExecutable,
     args,
-    "Installing system dependencies"
+    "正在安装系统依赖"
   );
 }
 
@@ -867,7 +867,7 @@ async function installCondaPackageBySpec(
   await runMicromambaCommand(
     micromambaExecutable,
     args,
-    progressLabel ?? `Installing ${packageSpecs.join(", ")}`,
+    progressLabel ?? `正在安装 ${packageSpecs.join(", ")}`,
   );
 }
 
@@ -904,7 +904,7 @@ async function removeCondaPackageBySpec(
   await runMicromambaCommand(
     micromambaExecutable,
     args,
-    progressLabel ?? `Removing ${names.join(", ")}`,
+    progressLabel ?? `正在移除 ${names.join(", ")}`,
   );
 }
 
@@ -925,12 +925,12 @@ async function promptForCondaInstallFolder(): Promise<string> {
   const defaultLocation = getDefaultInstallLocation();
   const { filePaths, canceled } = await dialog.showOpenDialog({
     properties: ["openDirectory", "createDirectory"],
-    title: "Select where to install the conda environment",
-    buttonLabel: "Select Folder",
+    title: "选择 conda 环境安装位置",
+    buttonLabel: "选择文件夹",
     defaultPath: defaultLocation,
   });
   if (canceled || !filePaths?.[0]) {
-    throw new Error("Installation cancelled — no folder selected.");
+    throw new Error("安装已取消：未选择文件夹。");
   }
   return path.join(filePaths[0], "nodetool-env");
 }
@@ -953,8 +953,8 @@ async function ensureCondaEnvironment(
     }
   }
 
-  logMessage(`Conda environment not found, creating at: ${condaEnvPath}`);
-  emitBootMessage("Setting up conda environment...");
+  logMessage(`未找到 Conda 环境，正在创建：${condaEnvPath}`);
+  emitBootMessage("正在设置 conda 环境...");
 
   setCondaInstallLocation(condaEnvPath);
 
@@ -965,8 +965,8 @@ async function ensureCondaEnvironment(
     BOOTSTRAP_CONDA_PACKAGES,
   );
 
-  logMessage("Conda environment created successfully");
-  emitBootMessage("Conda environment is ready");
+  logMessage("Conda 环境创建完成");
+  emitBootMessage("Conda 环境已就绪");
   return condaEnvPath;
 }
 

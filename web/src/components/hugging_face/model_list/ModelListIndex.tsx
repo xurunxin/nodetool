@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { EditorButton, FlexColumn, FlexRow, Box, MOTION } from "../../ui_primitives";
 import { LoadingSpinner, Text } from "../../ui_primitives";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
@@ -129,6 +130,7 @@ type ListItem =
 
 const ModelListIndex: React.FC = () => {
   const theme = useTheme();
+  const { t } = useTranslation(["models", "common"]);
   const [modelToDelete, setModelToDelete] = useState<string | null>(null);
   const selectedModelType = useModelManagerStore((state) => state.selectedModelType);
   const modelSearchTerm = useModelManagerStore((state) => state.modelSearchTerm);
@@ -291,7 +293,7 @@ const ModelListIndex: React.FC = () => {
           textAlign: "center"
         }}
       >
-        <LoadingSpinner size="medium" text="Loading models" />
+        <LoadingSpinner size="medium" text={t("models:loadingModels")} />
       </Box>
     );
   }
@@ -306,7 +308,9 @@ const ModelListIndex: React.FC = () => {
     const errorMessage =
       typeof err?.detail === "string"
         ? err.detail
-        : (err?.detail as Array<{ msg: string }>)?.[0]?.msg || err?.message || "Unknown error";
+        : (err?.detail as Array<{ msg: string }>)?.[0]?.msg ||
+          err?.message ||
+          t("common:unknownError");
 
     const isOllamaError = errorMessage.toLowerCase().includes("ollama");
 
@@ -320,7 +324,7 @@ const ModelListIndex: React.FC = () => {
         sx={{ textAlign: "center" }}
       >
         <Text size="big" color="error">
-          Could not load models
+          {t("models:couldNotLoadModels")}
         </Text>
         <Text
           size="normal"
@@ -333,8 +337,7 @@ const ModelListIndex: React.FC = () => {
           <FlexColumn gap={1} sx={{ mt: 1 }}>
             {isElectron ? (
               <Text size="small" color="warning">
-                Ollama should be running automatically. Please try restarting
-                the application.
+                {t("models:restartApplication")}
               </Text>
             ) : (
               <Text
@@ -346,7 +349,7 @@ const ModelListIndex: React.FC = () => {
                 sx={{ textDecoration: "underline" }}
                 color="primary"
               >
-                Download Ollama →
+                {t("models:downloadOllama")} →
               </Text>
             )}
           </FlexColumn>
@@ -377,7 +380,7 @@ const ModelListIndex: React.FC = () => {
           )}
           {modelSearchTerm && selectedModelType === "All" && (
             <Text size="normal" weight={600} sx={{ mb: 2, display: "block" }}>
-              Searched models for &quot;{modelSearchTerm}&quot;
+              {t("models:searchedModelsFor", { searchTerm: modelSearchTerm })}
             </Text>
           )}
           {selectedModelType !== "All" && (
@@ -426,8 +429,9 @@ const ModelListIndex: React.FC = () => {
                   color="secondary"
                   sx={{ mt: 0.5, display: "block" }}
                 >
-                  {filteredModels.length} model
-                  {filteredModels.length === 1 ? "" : "s"} in this category
+                  {t("models:modelCountInCategory", {
+                    count: filteredModels.length
+                  })}
                 </Text>
               </Box>
             </FlexRow>
@@ -528,21 +532,22 @@ const ModelListIndex: React.FC = () => {
                 <>
                   <SearchOffIcon sx={{ fontSize: 48, opacity: 0.5 }} />
                   <Text size="normal" weight={600} color="secondary" sx={{ display: "block" }}>
-                    No models found for &quot;{modelSearchTerm}&quot;
+                    {t("models:noModelsFoundFor", {
+                      searchTerm: modelSearchTerm
+                    })}
                   </Text>
                   <Text size="small" color="secondary" sx={{ display: "block" }}>
-                    Try a different search term or adjust your filters
+                    {t("models:tryDifferentSearchOrFilters")}
                   </Text>
                 </>
               ) : filterStatus === "downloaded" ? (
                 <>
                   <DownloadIcon sx={{ fontSize: 48, opacity: 0.5 }} />
                   <Text size="normal" weight={600} color="secondary" sx={{ display: "block" }}>
-                    No downloaded models
+                    {t("models:noDownloadedModels")}
                   </Text>
                   <Text size="small" color="secondary" sx={{ display: "block" }}>
-                    Switch to &quot;All&quot; or &quot;Available&quot; to find
-                    models to download
+                    {t("models:switchToAllOrAvailable")}
                   </Text>
                   <EditorButton
                     variant="outlined"
@@ -550,18 +555,17 @@ const ModelListIndex: React.FC = () => {
                     onClick={() => setFilterStatus("all")}
                     sx={{ mt: 1 }}
                   >
-                    Show all models
+                    {t("models:showAllModels")}
                   </EditorButton>
                 </>
               ) : (
                 <>
                   <SearchOffIcon sx={{ fontSize: 48, opacity: 0.5 }} />
                   <Text size="normal" weight={600} color="secondary" sx={{ display: "block" }}>
-                    No models available
+                    {t("models:noModelsAvailable")}
                   </Text>
                   <Text size="small" color="secondary" sx={{ display: "block" }}>
-                    Try adjusting the size filter or selecting a different
-                    category
+                    {t("models:tryAdjustingModelFilters")}
                   </Text>
                 </>
               )}

@@ -7,6 +7,7 @@
  */
 
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -184,6 +185,7 @@ const CanvasResizeBodyInner: React.FC<CanvasResizeBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(() => styles(theme), [theme]);
   const properties = nodeMetadata.properties ?? [];
   const imageProperty = useMemo(
@@ -288,9 +290,9 @@ const CanvasResizeBodyInner: React.FC<CanvasResizeBodyProps> = ({
           compact
           size="small"
         >
-          <ToggleOption value="fixed">Fixed</ToggleOption>
-          <ToggleOption value="scale">Scale</ToggleOption>
-          <ToggleOption value="padding">Padding</ToggleOption>
+          <ToggleOption value="fixed">{t("fixed")}</ToggleOption>
+          <ToggleOption value="scale">{t("scale")}</ToggleOption>
+          <ToggleOption value="padding">{t("padding")}</ToggleOption>
         </ToggleGroup>
 
         {mode === "fixed" && (
@@ -300,7 +302,7 @@ const CanvasResizeBodyInner: React.FC<CanvasResizeBodyProps> = ({
                 id={`canvas-width-${id}`}
                 nodeId={id}
                 name="width"
-                description="Target canvas width"
+                description={t("targetCanvasWidth")}
                 value={Number(props.width ?? 512)}
                 onChange={(_, v) => setNumberProp("width", Math.max(1, Math.round(v)))}
                 onChangeComplete={() => setPropertyComplete()}
@@ -315,7 +317,7 @@ const CanvasResizeBodyInner: React.FC<CanvasResizeBodyProps> = ({
                 id={`canvas-height-${id}`}
                 nodeId={id}
                 name="height"
-                description="Target canvas height"
+                description={t("targetCanvasHeight")}
                 value={Number(props.height ?? 512)}
                 onChange={(_, v) => setNumberProp("height", Math.max(1, Math.round(v)))}
                 onChangeComplete={() => setPropertyComplete()}
@@ -340,7 +342,7 @@ const CanvasResizeBodyInner: React.FC<CanvasResizeBodyProps> = ({
                 setNumberProp("scale", Math.round(next * 100) / 100);
               }}
               onChangeCommitted={() => setPropertyComplete()}
-              aria-label="Canvas scale factor"
+              aria-label={t("canvasScaleFactor")}
             />
           </div>
         )}
@@ -364,7 +366,7 @@ const CanvasResizeBodyInner: React.FC<CanvasResizeBodyProps> = ({
                     id={`canvas-${edge}-${id}`}
                     nodeId={id}
                     name={edge}
-                    description={`Padding ${edge}`}
+                    description={t("paddingEdge", { edge: t(edge) })}
                     value={Number(props[edge] ?? 0)}
                     onChange={(_, v) => setNumberProp(edge, Math.max(0, v))}
                     onChangeComplete={() => setPropertyComplete()}

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useRef } from "react";
 import isEqual from "fast-deep-equal";
+import { useTranslation } from "react-i18next";
 import ImageModelMenuDialog from "../model_menu/ImageModelMenuDialog";
 import useModelPreferencesStore from "../../stores/ModelPreferencesStore";
 import type {
@@ -29,6 +30,7 @@ const ImageModelSelect: React.FC<ImageModelSelectProps> = ({
   recommendedModels,
   modelPacks
 }) => {
+  const { t } = useTranslation("models");
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const addRecent = useModelPreferencesStore((s) => s.addRecent);
@@ -92,8 +94,8 @@ const ImageModelSelect: React.FC<ImageModelSelectProps> = ({
       return { label: value, secondaryLabel: undefined };
     }
 
-    return { label: "Select Image Model", secondaryLabel: undefined };
-  }, [currentSelectedModelDetails, value]);
+    return { label: t("selectImageModel"), secondaryLabel: undefined };
+  }, [currentSelectedModelDetails, value, t]);
 
   const handleClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -130,7 +132,7 @@ const ImageModelSelect: React.FC<ImageModelSelectProps> = ({
         active={!!value}
         label={displayInfo.label}
         secondaryLabel={displayInfo.secondaryLabel}
-        subLabel="Select Image Generation Model"
+        subLabel={t("selectImageGenerationModel")}
         onClick={handleClick}
       />
       <ImageModelMenuDialog

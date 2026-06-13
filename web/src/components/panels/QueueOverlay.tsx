@@ -18,6 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Job } from "../../stores/ApiTypes";
 import { useWorkflowManager } from "../../contexts/WorkflowManagerContext";
 import useWorkflowRunsStore from "../../stores/WorkflowRunsStore";
+import { useTranslation } from "react-i18next";
 
 const RUNNING = new Set(["running", "suspended", "paused"]);
 const QUEUED = new Set(["queued", "scheduled", "starting"]);
@@ -80,7 +81,8 @@ const RunBar = memo(function RunBar() {
 /** Job title — the stored run name, falling back to the workflow name. */
 const useJobName = (job: Job): string => {
   const { data: workflow } = useWorkflow(job.workflow_id);
-  return job.name || workflow?.name || "Untitled";
+  const { t } = useTranslation("workflows");
+  return job.name || workflow?.name || t("untitled");
 };
 
 const cardSx: SxProps<Theme> = {
@@ -149,6 +151,7 @@ const RunningCard = memo(function RunningCard({
   isFocused: boolean;
   onFocus?: () => void;
 }) {
+  const { t } = useTranslation("workflows");
   const theme = useTheme();
   const name = useJobName(job);
   const elapsed = formatClock(job.started_at, now);
@@ -192,7 +195,7 @@ const RunningCard = memo(function RunningCard({
           >
             <VisibilityIcon sx={{ fontSize: 12 }} />
             <Text size="tiny" sx={{ color: "primary.main" }}>
-              On canvas
+              {t("onCanvas")}
             </Text>
           </FlexRow>
         )}
@@ -207,7 +210,7 @@ const RunningCard = memo(function RunningCard({
         >
           <IconButton
             icon={<CloseIcon sx={{ fontSize: 15 }} />}
-            label="Stop run"
+            label={t("stopRun")}
             onClick={() => onCancel(job.id)}
             hoverColor="error.main"
           />
@@ -224,7 +227,7 @@ const RunningCard = memo(function RunningCard({
       <Box
         role="button"
         tabIndex={0}
-        aria-label="Show run on canvas"
+        aria-label={t("showRunOnCanvas")}
         aria-pressed={isFocused}
         onClick={onFocus}
         onKeyDown={(e: React.KeyboardEvent) => {
@@ -263,6 +266,7 @@ const EnqueuedCard = memo(function EnqueuedCard({
   index: number;
   onCancel: (id: string) => void;
 }) {
+  const { t } = useTranslation("workflows");
   const name = useJobName(job);
   return (
     <Box sx={cardSx}>
@@ -280,7 +284,7 @@ const EnqueuedCard = memo(function EnqueuedCard({
         </Text>
         <IconButton
           icon={<CloseIcon sx={{ fontSize: 15 }} />}
-          label="Remove from queue"
+          label={t("removeFromQueue")}
           onClick={() => onCancel(job.id)}
           hoverColor="error.main"
         />
@@ -290,6 +294,7 @@ const EnqueuedCard = memo(function EnqueuedCard({
 });
 
 const CancelledCard = memo(function CancelledCard({ job }: { job: Job }) {
+  const { t } = useTranslation("workflows");
   const name = useJobName(job);
   return (
     <Box sx={{ ...cardSx, opacity: 0.55 }}>
@@ -299,7 +304,7 @@ const CancelledCard = memo(function CancelledCard({ job }: { job: Job }) {
           {name}
         </Text>
         <Text size="tiny" color="secondary" family="secondary">
-          Cancelled
+          {t("queueCancelled")}
         </Text>
       </FlexRow>
     </Box>
@@ -378,6 +383,7 @@ const SingleName = memo(function SingleName({ job }: { job: Job }) {
  * is running or queued so it never clutters an idle canvas.
  */
 const QueueOverlay = memo(function QueueOverlay() {
+  const { t } = useTranslation("workflows");
   const theme = useTheme();
   const queryClient = useQueryClient();
   const { data: jobs } = useRunningJobs();
@@ -477,9 +483,9 @@ const QueueOverlay = memo(function QueueOverlay() {
               {single ? (
                 <SingleName job={single} />
               ) : running.length ? (
-                `${running.length} jobs running`
+                t("jobsRunning", { count: running.length })
               ) : (
-                "Queue"
+                t("queue")
               )}
             </Text>
             {single && (
@@ -489,7 +495,7 @@ const QueueOverlay = memo(function QueueOverlay() {
             )}
             <IconButton
               icon={<KeyboardArrowDownIcon sx={{ fontSize: 18 }} />}
-              label="Expand queue"
+              label={t("expandQueue")}
               onClick={() => setExpanded(true)}
             />
           </FlexRow>
@@ -498,7 +504,7 @@ const QueueOverlay = memo(function QueueOverlay() {
             <FlexRow align="center" gap={0.5} sx={{ color: "text.secondary" }}>
               <ScheduleIcon sx={{ fontSize: 13 }} />
               <Text size="tiny" color="secondary">
-                {queued.length} queued
+                {t("queuedCount", { count: queued.length })}
               </Text>
             </FlexRow>
           )}
@@ -512,7 +518,7 @@ const QueueOverlay = memo(function QueueOverlay() {
       <FlexRow align="center" gap={1} sx={{ px: 2, py: 1.5, flex: "0 0 auto" }}>
         <LayersIcon sx={{ fontSize: 17, color: "text.secondary" }} />
         <Text size="normal" weight={600} sx={{ flex: 1 }}>
-          Queue
+          {t("queue")}
         </Text>
         <FlexRow align="center" gap={1.25}>
           <HeaderCount
@@ -526,7 +532,7 @@ const QueueOverlay = memo(function QueueOverlay() {
         </FlexRow>
         <IconButton
           icon={<RemoveIcon sx={{ fontSize: 16 }} />}
-          label="Collapse queue"
+          label={t("collapseQueue")}
           onClick={() => setExpanded(false)}
         />
       </FlexRow>
@@ -534,7 +540,7 @@ const QueueOverlay = memo(function QueueOverlay() {
       <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 2, pb: 2 }}>
         {running.length > 0 && (
           <>
-            <SectionLabel>Running</SectionLabel>
+            <SectionLabel>{t("queueRunning")}</SectionLabel>
             <FlexColumn gap={1}>
               {running.map((job) => {
                 const isCurrentWf =
@@ -564,7 +570,7 @@ const QueueOverlay = memo(function QueueOverlay() {
         )}
         {queued.length > 0 && (
           <>
-            <SectionLabel>Enqueued</SectionLabel>
+            <SectionLabel>{t("queueEnqueued")}</SectionLabel>
             <FlexColumn gap={1}>
               {queued.map((job, index) => (
                 <EnqueuedCard
@@ -579,7 +585,7 @@ const QueueOverlay = memo(function QueueOverlay() {
         )}
         {cancelled.length > 0 && (
           <>
-            <SectionLabel>Cancelled</SectionLabel>
+            <SectionLabel>{t("queueCancelled")}</SectionLabel>
             <FlexColumn gap={1}>
               {cancelled.map((job) => (
                 <CancelledCard key={job.id} job={job} />

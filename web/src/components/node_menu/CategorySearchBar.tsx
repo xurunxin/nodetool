@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { forwardRef, memo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
 
@@ -52,7 +53,8 @@ interface CategorySearchBarProps {
  */
 const CategorySearchBar = memo(
   forwardRef<HTMLInputElement, CategorySearchBarProps>(
-    ({ value, onChange, placeholder = "Filter..." }, ref) => {
+    ({ value, onChange, placeholder }, ref) => {
+      const { t } = useTranslation("nodeMenu");
       const theme = useTheme();
       const handleClear = useCallback(() => onChange(""), [onChange]);
 
@@ -64,13 +66,13 @@ const CategorySearchBar = memo(
             type="text"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            aria-label="Filter category"
+            placeholder={placeholder ?? t("filter")}
+            aria-label={t("filterCategory")}
           />
           {value && (
             <ToolbarIconButton
               tabIndex={-1}
-              ariaLabel="Clear filter"
+              ariaLabel={t("clearFilter")}
               onClick={handleClear}
               icon={<ClearIcon />}
             />

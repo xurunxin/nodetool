@@ -11,6 +11,7 @@ import { Text, FlexRow, FlexColumn, NavButton } from "../ui_primitives";
 import { getSharedSettingsStyles } from "./sharedSettingsStyles";
 import { useNotificationStore } from "../../stores/NotificationStore";
 import { trpcClient } from "../../trpc/client";
+import { useTranslation } from "react-i18next";
 
 interface TargetStatus {
   target: string;
@@ -48,6 +49,7 @@ async function uninstallMcp(
 }
 
 const MCPSettingsMenu = () => {
+  const { t } = useTranslation("settings");
   const theme = useTheme();
   const queryClient = useQueryClient();
   const addNotification = useNotificationStore(
@@ -69,7 +71,9 @@ const MCPSettingsMenu = () => {
         addNotification({
           type: "success",
           alert: true,
-          content: `MCP installed for ${ok.map((r) => r.label).join(", ")}`
+          content: t("mcpInstalledFor", {
+            targets: ok.map((r) => r.label).join(", ")
+          })
         });
       }
     },
@@ -77,7 +81,7 @@ const MCPSettingsMenu = () => {
       addNotification({
         type: "error",
         alert: true,
-        content: `MCP install failed: ${err}`
+        content: t("mcpInstallFailed", { error: String(err) })
       });
     }
   });
@@ -91,7 +95,9 @@ const MCPSettingsMenu = () => {
         addNotification({
           type: "info",
           alert: true,
-          content: `MCP removed from ${ok.map((r) => r.label).join(", ")}`
+          content: t("mcpRemovedFrom", {
+            targets: ok.map((r) => r.label).join(", ")
+          })
         });
       }
     }
@@ -129,10 +135,9 @@ const MCPSettingsMenu = () => {
     >
       <div className="settings-main-content">
         <Text className="description" sx={{ mb: 1 }}>
-          Connect AI coding assistants to NodeTool via the{" "}
-          <strong>Model Context Protocol</strong>. When installed, Claude Code,
-          Codex, and OpenCode can use NodeTool workflows, assets, nodes, and
-          collections as tools.
+          {t("mcpDescriptionPrefix")}{" "}
+          <strong>{t("modelContextProtocol")}</strong>.{" "}
+          {t("mcpDescriptionSuffix")}
         </Text>
 
         {data?.defaultUrl && (
@@ -140,20 +145,20 @@ const MCPSettingsMenu = () => {
             className="description"
             sx={{ mb: 2, fontFamily: "monospace", opacity: 0.6 }}
           >
-            Server URL: {data.defaultUrl}
+            {t("serverUrl")}: {data.defaultUrl}
           </Text>
         )}
 
-        {isLoading && <Text sx={{ padding: "1em" }}>Loading…</Text>}
+        {isLoading && <Text sx={{ padding: "1em" }}>{t("loading")}</Text>}
 
         {data && (
           <>
             <div className="settings-section">
-              {data.targets.map((t) => (
-                <div key={t.target} className="settings-item">
+              {data.targets.map((target) => (
+                <div key={target.target} className="settings-item">
                   <FlexRow align="center" justify="space-between" fullWidth>
                     <FlexRow align="center" gap={1}>
-                      {t.installed ? (
+                      {target.installed ? (
                         <CheckCircleIcon
                           sx={{
                             color: theme.palette.success.main,
@@ -169,24 +174,24 @@ const MCPSettingsMenu = () => {
                         />
                       )}
                       <FlexColumn gap={0}>
-                        <Text sx={{ fontWeight: 500 }}>{t.label}</Text>
-                        {t.installed && t.url && (
+                        <Text sx={{ fontWeight: 500 }}>{target.label}</Text>
+                        {target.installed && target.url && (
                           <Text
                             className="description"
                             sx={{ fontSize: "0.75rem !important" }}
                           >
-                            {t.url}
+                            {target.url}
                           </Text>
                         )}
                       </FlexColumn>
                     </FlexRow>
                     <FlexRow gap={1}>
-                      {t.installed ? (
+                      {target.installed ? (
                         <NavButton
                           icon={<RemoveCircleOutlineIcon />}
-                          label="Remove"
+                          label={t("remove")}
                           disabled={busy}
-                          onClick={() => handleUninstall(t.target)}
+                          onClick={() => handleUninstall(target.target)}
                           navSize="small"
                           sx={{
                             padding: "0.25em 1em",
@@ -197,10 +202,10 @@ const MCPSettingsMenu = () => {
                       ) : (
                         <NavButton
                           icon={<AddCircleOutlineIcon />}
-                          label="Install"
+                          label={t("install")}
                           color="primary"
                           disabled={busy}
-                          onClick={() => handleInstall(t.target)}
+                          onClick={() => handleInstall(target.target)}
                           navSize="small"
                           sx={{
                             padding: "0.25em 1em",
@@ -219,7 +224,7 @@ const MCPSettingsMenu = () => {
               <FlexRow justify="flex-start" sx={{ mt: 1 }}>
                 <NavButton
                   icon={<InstallDesktopIcon />}
-                  label="Install All"
+                  label={t("installAll")}
                   color="primary"
                   disabled={busy}
                   onClick={handleInstallAll}

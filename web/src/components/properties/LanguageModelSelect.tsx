@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useRef } from "react";
 import isEqual from "fast-deep-equal";
+import { useTranslation } from "react-i18next";
 import LanguageModelMenuDialog from "../model_menu/LanguageModelMenuDialog";
 import useModelPreferencesStore from "../../stores/ModelPreferencesStore";
 import type {
@@ -26,6 +27,7 @@ const LanguageModelSelect: React.FC<LanguageModelSelectProps> = ({
   recommendedModels,
   modelPacks
 }) => {
+  const { t } = useTranslation("models");
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const addRecent = useModelPreferencesStore((s) => s.addRecent);
@@ -72,9 +74,9 @@ const LanguageModelSelect: React.FC<LanguageModelSelectProps> = ({
       <ModelSelectButton
         ref={buttonRef}
         active={!!value}
-        label={currentSelectedModelDetails?.name || value || "Select Model"}
+        label={currentSelectedModelDetails?.name || value || t("selectModel")}
         secondaryLabel={currentSelectedModelDetails?.provider}
-        subLabel="Select Model"
+        subLabel={t("selectLanguageModel")}
         onClick={handleClick}
       />
       <LanguageModelMenuDialog

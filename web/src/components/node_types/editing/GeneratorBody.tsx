@@ -15,6 +15,7 @@
  */
 
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -167,6 +168,7 @@ const GeneratorBodyInner: React.FC<GeneratorBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(
     () => [styles(theme), adjustmentSliderStyles(theme)],
     [theme]
@@ -259,7 +261,7 @@ const GeneratorBodyInner: React.FC<GeneratorBodyProps> = ({
         <ImageRefPreview
           value={previewValue}
           placeholder={
-            <CheckerDropzone message="Run to preview" />
+            <CheckerDropzone message={t("runToPreview")} />
           }
         />
       </div>

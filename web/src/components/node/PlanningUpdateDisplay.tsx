@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { PlanningUpdate } from "../../stores/ApiTypes";
@@ -61,6 +62,7 @@ const PLANNING_CONTENT_TRUNCATE_LENGTH = 120;
 const PlanningUpdateDisplay: React.FC<PlanningUpdateDisplayProps> = ({
   planningUpdate
 }) => {
+  const { t } = useTranslation("chat");
   const theme = useTheme();
   const cssStyles = useMemo(() => styles(theme), [theme]);
   const trimmedContent = planningUpdate?.content?.trim() || "";
@@ -83,7 +85,11 @@ const PlanningUpdateDisplay: React.FC<PlanningUpdateDisplayProps> = ({
           <AutorenewIcon />
         )}
       </span>
-      <span className="planning-name">{planningUpdate.phase}</span>
+      <span className="planning-name">
+        {t(`planningPhase_${planningUpdate.phase}`, {
+          defaultValue: planningUpdate.phase
+        })}
+      </span>
       {truncatedContent && (
         <span className="planning-message">{truncatedContent}</span>
       )}

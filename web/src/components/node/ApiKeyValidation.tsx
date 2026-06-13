@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Text, EditorButton } from "../ui_primitives";
 import { useApiKeyValidation } from "../../hooks/useApiKeyValidation";
@@ -9,6 +10,7 @@ interface ApiKeyValidationProps {
 
 const ApiKeyValidation: React.FC<ApiKeyValidationProps> = React.memo(
   ({ nodeNamespace }) => {
+    const { t } = useTranslation("models");
     const navigate = useNavigate();
     const missingAPIKey = useApiKeyValidation(nodeNamespace);
 
@@ -32,7 +34,7 @@ const ApiKeyValidation: React.FC<ApiKeyValidationProps> = React.memo(
               marginBottom: "0"
             }}
           >
-            {String(missingAPIKey)} is missing!
+            {t("apiKeyMissing", { key: String(missingAPIKey) })}
           </Text>
           <EditorButton
             className="api-key-button"
@@ -51,11 +53,11 @@ const ApiKeyValidation: React.FC<ApiKeyValidationProps> = React.memo(
               borderRadius: ".1em"
             }}
           >
-            Add key in Settings
+            {t("openSettingsToAddApiKey")}
           </EditorButton>
         </>
       );
-    }, [missingAPIKey, handleOpenSettings]);
+    }, [missingAPIKey, handleOpenSettings, t]);
 
     return content;
   }

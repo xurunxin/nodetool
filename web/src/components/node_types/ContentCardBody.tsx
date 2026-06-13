@@ -22,6 +22,7 @@
  */
 
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -537,13 +538,14 @@ const PreviewArea: React.FC<{
   variant: ContentCardVariant;
   value: unknown;
 }> = ({ variant, value }) => {
+  const { t } = useTranslation("nodeMenu");
   // Empty state — variant-specific empty surface.
   if (value === undefined || value === null) {
     if (variant === "image_mask") {
       return (
         <div className="mask-empty">
           <LayersIcon className="mask-icon" />
-          <span>No mask yet</span>
+          <span>{t("noMaskYet")}</span>
         </div>
       );
     }
@@ -551,12 +553,12 @@ const PreviewArea: React.FC<{
       Exclude<ContentCardVariant, "image_mask">,
       { message: string; icon: React.ReactNode }
     > = {
-      image: { message: "Run to generate", icon: <ImageIcon /> },
-      video: { message: "Run to generate video", icon: <MovieIcon /> },
-      text: { message: "Run to generate text", icon: <TextFieldsIcon /> },
-      audio: { message: "Run to generate audio", icon: <AudiotrackIcon /> },
-      model_3d: { message: "Run to generate 3D", icon: <ViewInArIcon /> },
-      generic: { message: "Run Model", icon: undefined }
+      image: { message: t("runToGenerate"), icon: <ImageIcon /> },
+      video: { message: t("runToGenerateVideo"), icon: <MovieIcon /> },
+      text: { message: t("runToGenerateText"), icon: <TextFieldsIcon /> },
+      audio: { message: t("runToGenerateAudio"), icon: <AudiotrackIcon /> },
+      model_3d: { message: t("runToGenerate3d"), icon: <ViewInArIcon /> },
+      generic: { message: t("runModel"), icon: undefined }
     };
     const { message, icon } = empty[variant];
     return <CheckerDropzone message={message} icon={icon} />;

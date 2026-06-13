@@ -1,7 +1,9 @@
 import React, { useState, memo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Text, FlexRow } from "../../ui_primitives";
 import { ThreadItemProps } from "../types/thread.types";
 import { DeleteButton } from "../../ui_primitives";
+import { getLocalizedThreadTitle } from "../utils/threadUtils";
 
 function formatClockTime(dateStr: string): string {
   const date = new Date(dateStr);
@@ -22,6 +24,10 @@ const ThreadItemBase: React.FC<ThreadItemProps> = ({
   previewText
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
+  const { t } = useTranslation("chat");
+  const displayTitle = thread.title
+    ? getLocalizedThreadTitle(thread.title, t("newConversation"))
+    : previewText;
 
   const handleDelete = useCallback(async () => {
     setIsDeleting(true);
@@ -57,7 +63,7 @@ const ThreadItemBase: React.FC<ThreadItemProps> = ({
     >
       <FlexRow align="center" justify="space-between" gap={1} sx={{ minWidth: 0 }}>
         <Text className="thread-title">
-          {thread.title || previewText}
+          {displayTitle}
         </Text>
         <Text className="thread-time">
           {formatClockTime(thread.updatedAt)}

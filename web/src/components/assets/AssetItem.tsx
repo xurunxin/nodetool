@@ -17,6 +17,7 @@ import { useSettingsStore } from "../../stores/SettingsStore";
 import { useAssetActions } from "./useAssetActions";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 
 
 const styles = (theme: Theme) =>
@@ -326,6 +327,7 @@ const deleteButtonOverlayStyle = css({
 
 const AssetItem: React.FC<AssetItemProps> = (props) => {
   const theme = useTheme();
+  const { t } = useTranslation("assets");
   const assetStyles = useMemo(() => styles(theme), [theme]);
   const {
     asset,
@@ -465,7 +467,7 @@ const AssetItem: React.FC<AssetItemProps> = (props) => {
         {isText && !isJson && !isCsv && (
           <TextSnippetIcon
             className="placeholder"
-            titleAccess={asset.content_type || "Text file"}
+            titleAccess={asset.content_type || t("textFile")}
           />
         )}
         {isAudio && (
@@ -474,7 +476,7 @@ const AssetItem: React.FC<AssetItemProps> = (props) => {
               style={{ color: `var(--c_${assetType})` }}
               onClick={handleAudioClick}
               className="placeholder"
-              titleAccess={asset.content_type || "Audio file"}
+              titleAccess={asset.content_type || t("audioFile")}
             />
             {showDuration && asset.duration && assetItemSize > 1 && (
               <Text className="duration info">
@@ -489,7 +491,7 @@ const AssetItem: React.FC<AssetItemProps> = (props) => {
               <VideoFileIcon
                 className="placeholder"
                 style={{ color: `var(--c_${assetType})`, zIndex: 1000 }}
-                titleAccess={asset.content_type || "Video file"}
+                titleAccess={asset.content_type || t("videoFile")}
               />
             ) : (
               <div
@@ -518,7 +520,7 @@ const AssetItem: React.FC<AssetItemProps> = (props) => {
             <PictureAsPdfIcon
               className="placeholder"
               style={{ color: `var(--c_${assetType})` }}
-              titleAccess={asset.content_type || "PDF file"}
+              titleAccess={asset.content_type || t("pdfFile")}
             />
             {asset.get_url !== "/images/placeholder.png" && (
               <div
@@ -535,14 +537,14 @@ const AssetItem: React.FC<AssetItemProps> = (props) => {
           <DataObjectIcon
             className="placeholder"
             style={{ color: `var(--c_${assetType})` }}
-            titleAccess={asset.content_type || "JSON file"}
+            titleAccess={asset.content_type || t("jsonFile")}
           />
         )}
         {isCsv && (
           <TableChartIcon
             className="placeholder"
             style={{ color: `var(--c_${assetType})` }}
-            titleAccess={asset.content_type || "CSV file"}
+            titleAccess={asset.content_type || t("csvFile")}
           />
         )}
         {!isImage &&
@@ -555,7 +557,7 @@ const AssetItem: React.FC<AssetItemProps> = (props) => {
             <InsertDriveFileIcon
               className="placeholder"
               style={{ color: `var(--c_${assetType})` }}
-              titleAccess={asset.content_type || "Unknown file type"}
+              titleAccess={asset.content_type || t("unknownFileType")}
             />
           )}
       </div>
@@ -565,7 +567,7 @@ const AssetItem: React.FC<AssetItemProps> = (props) => {
             <Text
               className="filetype info"
               size="tiny"
-              title={asset.content_type || "Unknown content type"}
+              title={asset.content_type || t("unknownContentType")}
               style={{
                 color: `var(--c_${assetType}, var(--palette-grey-100))`,
                 textTransform: "uppercase",
@@ -582,7 +584,9 @@ const AssetItem: React.FC<AssetItemProps> = (props) => {
             assetItemSize > 3 && (
               <Text
                 className="filesize info"
-                title={`File size: ${formatFileSize(asset.size)}`}
+                title={t("fileSizeTooltip", {
+                  size: formatFileSize(asset.size)
+                })}
               >
                 {formatFileSize(asset.size)}
               </Text>

@@ -1,4 +1,5 @@
 import React, { memo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Divider, ContextMenu } from "../ui_primitives";
 import ContextMenuItem from "./ContextMenuItem";
 import { useNodeContextMenu } from "../../hooks/nodes/useNodeContextMenu";
@@ -23,6 +24,7 @@ import { useGroupIntoSubgraph } from "../../hooks/nodes/useGroupIntoSubgraph";
 import { useNodes } from "../../contexts/NodeContext";
 
 const NodeContextMenu: React.FC = () => {
+  const { t } = useTranslation("nodeMenu");
   const {
     menuPosition,
     closeContextMenu,
@@ -55,21 +57,21 @@ const NodeContextMenu: React.FC = () => {
       <ContextMenuItem
         key="remove-from-group"
         onClick={handleRemoveFromGroup}
-        label="Remove from Group"
+        label={t("removeFromGroup")}
         IconComponent={<GroupRemoveIcon />}
-        tooltip="Remove this node from the group"
+        tooltip={t("removeNodeFromGroup")}
       />
     ),
     <ContextMenuItem
       key="duplicate"
       onClick={handlers.handleDuplicate}
-      label="Duplicate"
+      label={t("duplicate")}
       IconComponent={<QueueIcon />}
       tooltip={
         <div className="tooltip-span">
-          <div className="tooltip-title">Duplicate</div>
+          <div className="tooltip-title">{t("duplicate")}</div>
           <div className="tooltip-key">
-            <kbd>CTRL</kbd>+<kbd>D</kbd> / <kbd>⌘</kbd>+<kbd>D</kbd>
+            <kbd>{t("ctrlKey")}</kbd>+<kbd>D</kbd> / <kbd>⌘</kbd>+<kbd>D</kbd>
           </div>
         </div>
       }
@@ -77,13 +79,13 @@ const NodeContextMenu: React.FC = () => {
     <ContextMenuItem
       key="duplicate-vertical"
       onClick={handlers.handleDuplicateVertical}
-      label="Duplicate Vertical"
+      label={t("duplicateVertical")}
       IconComponent={<SouthIcon />}
       tooltip={
         <div className="tooltip-span">
-          <div className="tooltip-title">Duplicate Vertical</div>
+          <div className="tooltip-title">{t("duplicateVertical")}</div>
           <div className="tooltip-key">
-            <kbd>CTRL</kbd>+<kbd>SHIFT</kbd>+<kbd>D</kbd> / <kbd>⌘</kbd>+<kbd>SHIFT</kbd>+<kbd>D</kbd>
+            <kbd>{t("ctrlKey")}</kbd>+<kbd>{t("shiftKey")}</kbd>+<kbd>D</kbd> / <kbd>⌘</kbd>+<kbd>{t("shiftKey")}</kbd>+<kbd>D</kbd>
           </div>
         </div>
       }
@@ -91,20 +93,20 @@ const NodeContextMenu: React.FC = () => {
     <ContextMenuItem
       key="run-from-here"
       onClick={handlers.handleRunFromHere}
-      label={conditions.isWorkflowRunning ? "Running..." : "Run Node"}
+      label={conditions.isWorkflowRunning ? t("running") : t("runNode")}
       IconComponent={<PlayArrowIcon />}
-      tooltip="Run this node as its own job, using previous results as inputs"
+      tooltip={t("runNodeTooltip")}
       addButtonClassName={conditions.isWorkflowRunning ? "disabled" : ""}
     />,
     <ContextMenuItem
       key="toggle-bypass"
       onClick={handlers.handleToggleBypass}
-      label={conditions.isBypassed ? "Enable Node" : "Bypass Node"}
+      label={conditions.isBypassed ? t("enableNode") : t("bypassNode")}
       IconComponent={conditions.isBypassed ? <PowerSettingsNewIcon /> : <BlockIcon />}
       tooltip={
         <div className="tooltip-span">
           <div className="tooltip-title">
-            {conditions.isBypassed ? "Enable Node" : "Bypass Node"}
+            {conditions.isBypassed ? t("enableNode") : t("bypassNode")}
           </div>
           <div className="tooltip-key">
             <kbd>B</kbd>
@@ -115,69 +117,69 @@ const NodeContextMenu: React.FC = () => {
     <ContextMenuItem
       key="toggle-comment"
       onClick={handlers.handleToggleComment}
-      label={conditions.hasCommentTitle ? "Remove Comment" : "Add Comment"}
+      label={conditions.hasCommentTitle ? t("removeComment") : t("addComment")}
       IconComponent={<EditIcon />}
       tooltip={
         conditions.hasCommentTitle
-          ? "Remove the comment from this node"
-          : "Add a comment to this node"
+          ? t("removeCommentTooltip")
+          : t("addCommentTooltip")
       }
     />,
     <ContextMenuItem
       key="group-into-subgraph"
       onClick={handleGroupIntoSubgraph}
-      label="Group into Subgraph"
+      label={t("groupIntoSubgraph")}
       IconComponent={<AccountTreeIcon />}
-      tooltip="Move the selected nodes into a new subgraph node"
+      tooltip={t("groupIntoSubgraphTooltip")}
     />,
     conditions.canConvertToInput && (
       <ContextMenuItem
         key="convert-to-input"
         onClick={handlers.handleConvertToInput}
-        label="Convert to Input Node"
+        label={t("convertToInputNode")}
         IconComponent={<SwapHorizIcon />}
-        tooltip="Convert this constant node to an input node"
+        tooltip={t("convertConstantToInputTooltip")}
       />
     ),
     conditions.canConvertToConstant && (
       <ContextMenuItem
         key="convert-to-constant"
         onClick={handlers.handleConvertToConstant}
-        label="Convert to Constant Node"
+        label={t("convertToConstantNode")}
         IconComponent={<SwapHorizIcon />}
-        tooltip="Convert this input node to a constant node"
+        tooltip={t("convertInputToConstantTooltip")}
       />
     ),
     <ContextMenuItem
       key="show-templates"
       onClick={handlers.handleFindTemplates}
-      label="Show Templates"
+      label={t("showTemplates")}
       IconComponent={<SearchIcon />}
-      tooltip="Find Templates using this node"
+      tooltip={t("findTemplatesUsingNode")}
     />,
     <ContextMenuItem
       key="select-all"
       onClick={handlers.handleSelectAllSameType}
-      label={`Select all ${""} nodes`}
+      label={t("selectAllNodes")}
       IconComponent={<FilterListIcon />}
-      tooltip="Select all nodes of the same type"
+      tooltip={t("selectAllNodesSameType")}
     />,
     <Divider key="divider-before-delete" />,
     <ContextMenuItem
       key="delete-node"
       onClick={handlers.handleDeleteNode}
-      label="Delete Node"
+      label={t("deleteNode")}
       IconComponent={<DeleteIcon />}
-      tooltip="Delete this node"
+      tooltip={t("deleteNodeTooltip")}
     />,
     isDevelopment && <Divider key="dev-divider" />,
     isDevelopment && (
       <ContextMenuItem
         key="copy-nodedata"
         onClick={handlers.handleCopyMetadataToClipboard}
-        label="Copy NodeData"
+        label={t("copyNodeData")}
         IconComponent={<DataArrayIcon />}
-        tooltip="Copy node data to the clipboard"
+        tooltip={t("copyNodeDataTooltip")}
       />
     )
   ];

@@ -8,6 +8,7 @@
  */
 
 import React, { memo, useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -36,13 +37,6 @@ import { asImageRef } from "../../../utils/imageRef";
 import { MASK_NODE_TYPE } from "../../../constants/nodeTypes";
 
 type MaskTab = "image1" | "image2" | "mask" | "result";
-
-const TAB_PLACEHOLDERS: Record<MaskTab, string> = {
-  image1: "Connect Image 1",
-  image2: "Connect Image 2",
-  mask: "Connect a mask",
-  result: "Run the node to composite"
-};
 
 const styles = (theme: Theme) =>
   css({
@@ -126,6 +120,7 @@ const MaskBodyInner: React.FC<MaskBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(() => styles(theme), [theme]);
 
   const [tab, setTab] = useState<MaskTab>("result");
@@ -162,6 +157,15 @@ const MaskBodyInner: React.FC<MaskBodyProps> = ({
         : tab === "mask"
           ? mask
           : result;
+  const tabPlaceholders = useMemo<Record<MaskTab, string>>(
+    () => ({
+      image1: t("connectImage1"),
+      image2: t("connectImage2"),
+      mask: t("connectMask"),
+      result: t("runNodeToComposite")
+    }),
+    [t]
+  );
 
   const handleTabChange = useCallback(
     (_: React.MouseEvent<HTMLElement>, next: string | null) => {
@@ -177,7 +181,7 @@ const MaskBodyInner: React.FC<MaskBodyProps> = ({
     <div css={cssStyles} className="mask-body" data-bespoke-body="Mask">
       <HandleColumn id={id} properties={imageHandles} />
       <div className="preview-area">
-        <ImagePreview value={tabValue} placeholder={TAB_PLACEHOLDERS[tab]} />
+        <ImagePreview value={tabValue} placeholder={tabPlaceholders[tab]} />
       </div>
 
       <FlexColumn className="controls" gap={0.5}>
@@ -188,19 +192,19 @@ const MaskBodyInner: React.FC<MaskBodyProps> = ({
             value={tab}
             exclusive
             onChange={handleTabChange}
-            aria-label="Preview tab"
+            aria-label={t("previewTab")}
           >
-            <ToggleOption value="image1" aria-label="Image 1">
-              Img 1
+            <ToggleOption value="image1" aria-label={t("image1Tab")}>
+              {t("img1Tab")}
             </ToggleOption>
-            <ToggleOption value="image2" aria-label="Image 2">
-              Img 2
+            <ToggleOption value="image2" aria-label={t("image2Tab")}>
+              {t("img2Tab")}
             </ToggleOption>
-            <ToggleOption value="mask" aria-label="Mask">
-              Mask
+            <ToggleOption value="mask" aria-label={t("maskTab")}>
+              {t("maskTab")}
             </ToggleOption>
-            <ToggleOption value="result" aria-label="Result">
-              Result
+            <ToggleOption value="result" aria-label={t("resultTab")}>
+              {t("resultTab")}
             </ToggleOption>
           </ToggleGroup>
         </FlexRow>

@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Text, EditorButton } from "../ui_primitives";
 import { useRequiredSettings } from "../../hooks/useRequiredSettings";
@@ -10,6 +11,7 @@ interface RequiredSettingsWarningProps {
 const RequiredSettingsWarning: React.FC<RequiredSettingsWarningProps> = React.memo(
   ({ nodeType }) => {
     const navigate = useNavigate();
+    const { t } = useTranslation("nodeMenu");
     const missingSettings = useRequiredSettings(nodeType);
 
     const handleOpenSettings = useCallback(() => {
@@ -26,10 +28,10 @@ const RequiredSettingsWarning: React.FC<RequiredSettingsWarningProps> = React.me
       }
 
       const settingsList = missingSettings.join(", ");
-      const message =
-        missingSettings.length === 1
-          ? `Required setting ${settingsList} is not configured!`
-          : `Required settings ${settingsList} are not configured!`;
+      const message = t("requiredSettingNotConfigured", {
+        count: missingSettings.length,
+        settings: settingsList
+      });
 
       return (
         <>
@@ -63,11 +65,11 @@ const RequiredSettingsWarning: React.FC<RequiredSettingsWarningProps> = React.me
               borderRadius: ".1em"
             }}
           >
-            Configure in Settings
+            {t("configureInSettings")}
           </EditorButton>
         </>
       );
-    }, [missingSettings, handleOpenSettings]);
+    }, [missingSettings, handleOpenSettings, t]);
 
     return content;
   }

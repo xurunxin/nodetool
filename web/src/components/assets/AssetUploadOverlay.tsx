@@ -8,6 +8,7 @@ import { Text, Box } from "../ui_primitives";
 //server state
 import { useAssetUpload } from "../../serverState/useAssetUpload";
 import LinearProgressWithLabel from "./LinearProgressWithLabel";
+import { useTranslation } from "react-i18next";
 
 const styles = (theme: Theme) =>
   css({
@@ -43,6 +44,7 @@ const styles = (theme: Theme) =>
 
 const AssetUploadOverlay = () => {
   const theme = useTheme();
+  const { t } = useTranslation("assets");
   const { files, isUploading, overallProgress, completed } = useAssetUpload();
 
   if (!isUploading) {
@@ -53,9 +55,12 @@ const AssetUploadOverlay = () => {
     <div css={styles(theme)} className="uploading-overlay">
       <div className="uploading-message">
         <Box>
-          <Text size="bigger">Uploading assets</Text>
+          <Text size="bigger">{t("uploadingAssets")}</Text>
           <Text size="normal" weight={600}>
-            {completed} / {files.length} files completed
+            {t("filesCompleted", {
+              completed,
+              count: files.length
+            })}
           </Text>
         </Box>
         <LinearProgressWithLabel value={overallProgress} />

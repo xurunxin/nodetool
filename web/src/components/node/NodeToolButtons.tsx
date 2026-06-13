@@ -1,4 +1,5 @@
 import React, { memo, useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useReactFlow, Node } from "@xyflow/react";
 import {
@@ -36,6 +37,7 @@ interface NodeToolbarProps {
 }
 
 const NodeToolButtons: React.FC<NodeToolbarProps> = ({ nodeId }) => {
+  const { t } = useTranslation("nodeMenu");
   const { getNode } = useReactFlow();
   const navigate = useNavigate();
   const deleteNode = useNodes((state) => state.deleteNode);
@@ -131,7 +133,7 @@ const NodeToolButtons: React.FC<NodeToolbarProps> = ({ nodeId }) => {
       >
         {/* Primary Actions - Always Visible */}
         <ToolbarIconButton
-          title={isWorkflowRunning ? "Running..." : "Run Node"}
+          title={isWorkflowRunning ? t("running") : t("runNode")}
           delay={TOOLTIP_ENTER_DELAY}
           className="nodrag"
           onClick={runFromHere}
@@ -144,7 +146,7 @@ const NodeToolButtons: React.FC<NodeToolbarProps> = ({ nodeId }) => {
         </ToolbarIconButton>
 
         <ToolbarIconButton
-          title={`${isBypassed ? "Enable Node" : "Bypass Node"} ${getShortcutTooltip("bypassNode", undefined, "combo")}`}
+          title={`${isBypassed ? t("enableNode") : t("bypassNode")} ${getShortcutTooltip("bypassNode", undefined, "combo")}`}
           delay={TOOLTIP_ENTER_DELAY}
           className="nodrag"
           onClick={handleToggleBypass}
@@ -156,7 +158,7 @@ const NodeToolButtons: React.FC<NodeToolbarProps> = ({ nodeId }) => {
         </ToolbarIconButton>
 
         <ToolbarIconButton
-          title={`Duplicate ${getShortcutTooltip("duplicate", undefined, "combo")}`}
+          title={`${t("duplicate")} ${getShortcutTooltip("duplicate", undefined, "combo")}`}
           delay={TOOLTIP_ENTER_DELAY}
           className="nodrag"
           onClick={handleDuplicateNodes}
@@ -168,7 +170,7 @@ const NodeToolButtons: React.FC<NodeToolbarProps> = ({ nodeId }) => {
 
         {/* More Actions Dropdown */}
         <ToolbarIconButton
-          title="More Actions"
+          title={t("moreActions")}
           delay={TOOLTIP_ENTER_DELAY}
           className="nodrag"
           onClick={handleOpenDropdown}
@@ -202,7 +204,7 @@ const NodeToolButtons: React.FC<NodeToolbarProps> = ({ nodeId }) => {
             <ListItemIcon>
               <GroupRemoveIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>Remove from Group</ListItemText>
+            <ListItemText>{t("removeFromGroup")}</ListItemText>
           </EditorMenuItem>
         )}
 
@@ -211,7 +213,7 @@ const NodeToolButtons: React.FC<NodeToolbarProps> = ({ nodeId }) => {
             <ListItemIcon>
               <SwapHorizIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>Convert to Input</ListItemText>
+            <ListItemText>{t("convertToInput")}</ListItemText>
           </EditorMenuItem>
         )}
 
@@ -220,7 +222,7 @@ const NodeToolButtons: React.FC<NodeToolbarProps> = ({ nodeId }) => {
             <ListItemIcon>
               <SwapHorizIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>Convert to Constant</ListItemText>
+            <ListItemText>{t("convertToConstant")}</ListItemText>
           </EditorMenuItem>
         )}
 
@@ -229,7 +231,7 @@ const NodeToolButtons: React.FC<NodeToolbarProps> = ({ nodeId }) => {
             <EditIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>
-            {hasCommentTitle ? "Remove Comment" : "Add Comment"}
+            {hasCommentTitle ? t("removeComment") : t("addComment")}
           </ListItemText>
         </EditorMenuItem>
 
@@ -237,14 +239,14 @@ const NodeToolButtons: React.FC<NodeToolbarProps> = ({ nodeId }) => {
           <ListItemIcon>
             <SearchIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Show Templates</ListItemText>
+          <ListItemText>{t("showTemplates")}</ListItemText>
         </EditorMenuItem>
 
         <EditorMenuItem onClick={handleSelectAllSameType}>
           <ListItemIcon>
             <FilterListIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Select All Same Type</ListItemText>
+          <ListItemText>{t("selectAllSameType")}</ListItemText>
         </EditorMenuItem>
 
         {isDevelopment && [
@@ -253,7 +255,7 @@ const NodeToolButtons: React.FC<NodeToolbarProps> = ({ nodeId }) => {
             <ListItemIcon>
               <DataArrayIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>Copy NodeData</ListItemText>
+            <ListItemText>{t("copyNodeData")}</ListItemText>
           </EditorMenuItem>
         ]}
 
@@ -264,7 +266,7 @@ const NodeToolButtons: React.FC<NodeToolbarProps> = ({ nodeId }) => {
             <DeleteIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>
-            Delete {getShortcutTooltip("deleteSelected", undefined, "combo")}
+            {t("deleteSelected")} {getShortcutTooltip("deleteSelected", undefined, "combo")}
           </ListItemText>
         </EditorMenuItem>
       </EditorMenu>

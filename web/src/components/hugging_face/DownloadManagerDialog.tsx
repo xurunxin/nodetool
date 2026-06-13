@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { memo, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import {
   DialogTitle,
@@ -51,6 +52,7 @@ const styles = (theme: Theme) =>
   });
 
 const DownloadManagerDialog: React.FC = () => {
+  const { t } = useTranslation(["models", "common"]);
   const isDialogOpen = useModelDownloadStore((state) => state.isDialogOpen);
   const closeDialog = useModelDownloadStore((state) => state.closeDialog);
   const downloads = useModelDownloadStore((state) => state.downloads);
@@ -62,17 +64,11 @@ const DownloadManagerDialog: React.FC = () => {
   const theme = useTheme();
 
   const infoMessage = hasActiveDownloads ? (
-    "Downloads continue in the background. Access them anytime from the toolbar download icon."
+    t("downloadsContinueInBackground")
   ) : (
     <FlexColumn gap={1}>
-      <span>
-        Download models using the <strong>Recommended Models</strong> button
-        inside nodes.
-      </span>
-      <span>
-        The <strong>Model Manager</strong> in the top right panel shows all
-        available models.
-      </span>
+      <span>{t("downloadModelsUsingRecommended")}</span>
+      <span>{t("modelManagerShowsAvailableModels")}</span>
     </FlexColumn>
   );
 
@@ -86,7 +82,7 @@ const DownloadManagerDialog: React.FC = () => {
       fullWidth
     >
       <DialogTitle sx={{ color: "inherit", position: "relative" }}>
-        {hasActiveDownloads ? "Download Progress" : "Model Downloads"}
+        {hasActiveDownloads ? t("downloadProgress") : t("modelDownloads")}
         <CloseButton
           onClick={closeDialog}
           className="title-close"
@@ -108,13 +104,12 @@ const DownloadManagerDialog: React.FC = () => {
               }}
             >
               <DownloadingIcon sx={{ opacity: 0.8 }} />
-              <Text size="normal" weight={600}>No active downloads</Text>
+              <Text size="normal" weight={600}>{t("noActiveDownloads")}</Text>
               <Text
                 size="small"
                 sx={{ opacity: 0.8, textAlign: "center" }}
               >
-                Start a model download from the Recommended Models dialog or
-                Model Manager.
+                {t("startModelDownloadFromRecommended")}
               </Text>
             </FlexColumn>
           )}
@@ -163,7 +158,7 @@ const DownloadManagerDialog: React.FC = () => {
           {infoMessage}
         </Text>
         <EditorButton onClick={closeDialog} variant="contained">
-          Close
+          {t("common:close")}
         </EditorButton>
       </DialogActions>
     </Dialog>

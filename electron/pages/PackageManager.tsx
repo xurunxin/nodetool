@@ -212,10 +212,10 @@ const PackageManager: React.FC = () => {
       if (result.success) {
         await loadRuntimes();
       } else {
-        setError(result.message || "Runtime installation failed");
+        setError(result.message || "运行时安装失败");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Runtime installation failed");
+      setError(err instanceof Error ? err.message : "运行时安装失败");
     } finally {
       setInstallingRuntimes(prev => { const next = new Set(prev); next.delete(runtimeId); return next; });
     }
@@ -232,10 +232,10 @@ const PackageManager: React.FC = () => {
       if (result.success) {
         await loadRuntimes();
       } else {
-        setError(result.message || "Runtime uninstall failed");
+        setError(result.message || "运行时卸载失败");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Runtime uninstall failed");
+      setError(err instanceof Error ? err.message : "运行时卸载失败");
     } finally {
       setInstallingRuntimes(prev => { const next = new Set(prev); next.delete(runtimeId); return next; });
     }
@@ -299,14 +299,14 @@ const PackageManager: React.FC = () => {
 
   const fetchAvailablePackages = async (): Promise<PackageListResponse> => {
     if (!window.electronAPI?.packages?.listAvailable) {
-      throw new Error("Package API is not available");
+      throw new Error("包管理 API 不可用");
     }
     return await window.electronAPI.packages.listAvailable();
   };
 
   const fetchInstalledPackages = async (): Promise<InstalledPackageListResponse> => {
     if (!window.electronAPI?.packages?.listInstalled) {
-      throw new Error("Package API is not available");
+      throw new Error("包管理 API 不可用");
     }
     return await window.electronAPI.packages.listInstalled();
   };
@@ -365,7 +365,7 @@ const PackageManager: React.FC = () => {
         throw new Error(result.message);
       }
       if (!installed) {
-        alert("Package installed successfully. The server will restart to apply changes.");
+        alert("包安装成功。服务器将重启以应用更改。");
         const installedData = await fetchInstalledPackages();
         setInstalledPackages(installedData.packages || []);
         try { window.electronAPI?.restartServer?.(); } catch (e) { /* ignore */ }
@@ -376,7 +376,7 @@ const PackageManager: React.FC = () => {
       setLastUpdated(new Date());
     } catch (error: any) {
       console.error("Package action failed:", error);
-      setError(`Failed to ${installed ? "uninstall" : "install"} package: ${error.message}`);
+      setError(`${installed ? "卸载" : "安装"}包失败：${error.message}`);
     } finally {
       setIsProcessing(false);
       setActivePackageId(null);
@@ -394,14 +394,14 @@ const PackageManager: React.FC = () => {
       if (!result.success) {
         throw new Error(result.message);
       }
-      alert("Package updated successfully. The server will restart to apply changes.");
+      alert("包更新成功。服务器将重启以应用更改。");
       const installedData = await fetchInstalledPackages();
       setInstalledPackages(installedData.packages || []);
       try { window.electronAPI?.restartServer?.(); } catch (e) { /* ignore */ }
       setLastUpdated(new Date());
     } catch (error: any) {
       console.error("Package update failed:", error);
-      setError(`Failed to update package: ${error.message}`);
+      setError(`更新包失败：${error.message}`);
     } finally {
       setIsProcessing(false);
       setActivePackageId(null);
@@ -456,7 +456,7 @@ const PackageManager: React.FC = () => {
       <div className="app-wrapper">
         <div className="loading-container">
           <div className="spinner" />
-          <div>Loading packages…</div>
+          <div>正在加载包...</div>
         </div>
       </div>
     );
@@ -467,7 +467,7 @@ const PackageManager: React.FC = () => {
       <div className="app-wrapper">
         <div className="loading-container">
           <div className="empty-icon">⚠️</div>
-          <h3 style={{ color: "var(--text-secondary)", marginBottom: 8 }}>Error loading packages</h3>
+          <h3 style={{ color: "var(--text-secondary)", marginBottom: 8 }}>包加载失败</h3>
           <p>{error}</p>
         </div>
       </div>
@@ -481,22 +481,22 @@ const PackageManager: React.FC = () => {
         <div className="header-brand">
           <div className="header-icon">📦</div>
           <div className="header-text">
-            <h1>Package Manager</h1>
-            <p>Manage and install NodeTool packages and extensions</p>
+            <h1>包管理器</h1>
+            <p>管理和安装 NodeTool 包与扩展</p>
           </div>
         </div>
         <div className="tabs">
           <button className={`tab ${activeTab === "all" ? "active" : ""}`} onClick={() => setActiveTab("all")}>
-            <IconGrid className="tab-icon" /> All Packages
+            <IconGrid className="tab-icon" /> 全部包
           </button>
           <button className={`tab ${activeTab === "installed" ? "active" : ""}`} onClick={() => setActiveTab("installed")}>
-            <IconCheck className="tab-icon" /> Installed
+            <IconCheck className="tab-icon" /> 已安装
           </button>
           <button className={`tab ${activeTab === "available" ? "active" : ""}`} onClick={() => setActiveTab("available")}>
-            <IconDownload className="tab-icon" /> Available
+            <IconDownload className="tab-icon" /> 可用
           </button>
           <button className={`tab ${activeTab === "updates" ? "active" : ""}`} onClick={() => setActiveTab("updates")}>
-            <IconRefresh className="tab-icon" /> Updates
+            <IconRefresh className="tab-icon" /> 更新
           </button>
 
         </div>
@@ -519,7 +519,7 @@ const PackageManager: React.FC = () => {
                 <input
                   type="text"
                   className="search-input"
-                  placeholder="Search packages…"
+                  placeholder="搜索包..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   disabled={isAnyProcessing}
@@ -531,7 +531,7 @@ const PackageManager: React.FC = () => {
                   onClick={() => setShowNodeSearch(s => !s)}
                   disabled={isAnyProcessing}
                 >
-                  <IconSliders /> {showNodeSearch ? "Hide Node Search" : "Search Nodes"}
+                  <IconSliders /> {showNodeSearch ? "隐藏节点搜索" : "搜索节点"}
                 </button>
               </div>
             </div>
@@ -540,7 +540,7 @@ const PackageManager: React.FC = () => {
             {showNodeSearch && (
               <div className="node-search-panel">
                 <div className="node-search-header">
-                  <h3>Search Specific Nodes</h3>
+                  <h3>搜索指定节点</h3>
                   <button className="node-search-close" onClick={() => { setShowNodeSearch(false); setNodeQuery(""); setNodeResults([]); }}>
                     <IconX />
                   </button>
@@ -551,7 +551,7 @@ const PackageManager: React.FC = () => {
                     <input
                       type="text"
                       className="search-input"
-                      placeholder="Type to find nodes across all packages…"
+                      placeholder="输入关键字，在所有包中查找节点..."
                       value={nodeQuery}
                       onChange={(e) => handleNodeSearch(e.target.value)}
                       disabled={isAnyProcessing}
@@ -562,13 +562,13 @@ const PackageManager: React.FC = () => {
                   {!nodeQuery ? (
                     <div className="node-search-hint">
                       <div className="node-search-hint-icon">🔍</div>
-                      <div className="node-search-hint-text">Start typing to search for nodes across all packages</div>
+                      <div className="node-search-hint-text">开始输入以在所有包中搜索节点</div>
                     </div>
                   ) : (
                     <>
                       {nodeResults.length === 0 && !nodeSearching ? (
                         <div className="empty-state-small">
-                          No nodes found matching "{nodeQuery}"
+                          未找到匹配“{nodeQuery}”的节点
                         </div>
                       ) : (
                         nodeResults.slice(0, 20).map((n, idx) => (
@@ -587,10 +587,10 @@ const PackageManager: React.FC = () => {
                                   onClick={() => handlePackageAction(n.package, false)}
                                   disabled={isAnyProcessing}
                                 >
-                                  {activePackageId === n.package ? <div className="spinner-small" /> : "Install"}
+                                  {activePackageId === n.package ? <div className="spinner-small" /> : "安装"}
                                 </button>
                               ) : (
-                                <span className="status-text installed">✓ Installed</span>
+                                <span className="status-text installed">已安装</span>
                               )}
                             </div>
                           </div>
@@ -616,7 +616,7 @@ const PackageManager: React.FC = () => {
                         <div className="package-title-row">
                           <span className="package-name">{rt.name}</span>
                           {rt.installed && (
-                            <span className="badge badge-installed"><span className="badge-dot" /> Installed</span>
+                            <span className="badge badge-installed"><span className="badge-dot" /> 已安装</span>
                           )}
                         </div>
                       </div>
@@ -631,7 +631,7 @@ const PackageManager: React.FC = () => {
                           onClick={() => handleUninstallRuntime(rt.id as RuntimePackageId)}
                           disabled={isInstalling || isAnyProcessing}
                         >
-                          <IconTrash /> {isInstalling ? "Removing…" : "Uninstall"}
+                          <IconTrash /> {isInstalling ? "正在移除..." : "卸载"}
                         </button>
                       ) : (
                         <button
@@ -639,7 +639,7 @@ const PackageManager: React.FC = () => {
                           onClick={() => handleInstallRuntime(rt.id as RuntimePackageId)}
                           disabled={isInstalling || isAnyProcessing}
                         >
-                          <IconDownload /> {isInstalling ? "Installing…" : "Install"}
+                          <IconDownload /> {isInstalling ? "正在安装..." : "安装"}
                         </button>
                       )}
                     </div>
@@ -651,8 +651,8 @@ const PackageManager: React.FC = () => {
               {filteredPackages.length === 0 && (activeTab !== "all" || runtimes.length === 0) && (
                 <div className="empty-state">
                   <div className="empty-icon">📦</div>
-                  <h3>No packages found</h3>
-                  <p>Try adjusting your search or switching to a different tab.</p>
+                  <h3>未找到包</h3>
+                  <p>请调整搜索条件，或切换到其他标签页。</p>
                 </div>
               )}
 
@@ -676,10 +676,10 @@ const PackageManager: React.FC = () => {
                           <div className="package-title-row">
                             <span className="package-name" title={pkg.name}>{pkg.name}</span>
                             {installed && !updateAvailable && (
-                              <span className="badge badge-installed"><span className="badge-dot" /> Installed</span>
+                              <span className="badge badge-installed"><span className="badge-dot" /> 已安装</span>
                             )}
                             {updateAvailable && (
-                              <span className="badge badge-update"><span className="badge-dot" /> Update</span>
+                              <span className="badge badge-update"><span className="badge-dot" /> 有更新</span>
                             )}
                           </div>
                           {pkg.repo_id.includes("/") && (
@@ -700,7 +700,7 @@ const PackageManager: React.FC = () => {
 
                       <div className="package-card-body">
                         <p className="package-description" title={pkg.description}>
-                          {pkg.description || "No description available."}
+                          {pkg.description || "暂无描述。"}
                         </p>
                         <div className="package-meta">
                           {installed && installedPkg ? (
@@ -713,7 +713,7 @@ const PackageManager: React.FC = () => {
                               )}
                             </>
                           ) : pkg.version ? (
-                            <span className="version-pill">Latest: v{pkg.version}</span>
+                            <span className="version-pill">最新：v{pkg.version}</span>
                           ) : null}
                         </div>
                       </div>
@@ -725,7 +725,7 @@ const PackageManager: React.FC = () => {
                             onClick={() => handleUpdatePackage(pkg.repo_id)}
                             disabled={isAnyProcessing}
                           >
-                            {isActive ? <div className="spinner-small" /> : `Update to v${installedPkg?.latestVersion}`}
+                            {isActive ? <div className="spinner-small" /> : `更新到 v${installedPkg?.latestVersion}`}
                           </button>
                         )}
                         <button
@@ -736,9 +736,9 @@ const PackageManager: React.FC = () => {
                           {isActive && !updateAvailable ? (
                             <div className="spinner-small" />
                           ) : installed ? (
-                            <><IconTrash /> Uninstall</>
+                            <><IconTrash /> 卸载</>
                           ) : (
-                            <><IconDownload /> Install</>
+                            <><IconDownload /> 安装</>
                           )}
                         </button>
                       </div>
@@ -754,29 +754,29 @@ const PackageManager: React.FC = () => {
         <div className="footer-stats">
           <div className="footer-stat">
             <span className="footer-stat-dot total" />
-            {stats.total} packages
+            {stats.total} 个包
           </div>
           <div className="footer-stat">
             <span className="footer-stat-dot installed" />
-            {stats.installed} installed
+            已安装 {stats.installed} 个
           </div>
           <div className="footer-stat">
             <span className="footer-stat-dot available" />
-            {stats.available} available
+            可用 {stats.available} 个
           </div>
           {stats.updates > 0 && (
             <div className="footer-stat">
               <span className="footer-stat-dot updates" />
-              {stats.updates} updates
+              {stats.updates} 个更新
             </div>
           )}
         </div>
         <div className="footer-actions">
           <button className="footer-btn" onClick={handleRefresh} disabled={loading}>
-            <IconRefresh /> Refresh
+            <IconRefresh /> 刷新
           </button>
           {lastUpdated && (
-            <span>Updated {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+            <span>更新于 {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
           )}
         </div>
       </div>
@@ -786,7 +786,7 @@ const PackageManager: React.FC = () => {
         <div className="pm-console-header" onClick={handleToggleConsole}>
           <div className="pm-console-title">
             <span className={`pm-console-indicator ${consoleLogs.length === 0 ? "idle" : ""}`} />
-            Console Output
+            控制台输出
             {consoleLogs.length > 0 && (
               <span className="pm-console-count">({consoleLogs.length})</span>
             )}
@@ -798,10 +798,10 @@ const PackageManager: React.FC = () => {
               onClick={handleClearConsole}
               disabled={consoleLogs.length === 0}
             >
-              Clear
+              清空
             </button>
             <button type="button" className="pm-console-button" onClick={handleToggleConsole}>
-              {isConsoleCollapsed ? "Show" : "Hide"}
+              {isConsoleCollapsed ? "显示" : "隐藏"}
             </button>
           </div>
         </div>
@@ -811,11 +811,11 @@ const PackageManager: React.FC = () => {
             ref={consoleBodyRef}
             role="log"
             aria-live="polite"
-            aria-label="Package manager console output"
+            aria-label="包管理器控制台输出"
           >
             {consoleLogs.length === 0 ? (
               <div className="pm-console-empty">
-                Console output will appear here when you install, update, or uninstall a package.
+                安装、更新或卸载包时，控制台输出会显示在这里。
               </div>
             ) : (
               consoleLogs.map((line, i) => (

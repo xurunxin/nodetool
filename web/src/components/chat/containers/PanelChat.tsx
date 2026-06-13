@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ChatView from "./ChatView";
 import useGlobalChatStore, {
@@ -16,6 +17,7 @@ import {
 import { ChatSidebar } from "../sidebar/ChatSidebar";
 import type { ThreadInfo } from "../types/thread.types";
 import type { Message, MessageTextContent } from "../../../stores/ApiTypes";
+import { getLocalizedThreadTitle } from "../utils/threadUtils";
 
 /**
  * PanelChat — the unified chat for the editor's left side panel.
@@ -27,6 +29,7 @@ import type { Message, MessageTextContent } from "../../../stores/ApiTypes";
  * workflow tools target the open workflow in every mode.
  */
 const PanelChat: React.FC = () => {
+  const { t } = useTranslation("chat");
   const currentWorkflowId = useWorkflowManager(
     (state) => state.currentWorkflowId
   );
@@ -163,14 +166,14 @@ const PanelChat: React.FC = () => {
     (threadId: string) => {
       const thread = threads[threadId];
       if (!thread) {
-        return "Empty conversation";
+        return t("emptyConversation");
       }
       if (thread.title) {
-        return thread.title;
+        return getLocalizedThreadTitle(thread.title, t("newConversation"));
       }
       const threadMessages = messageCache[threadId];
       if (!threadMessages || threadMessages.length === 0) {
-        return "New conversation";
+        return t("newConversation");
       }
       const firstUserMessage = threadMessages.find(
         (msg: Message) => msg.role === "user"
@@ -182,12 +185,12 @@ const PanelChat: React.FC = () => {
             : Array.isArray(firstUserMessage.content) &&
               firstUserMessage.content[0]?.type === "text"
             ? (firstUserMessage.content[0] as MessageTextContent).text
-            : "[Media message]";
+            : t("mediaMessage");
         return content?.substring(0, 50) + (content?.length > 50 ? "..." : "");
       }
-      return "New conversation";
+      return t("newConversation");
     },
-    [threads, messageCache]
+    [threads, messageCache, t]
   );
 
   const threadsWithMessages = useMemo<Record<string, ThreadInfo>>(
@@ -197,13 +200,15 @@ const PanelChat: React.FC = () => {
           id,
           {
             id: thread.id,
-            title: thread.title ?? undefined,
+            title: thread.title
+              ? getLocalizedThreadTitle(thread.title, t("newConversation"))
+              : undefined,
             updatedAt: thread.updated_at,
             messages: messageCache[id] || []
           }
         ])
       ),
-    [threads, messageCache]
+    [threads, messageCache, t]
   );
 
   const chatStatus = status === "stopping" ? "loading" : status;
@@ -217,15 +222,14 @@ const PanelChat: React.FC = () => {
         sx={{ height: "100%", px: 3, textAlign: "center" }}
       >
         <Text size="normal" weight={500} family="secondary">
-          Workflow chat
+          {t("workflowChat")}
         </Text>
         <Caption size="small">
-          Ask me to build or edit this workflow, generate media, or switch to
-          the Pi agent. I can control nodes, connections, and runs directly.
+          {t("workflowChatDescription")}
         </Caption>
       </FlexColumn>
     ),
-    []
+    [t]
   );
 
   return (
@@ -291,7 +295,7 @@ const PanelChat: React.FC = () => {
             currentLogUpdate={currentLogUpdate}
             workflowId={workflowId}
             requireToolSupport
-            composerPlaceholder="Ask anything…"
+            composerPlaceholder={t("askAnything")}
             noMessagesPlaceholder={error ? undefined : placeholder}
           />
         </FlexColumn>

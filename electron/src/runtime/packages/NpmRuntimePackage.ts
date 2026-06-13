@@ -119,7 +119,7 @@ export class NpmRuntimePackage implements RuntimePackage {
       if (checks.some(Boolean)) {
         return {
           installed: true,
-          brokenReason: `Missing packages: ${missing.join(", ")}`,
+          brokenReason: `缺少包：${missing.join(", ")}`,
         };
       }
       return { installed: false };
@@ -158,7 +158,7 @@ export class NpmRuntimePackage implements RuntimePackage {
     const npmPath = resolveNpmExecutable();
     if (!npmPath) {
       throw new Error(
-        "npm not found in PATH. Install Node.js (which includes npm) to install JavaScript packages."
+        "PATH 中找不到 npm。请安装包含 npm 的 Node.js 后再安装 JavaScript 包。"
       );
     }
     await this.ensureRoot(ctx);
@@ -200,11 +200,11 @@ export class NpmRuntimePackage implements RuntimePackage {
       child.on("exit", (code) => {
         signal.removeEventListener("abort", onAbort);
         if (signal.aborted) {
-          reject(new Error("aborted"));
+          reject(new Error("已中止"));
         } else if (code === 0) {
           resolve();
         } else {
-          reject(new Error(`npm failed with code ${code}: ${stderr}`));
+          reject(new Error(`npm 执行失败，退出码 ${code}：${stderr}`));
         }
       });
       child.on("error", (error) => {
@@ -215,7 +215,7 @@ export class NpmRuntimePackage implements RuntimePackage {
   }
 
   async *install(ctx: RuntimeContext, signal: AbortSignal): AsyncIterable<RuntimeProgress> {
-    yield { type: "stage", label: `Installing ${this.name}` };
+    yield { type: "stage", label: `正在安装 ${this.name}` };
     const queue: RuntimeProgress[] = [];
     try {
       await this.runNpm(ctx, ["install", ...this.npmPackages], signal, (level, line) => {
@@ -232,11 +232,11 @@ export class NpmRuntimePackage implements RuntimePackage {
   async *update(ctx: RuntimeContext, signal: AbortSignal): AsyncIterable<RuntimeProgress> {
     const current = await this.status(ctx);
     if (!current.installed) {
-      yield { type: "error", message: `${this.name} is not installed — install it first.` };
+      yield { type: "error", message: `${this.name} 尚未安装，请先安装。` };
       return;
     }
     if (current.installedVersion && this.pinnedVersion() === current.installedVersion) {
-      yield { type: "stage", label: `${this.name} is already at the target version.` };
+      yield { type: "stage", label: `${this.name} 已是目标版本。` };
       yield { type: "done" };
       return;
     }
@@ -244,20 +244,20 @@ export class NpmRuntimePackage implements RuntimePackage {
     try {
       await this.uninstall(ctx);
     } catch (error) {
-      yield { type: "log", level: "warn", line: `Uninstall before update failed: ${error}` };
+      yield { type: "log", level: "warn", line: `更新前卸载失败：${error}` };
     }
     yield* this.install(ctx, signal);
   }
 
   async *repair(ctx: RuntimeContext, signal: AbortSignal): AsyncIterable<RuntimeProgress> {
-    yield { type: "stage", label: `Repairing ${this.name}` };
+    yield { type: "stage", label: `正在修复 ${this.name}` };
     yield* this.install(ctx, signal);
   }
 
   async uninstall(ctx: RuntimeContext): Promise<void> {
     const npmPath = resolveNpmExecutable();
     if (!npmPath) {
-      throw new Error("npm not found in PATH.");
+      throw new Error("PATH 中找不到 npm。");
     }
     await this.ensureRoot(ctx);
     const cacheDir = path.join(ctx.userDataDir, "npm-cache");
@@ -273,7 +273,7 @@ export class NpmRuntimePackage implements RuntimePackage {
         stderr += data.toString();
       });
       child.on("exit", (code) =>
-        code === 0 ? resolve() : reject(new Error(`npm uninstall failed: ${stderr}`))
+        code === 0 ? resolve() : reject(new Error(`npm 卸载失败：${stderr}`))
       );
       child.on("error", reject);
     });

@@ -9,6 +9,7 @@
  */
 
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -132,6 +133,7 @@ const DropShadowBodyInner: React.FC<DropShadowBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(
     () => [styles(theme), adjustmentSliderStyles(theme)],
     [theme]
@@ -178,7 +180,7 @@ const DropShadowBodyInner: React.FC<DropShadowBodyProps> = ({
       </div>
 
       <FlexRow className="color-row" align="center" justify="space-between">
-        <span className="color-label">Shadow Color</span>
+        <span className="color-label">{t("shadowColor")}</span>
         <ColorPicker
           color={shadowColor}
           onColorChange={handleColorChange}

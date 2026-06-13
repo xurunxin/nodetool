@@ -13,6 +13,7 @@ import {
 } from "../../stores/BottomPanelStore";
 import { memo, useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import isEqual from "fast-deep-equal";
 import TracePanel from "./TracePanel";
 import LogPanel from "./LogPanel";
@@ -45,13 +46,13 @@ const sandboxesEnabled = !isProduction;
 
 const HEADER_HEIGHT = 32;
 
-// Worker label derived from BASE_URL. Empty = local dev (Vite proxy → :7777).
-const workerLabel = (() => {
-  if (!BASE_URL) return "worker:local";
+// Worker host derived from BASE_URL. Empty = local dev (Vite proxy -> :7777).
+const workerHost = (() => {
+  if (!BASE_URL) return null;
   try {
-    return `worker:${new URL(BASE_URL).hostname}`;
+    return new URL(BASE_URL).hostname;
   } catch {
-    return "worker:remote";
+    return "remote";
   }
 })();
 
@@ -106,28 +107,28 @@ const useGraphCounts = (
 
 interface ViewSpec {
   id: BottomPanelView;
-  label: string;
+  labelKey: "logs" | "sandboxes" | "versions" | "trace";
   icon: React.ReactNode;
   enabled: boolean;
 }
 
 const VIEW_SPECS: Record<BottomPanelView, ViewSpec> = {
-  logs: { id: "logs", label: "Logs", icon: <ArticleIcon />, enabled: true },
+  logs: { id: "logs", labelKey: "logs", icon: <ArticleIcon />, enabled: true },
   sandboxes: {
     id: "sandboxes",
-    label: "Sandboxes",
+    labelKey: "sandboxes",
     icon: <DesktopWindowsIcon />,
     enabled: sandboxesEnabled
   },
   versions: {
     id: "versions",
-    label: "Versions",
+    labelKey: "versions",
     icon: <HistoryIcon />,
     enabled: true
   },
   trace: {
     id: "trace",
-    label: "Trace",
+    labelKey: "trace",
     icon: <TimelineIcon />,
     enabled: true
   }
@@ -337,17 +338,19 @@ const styles = (theme: Theme) =>
 
 interface TabButtonProps {
   spec: ViewSpec;
+  label: string;
   active: boolean;
   onClick: () => void;
 }
 
 const TabButton = memo(function TabButton({
   spec,
+  label,
   active,
   onClick
 }: TabButtonProps) {
   return (
-    <Tooltip title={spec.label} placement="top" delay={TOOLTIP_ENTER_DELAY}>
+    <Tooltip title={label} placement="top" delay={TOOLTIP_ENTER_DELAY}>
       <button
         type="button"
         role="tab"
@@ -356,7 +359,7 @@ const TabButton = memo(function TabButton({
         onClick={onClick}
       >
         {spec.icon}
-        <span>{spec.label}</span>
+        <span>{label}</span>
       </button>
     </Tooltip>
   );
@@ -433,6 +436,7 @@ const PanelBodyContent = memo(function PanelBodyContent({
 
 const PanelBottom: React.FC = () => {
   const theme = useTheme();
+  const { t } = useTranslation("navigation");
   const path = useLocation().pathname;
   const {
     ref: panelRef,
@@ -456,6 +460,11 @@ const PanelBottom: React.FC = () => {
   );
 
   const systemStats = useSystemStatsStore((state) => state.stats);
+  const statusLabel = isConnected ? t("connected") : t("offline");
+  const displayedWorkerLabel =
+    workerHost === null
+      ? t("localWorker")
+      : `${t("worker")}:${workerHost}`;
 
   useCombo(["Control", "Shift", "T"], () => handlePanelToggle("trace"), false);
   useCombo(["l"], () => handlePanelToggle("logs"), false);
@@ -522,7 +531,7 @@ const PanelBottom: React.FC = () => {
             onMouseDown={handleMouseDown}
             style={{ cursor: isDragging ? "ns-resize" : "ns-resize" }}
             role="slider"
-            aria-label="Resize panel"
+            aria-label={t("resizePanel")}
             aria-valuenow={panelSize}
             aria-valuemin={40}
             aria-valuemax={600}
@@ -534,46 +543,47 @@ const PanelBottom: React.FC = () => {
             <div
               className="status-cluster"
               role="status"
-              aria-label={`Worker ${isConnected ? "connected" : "disconnected"}`}
+              aria-label={t("workerStatus", { status: statusLabel })}
             >
               <span
                 className={`status-dot ${isConnected ? "" : "disconnected"}`}
                 aria-hidden
               />
-              <span>{isConnected ? "connected" : "offline"}</span>
+              <span>{statusLabel}</span>
               <span className="sep" aria-hidden>·</span>
-              <span>{workerLabel}</span>
+              <span>{displayedWorkerLabel}</span>
             </div>
             <div className="tab-rail" role="tablist">
               {enabledViews.map((view) => (
                 <TabButton
                   key={view}
                   spec={VIEW_SPECS[view]}
+                  label={t(VIEW_SPECS[view].labelKey)}
                   active={isVisible && activeView === view}
                   onClick={() => handlePanelToggle(view)}
                 />
               ))}
             </div>
-            <div className="meta-cluster" aria-label="Workflow stats">
+            <div className="meta-cluster" aria-label={t("workflowStats")}>
               {currentWorkflowId && (
                 <span className="meta-pair">
                   <span className="meta-value">{nodeCount}</span>
-                  <span className="meta-key">nodes</span>
+                  <span className="meta-key">{t("nodes")}</span>
                   <span className="sep" aria-hidden>·</span>
                   <span className="meta-value">{edgeCount}</span>
-                  <span className="meta-key">edges</span>
+                  <span className="meta-key">{t("edges")}</span>
                 </span>
               )}
               {systemStats && (
                 <>
                   <span className="meta-pair">
-                    <span className="meta-key">cpu</span>
+                    <span className="meta-key">{t("cpu")}</span>
                     <span className="meta-value">
                       {Math.round(systemStats.cpu_percent)}%
                     </span>
                   </span>
                   <span className="meta-pair">
-                    <span className="meta-key">mem</span>
+                    <span className="meta-key">{t("memory")}</span>
                     <span className="meta-value">
                       {systemStats.memory_used_gb !== undefined
                         ? `${systemStats.memory_used_gb.toFixed(1)}G`

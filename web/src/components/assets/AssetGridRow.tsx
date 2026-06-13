@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   AssetOrDivider,
   DIVIDER_HEIGHT,
@@ -16,17 +17,6 @@ import {
   TOOLTIP_ENTER_NEXT_DELAY
 } from "../../config/constants";
 import { ExpandCollapseButton } from "../ui_primitives";
-
-const TYPE_LABELS: Record<string, string> = {
-  image: "Images",
-  video: "Videos",
-  audio: "Audio",
-  model_3d: "3D Models",
-  text: "Text",
-  application: "Documents",
-  folder: "Folders",
-  other: "Other"
-};
 
 interface AssetGridRowProps {
   index: number;
@@ -60,6 +50,7 @@ const AssetGridRow: React.FC<AssetGridRowProps> = ({ index, style, data }) => {
     toggleExpanded
   } = data;
 
+  const { t } = useTranslation("assets");
   const theme = useTheme();
   const openContextMenu = useContextMenuStore((state) => state.openContextMenu);
   const rowItems = getItemsForRow(index);
@@ -130,11 +121,15 @@ const AssetGridRow: React.FC<AssetGridRowProps> = ({ index, style, data }) => {
     };
     const isExpanded = expandedTypes.has(divider.type);
 
-    const typeLabel = TYPE_LABELS[divider.type] ?? divider.type;
+    const typeLabel = t(`typeFilters.${divider.type}`, {
+      defaultValue: divider.type
+    });
 
     return (
       <Tooltip
-        title={`${isExpanded ? "Collapse" : "Expand"} ${typeLabel.toLowerCase()}`}
+        title={t(isExpanded ? "collapseType" : "expandType", {
+          type: typeLabel
+        })}
         placement="bottom"
         delay={TOOLTIP_ENTER_DELAY * 2}
         nextDelay={TOOLTIP_ENTER_NEXT_DELAY * 2}

@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { memo, useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 import { Box, FlexRow, FlexColumn, Text, MOTION } from "../ui_primitives";
 import {
@@ -34,6 +35,7 @@ const SpendOverTimeChartInternal: React.FC<SpendOverTimeChartProps> = ({
   rangeLabel
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("costs");
   const [hovered, setHovered] = useState<number | null>(null);
 
   const colorOf = useCallback(
@@ -87,7 +89,7 @@ const SpendOverTimeChartInternal: React.FC<SpendOverTimeChartProps> = ({
       >
         <FlexRow gap={1} align="baseline">
           <Text size="big" weight={600}>
-            Spend over time
+            {t("spendOverTime")}
           </Text>
           <Text size="small" color="secondary">
             {rangeLabel}
@@ -282,6 +284,7 @@ const BarTooltip: React.FC<{
   isActive: (id: string) => boolean;
 }> = ({ day, stackOrder, colorOf, isActive }) => {
   const theme = useTheme();
+  const { t } = useTranslation("costs");
   const total = stackOrder.reduce(
     (sum, id) => (isActive(id) ? sum + (day.values[id] ?? 0) : sum),
     0
@@ -339,7 +342,7 @@ const BarTooltip: React.FC<{
         >
           <FlexRow justify="space-between" align="center">
             <Text size="smaller" weight={600}>
-              Total
+              {t("total")}
             </Text>
             <Text size="smaller" weight={600} family="secondary">
               {formatMoney(total)}

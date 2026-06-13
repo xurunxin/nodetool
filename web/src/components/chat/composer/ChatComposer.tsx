@@ -6,6 +6,7 @@ import React, {
   useMemo,
   memo
 } from "react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 import { Collapse } from "../../ui_primitives";
 import useMediaQuery from "@mui/material/useMediaQuery";
@@ -41,6 +42,7 @@ const ChatComposer: React.FC<ChatComposerProps> = memo(({
   disabled = false,
   toolbarNode
 }) => {
+  const { t } = useTranslation("chat");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -147,7 +149,7 @@ const ChatComposer: React.FC<ChatComposerProps> = memo(({
                   mb: 0.5
                 }}
               >
-                Message queued
+                {t("messageQueuedLabel")}
               </Caption>
               <Caption
                 sx={{
@@ -162,7 +164,7 @@ const ChatComposer: React.FC<ChatComposerProps> = memo(({
               </Caption>
             </div>
             <ToolbarIconButton
-              tooltip="Send now (interrupts current response)"
+              tooltip={t("sendNowInterrupts")}
               onClick={sendQueuedNow}
               disabled={!onStop}
               icon={<SendIcon sx={{ fontSize: 16 }} />}
@@ -172,7 +174,7 @@ const ChatComposer: React.FC<ChatComposerProps> = memo(({
               }}
             />
             <ToolbarIconButton
-              tooltip="Cancel queued message"
+              tooltip={t("cancelQueuedMessage")}
               onClick={cancelQueued}
               icon={<ClearIcon sx={{ fontSize: 16 }} />}
               sx={{
@@ -210,8 +212,8 @@ const ChatComposer: React.FC<ChatComposerProps> = memo(({
             disabled={isInputDisabled}
             placeholder={
               isMobile
-                ? "Type a message..."
-                : "Type a message... (Shift+Enter for new line)"
+                ? t("typeMessage")
+                : t("typeMessageWithShiftEnter")
             }
           />
           <div className="composer-footer">

@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { memo, useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CopyButton, DeleteButton, DownloadButton, EmptyState, ScrollArea } from "../ui_primitives";
 import PanelToolbar from "./PanelToolbar";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
@@ -108,33 +109,42 @@ function getOutputText(detail: unknown): string | null {
 }
 
 function LLMDetail({ detail }: { detail: Record<string, unknown> }) {
+  const { t } = useTranslation("common");
+
   return (
     <div>
       {detail.messages ? (
         <div className="llm-section">
-          <div className="llm-label">Request ({(detail.messages as unknown[]).length} messages)</div>
+          <div className="llm-label">
+            {t("requestMessages", {
+              count: (detail.messages as unknown[]).length
+            })}
+          </div>
           <pre>{JSON.stringify(detail.messages, null, 2)}</pre>
         </div>
       ) : null}
       {detail.response ? (
         <div className="llm-section">
-          <div className="llm-label">Response</div>
+          <div className="llm-label">{t("response")}</div>
           <pre>{typeof detail.response === "string" ? detail.response : JSON.stringify(detail.response, null, 2)}</pre>
         </div>
       ) : null}
       {detail.tool_calls && (detail.tool_calls as unknown[]).length > 0 ? (
         <div className="llm-section">
-          <div className="llm-label">Tool Calls</div>
+          <div className="llm-label">{t("toolCalls")}</div>
           <pre>{JSON.stringify(detail.tool_calls, null, 2)}</pre>
         </div>
       ) : null}
       <div className="llm-section">
         <div className="llm-label">
           {[
-            detail.tokens_input && `In: ${detail.tokens_input}`,
-            detail.tokens_output && `Out: ${detail.tokens_output}`,
-            detail.cost && `Cost: $${(detail.cost as number).toFixed(4)}`,
-            detail.duration_ms && `Duration: ${detail.duration_ms}ms`,
+            detail.tokens_input &&
+              `${t("inputTokens")}: ${detail.tokens_input}`,
+            detail.tokens_output &&
+              `${t("outputTokens")}: ${detail.tokens_output}`,
+            detail.cost && `${t("cost")}: $${(detail.cost as number).toFixed(4)}`,
+            detail.duration_ms &&
+              `${t("duration")}: ${detail.duration_ms}ms`,
           ]
             .filter(Boolean)
             .join(" · ")}
@@ -142,7 +152,7 @@ function LLMDetail({ detail }: { detail: Record<string, unknown> }) {
       </div>
       {detail.error ? (
         <div className="llm-section">
-          <div className="llm-label" style={{ color: "var(--palette-error-main)" }}>Error</div>
+          <div className="llm-label" style={{ color: "var(--palette-error-main)" }}>{t("error")}</div>
           <pre>{String(detail.error)}</pre>
         </div>
       ) : null}
@@ -201,6 +211,7 @@ const TraceRow = memo(function TraceRow({
 
 const TracePanel: React.FC = () => {
   const theme = useTheme();
+  const { t } = useTranslation(["navigation", "common"]);
   const events = useTraceStore((s) => s.events);
   const clear = useTraceStore((s) => s.clear);
   const exportJSON = useTraceStore((s) => s.exportJSON);
@@ -273,25 +284,25 @@ const TracePanel: React.FC = () => {
   return (
     <div css={cssStyles}>
       <PanelToolbar
-        title="Trace"
+        title={t("navigation:trace")}
         count={events.length}
         actions={
           <>
             <CopyButton
               value={copyValue}
-              tooltip="Copy to clipboard"
+              tooltip={t("common:copyToClipboard")}
               disabled={events.length === 0}
               nodrag={false}
             />
             <DownloadButton
               onClick={handleExport}
-              tooltip="Export as JSON"
+              tooltip={t("common:exportAsJson")}
               disabled={events.length === 0}
               nodrag={false}
             />
             <DeleteButton
               onClick={clear}
-              tooltip="Clear trace"
+              tooltip={t("common:clearTrace")}
               iconVariant="clear"
               nodrag={false}
             />
@@ -302,8 +313,8 @@ const TracePanel: React.FC = () => {
         {events.length === 0 ? (
           <EmptyState
             variant="empty"
-            title="No trace data"
-            description="Run a workflow to see the execution trace"
+            title={t("common:noTraceData")}
+            description={t("common:runWorkflowTraceDescription")}
             size="small"
           />
         ) : (

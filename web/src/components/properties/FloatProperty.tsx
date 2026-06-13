@@ -4,12 +4,18 @@ import { PropertyProps } from "../node/PropertyInput";
 import isEqual from "fast-deep-equal";
 import { useInputMinMax } from "../../hooks/useInputMinMax";
 import { useTemporalNodes } from "../../contexts/NodeContext";
+import {
+  localizeDescription,
+  localizePropertyName
+} from "../../i18n/nodeMetadataLocalization";
 
 const FloatProperty = (props: PropertyProps) => {
   const { property, nodeId, value: propValue, hideLabel, tabIndex, changed, onChange, onChangeComplete } = props;
   const id = `slider-${property.name}-${props.propertyIndex}`;
-  const name = property.name.replaceAll("_", " ");
-  const description = property.description || "No description available";
+  const name = localizePropertyName(property.name);
+  const description = localizeDescription(
+    property.description || "No description available"
+  );
 
   const value = typeof propValue === "number" ? propValue : 0;
   const pauseHistory = useTemporalNodes((state) => state.pause);

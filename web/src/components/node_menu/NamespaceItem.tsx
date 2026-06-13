@@ -1,4 +1,5 @@
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import useNodeMenuStore from "../../stores/NodeMenuStore";
 import RenderNamespaces from "./RenderNamespaces";
 import { NamespaceTree } from "../../hooks/useNamespaceTree";
@@ -14,12 +15,16 @@ interface NamespaceItemProps {
   tree: NamespaceTree;
 }
 
-const formatNamespaceLabel = (value: string): string => {
+const formatNamespaceLabel = (
+  value: string,
+  t: (key: string, options?: { defaultValue: string }) => string
+): string => {
   const normalized = value.replaceAll("_", " ");
+  const translationKey = value.replaceAll("_", "-").toLowerCase();
   if (normalized.toLowerCase() === "openai") {
-    return "OpenAI";
+    return t("namespaces.openai", { defaultValue: "OpenAI" });
   }
-  return normalized;
+  return t(`namespaces.${translationKey}`, { defaultValue: normalized });
 };
 
 const NamespaceItem: React.FC<NamespaceItemProps> = ({
@@ -31,6 +36,7 @@ const NamespaceItem: React.FC<NamespaceItemProps> = ({
   hasChildren,
   tree
 }) => {
+  const { t } = useTranslation("nodeMenu");
   const setSelectedPath = useNodeMenuStore((state) => state.setSelectedPath);
 
   const handleClick = useCallback(
@@ -57,7 +63,7 @@ const NamespaceItem: React.FC<NamespaceItemProps> = ({
         <div className="namespace-item">
           {isTopLevel && <NamespaceIcon namespace={namespace} />}
           <span className="namespace-label">
-            {formatNamespaceLabel(namespace)}
+            {formatNamespaceLabel(namespace, t)}
           </span>
         </div>
       </li>

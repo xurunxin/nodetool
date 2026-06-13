@@ -7,6 +7,7 @@
  */
 
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -117,6 +118,7 @@ const ChromaKeyBodyInner: React.FC<ChromaKeyBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(
     () => [styles(theme), adjustmentSliderStyles(theme)],
     [theme]
@@ -166,7 +168,7 @@ const ChromaKeyBodyInner: React.FC<ChromaKeyBodyProps> = ({
 
       <div className="controls">
         {/* Color picker row */}
-        <span className="ctrl-label">Key Color</span>
+        <span className="ctrl-label">{t("keyColor")}</span>
         <span style={{ gridColumn: "2 / 4", display: "flex", alignItems: "center" }}>
           <ColorPicker
             color={hexColor}
@@ -183,7 +185,7 @@ const ChromaKeyBodyInner: React.FC<ChromaKeyBodyProps> = ({
           return (
             <AdjustmentSlider
               key={spec.name}
-              spec={spec}
+              spec={{ ...spec, label: t(spec.name) }}
               value={value}
               onChange={handleSliderChange}
               onCommit={setPropertyComplete}

@@ -30,63 +30,63 @@ interface Provider {
 const PROVIDERS: Provider[] = [
   {
     name: "Kie.ai",
-    description: "Unified API access to multiple AI models including video generation, image synthesis, and audio models.",
+    description: "通过统一 API 访问视频生成、图像合成和音频等多类 AI 模型。",
     signupUrl: "https://kie.ai/",
-    capabilities: ["Video Generation", "Image Generation", "Audio"],
+    capabilities: ["视频生成", "图像生成", "音频"],
   },
   {
     name: "Fal.ai",
-    description: "Fast inference platform for image and video generation models with optimized performance.",
+    description: "面向图像和视频生成模型的快速推理平台，性能经过优化。",
     signupUrl: "https://fal.ai/",
-    capabilities: ["Image Generation", "Video Generation", "Fast Inference"],
+    capabilities: ["图像生成", "视频生成", "快速推理"],
   },
   {
     name: "Hugging Face",
-    description: "Access to 500,000+ open-source models for text, image, audio, and more.",
+    description: "访问 500,000+ 个面向文本、图像、音频等场景的开源模型。",
     signupUrl: "https://huggingface.co/settings/tokens",
-    capabilities: ["Text Generation", "Image Models", "Speech", "Embeddings"],
+    capabilities: ["文本生成", "图像模型", "语音", "嵌入"],
   },
   {
     name: "Replicate",
-    description: "Run open-source machine learning models in the cloud with a simple API.",
+    description: "用简单 API 在云端运行开源机器学习模型。",
     signupUrl: "https://replicate.com/",
-    capabilities: ["Image Generation", "Video", "Audio", "Text"],
+    capabilities: ["图像生成", "视频", "音频", "文本"],
   },
   {
     name: "OpenAI",
-    description: "Access GPT-4, GPT-Image, Whisper, and other powerful AI models from OpenAI.",
+    description: "访问 OpenAI 的 GPT、图像、Whisper 等强大 AI 模型。",
     signupUrl: "https://platform.openai.com/api-keys",
-    capabilities: ["Chat", "Image Generation", "Speech", "Embeddings"],
+    capabilities: ["聊天", "图像生成", "语音", "嵌入"],
   },
   {
     name: "OpenRouter",
-    description: "Unified API for accessing multiple LLM providers with automatic fallbacks.",
+    description: "通过统一 API 访问多个大语言模型服务商，并支持自动回退。",
     signupUrl: "https://openrouter.ai/",
-    capabilities: ["Chat", "Multiple LLMs", "Cost Optimization"],
+    capabilities: ["聊天", "多模型", "成本优化"],
   },
   {
     name: "Anthropic",
-    description: "Access Claude models for advanced reasoning, analysis, and code generation.",
+    description: "访问 Claude 模型，用于高级推理、分析和代码生成。",
     signupUrl: "https://console.anthropic.com/",
-    capabilities: ["Chat", "Analysis", "Code Generation"],
+    capabilities: ["聊天", "分析", "代码生成"],
   },
   {
     name: "Cerebras",
-    description: "Ultra-fast inference for large language models with industry-leading speed.",
+    description: "为大语言模型提供行业领先速度的超快推理。",
     signupUrl: "https://cloud.cerebras.ai/",
-    capabilities: ["Fast Inference", "Chat", "Text Generation"],
+    capabilities: ["快速推理", "聊天", "文本生成"],
   },
   {
     name: "Gemini",
-    description: "Google's multimodal AI models for text, image, audio, and video understanding.",
+    description: "Google 的多模态 AI 模型，支持文本、图像、音频和视频理解。",
     signupUrl: "https://ai.google.dev/",
-    capabilities: ["Multimodal", "Chat", "Vision", "Video"],
+    capabilities: ["多模态", "聊天", "视觉", "视频"],
   },
   {
     name: "MiniMax",
-    description: "Advanced AI models for video generation and multimodal content creation.",
+    description: "用于视频生成和多模态内容创作的高级 AI 模型。",
     signupUrl: "https://www.minimax.io/",
-    capabilities: ["Video Generation", "Chat", "Audio"],
+    capabilities: ["视频生成", "聊天", "音频"],
   },
 ];
 
@@ -128,9 +128,9 @@ const ProviderCarousel: React.FC = () => {
   return (
     <div className="provider-carousel-container">
       <div className="provider-carousel-header">
-        <h3 className="provider-carousel-title">Supported Providers</h3>
+        <h3 className="provider-carousel-title">支持的服务商</h3>
         <p className="provider-carousel-subtitle">
-          NodeTool integrates with these AI providers. Sign up to get API keys.
+          NodeTool 已集成这些 AI 服务商。注册后即可获取 API 密钥。
         </p>
       </div>
 
@@ -139,7 +139,7 @@ const ProviderCarousel: React.FC = () => {
           className="provider-carousel-nav provider-carousel-prev" 
           onClick={prevSlide}
           type="button"
-          aria-label="Previous provider"
+          aria-label="上一个服务商"
         >
           ‹
         </button>
@@ -160,7 +160,7 @@ const ProviderCarousel: React.FC = () => {
               onClick={() => handleOpenProvider(currentProvider.signupUrl)}
               type="button"
             >
-              Get API Key →
+              获取 API 密钥 →
             </button>
           </div>
         </div>
@@ -169,7 +169,7 @@ const ProviderCarousel: React.FC = () => {
           className="provider-carousel-nav provider-carousel-next" 
           onClick={nextSlide}
           type="button"
-          aria-label="Next provider"
+          aria-label="下一个服务商"
         >
           ›
         </button>
@@ -182,7 +182,7 @@ const ProviderCarousel: React.FC = () => {
             className={`provider-carousel-dot ${index === currentIndex ? 'active' : ''}`}
             onClick={() => goToSlide(index)}
             type="button"
-            aria-label={`Go to ${PROVIDERS[index].name}`}
+            aria-label={`切换到 ${PROVIDERS[index].name}`}
           />
         ))}
       </div>
@@ -220,25 +220,25 @@ const BootMessage: React.FC<BootMessageProps> = ({
 
         {isError && (
           <div className="boot-error">
-            <div className="boot-error-title">Backend failed to start</div>
+            <div className="boot-error-title">后端启动失败</div>
             <div className="boot-error-message">
               {resolvedMessage ||
-                "An unexpected error occurred while starting the backend server."}
+                "启动后端服务器时发生意外错误。"}
             </div>
             <div className="boot-actions">
               {onRetry && (
                 <button className="boot-action primary" onClick={onRetry}>
-                  Retry start
+                  重试启动
                 </button>
               )}
               {onOpenLogs && (
                 <button className="boot-action" onClick={onOpenLogs}>
-                  Open logs
+                  打开日志
                 </button>
               )}
               {onReinstall && (
                 <button className="boot-action" onClick={onReinstall}>
-                  Reinstall environment
+                  重新安装环境
                 </button>
               )}
             </div>

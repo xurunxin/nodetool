@@ -7,6 +7,7 @@
 
 import React, { useCallback, useMemo, useState } from "react";
 import { useTheme } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
 import { FlexRow } from "../ui_primitives/FlexRow";
@@ -28,6 +29,7 @@ interface ChainEditorProps {
 
 export const ChainEditor: React.FC<ChainEditorProps> = ({ onSave }) => {
   const theme = useTheme();
+  const { t } = useTranslation("workflows");
   const [saving, setSaving] = useState(false);
 
   const chain = useChainEditorStore((s) => s.chain);
@@ -106,14 +108,14 @@ export const ChainEditor: React.FC<ChainEditorProps> = ({ onSave }) => {
           variant="standard"
           value={workflowName}
           onChange={(e) => setWorkflowName(e.target.value)}
-          placeholder="Workflow name"
+          placeholder={t("workflowName")}
           slotProps={{ input: { disableUnderline: true, sx: { fontWeight: 600, fontSize: theme.fontSizeNormal } } }}
           sx={{ flex: 1 }}
         />
         <ToolbarIconButton
           size="small"
-          ariaLabel="Save workflow"
-          tooltip="Save workflow"
+          ariaLabel={t("saveWorkflow")}
+          tooltip={t("saveWorkflow")}
           onClick={handleSave}
           disabled={saving}
           icon={<SaveOutlinedIcon sx={{ fontSize: 20 }} />}
@@ -137,10 +139,8 @@ export const ChainEditor: React.FC<ChainEditorProps> = ({ onSave }) => {
           <FlexColumn align="center" justify="center" sx={{ pt: 8 }}>
             <EmptyState
               icon={<AccountTreeOutlinedIcon sx={{ fontSize: 48 }} />}
-              title="Build Your Workflow"
-              description={
-                "Add nodes to create a processing chain.\nEach node's output flows into the next."
-              }
+              title={t("buildYourWorkflow")}
+              description={t("addNodesChainDescription")}
             />
             <AddNodeButton isHero onClick={() => showNodePicker(0)} />
           </FlexColumn>

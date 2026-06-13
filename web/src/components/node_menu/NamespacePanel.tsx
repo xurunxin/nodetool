@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Text, BORDER_RADIUS, ListGroup, MOTION } from "../ui_primitives";
 import RenderNamespaces from "./RenderNamespaces";
 import useNodeMenuStore from "../../stores/NodeMenuStore";
@@ -175,6 +176,7 @@ const namespacePanelStyles = (theme: Theme) =>
   });
 
 const NamespacePanel: React.FC<NamespacePanelProps> = ({ namespaceTree }) => {
+  const { t } = useTranslation("nodeMenu");
   const theme = useTheme();
   const { searchTerm, selectedPath, setSelectedPath } = useNodeMenuStore(
     useShallow((state) => ({
@@ -259,23 +261,23 @@ const NamespacePanel: React.FC<NamespacePanelProps> = ({ namespaceTree }) => {
             tabIndex={0}
             title={
               searchTerm.length > minSearchTermLength
-                ? "Show all results"
-                : "Home"
+                ? t("showAllResults")
+                : t("home")
             }
           >
             <div className="namespace-item">
               <HomeNamespaceIcon />
               <span className="namespace-label">
                 {searchTerm.length > minSearchTermLength
-                  ? "All results"
-                  : "Home"}
+                  ? t("allResults")
+                  : t("home")}
               </span>
             </div>
           </div>
         </div>
         {Object.keys(localTree).length > 0 && (
           <>
-            <Text className="namespace-section-title">Local</Text>
+            <Text className="namespace-section-title">{t("local")}</Text>
             <div className="namespace-list-local">
               <RenderNamespaces tree={localTree} />
             </div>
@@ -284,7 +286,7 @@ const NamespacePanel: React.FC<NamespacePanelProps> = ({ namespaceTree }) => {
         {Object.keys(providerTree).length > 0 && (
           <>
             <Text className="namespace-section-title providers">
-              Providers
+              {t("providers")}
             </Text>
             <div className="namespace-list-providers">
               <RenderNamespaces tree={providerTree} />

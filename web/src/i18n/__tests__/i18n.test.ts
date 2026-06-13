@@ -4,6 +4,11 @@ import i18n, {
   SUPPORTED_LANGUAGES,
   translate
 } from "../index";
+import {
+  localizeDataTypeLabel,
+  localizeNodeTitle,
+  localizePropertyName
+} from "../nodeMetadataLocalization";
 
 describe("web i18n", () => {
   it("defaults to zh-CN", () => {
@@ -76,5 +81,21 @@ describe("web i18n", () => {
 
   it("returns the key for missing translations", () => {
     expect(translate("common:notARealKey")).toBe("notARealKey");
+  });
+
+  it("localizes common node metadata display names", () => {
+    expect(localizeNodeTitle("Image To Video")).toBe("图像转视频");
+    expect(localizePropertyName("negative_prompt")).toBe("负面提示词");
+    expect(localizePropertyName("num_inference_steps")).toBe("推理步数");
+    expect(localizeDataTypeLabel("image")).toBe("图像");
+  });
+
+  it("leaves metadata identifiers unchanged in English mode", async () => {
+    try {
+      await i18n.changeLanguage(FALLBACK_LANGUAGE);
+      expect(localizePropertyName("negative_prompt")).toBe("negative_prompt");
+    } finally {
+      await i18n.changeLanguage(DEFAULT_LANGUAGE);
+    }
   });
 });

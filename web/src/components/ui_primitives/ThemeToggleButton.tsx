@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { useCallback, memo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme, useColorScheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -38,10 +39,11 @@ export interface ThemeToggleButtonProps {
 export const ThemeToggleButtonInternal: React.FC<ThemeToggleButtonProps> = ({
   variant = "icon",
   buttonSize = "small",
-  lightLabel = "Light",
-  darkLabel = "Dark",
+  lightLabel,
+  darkLabel,
   className
 }) => {
+  const { t } = useTranslation("navigation");
   const theme = useTheme();
   const { mode, setMode } = useColorScheme();
 
@@ -55,7 +57,9 @@ export const ThemeToggleButtonInternal: React.FC<ThemeToggleButtonProps> = ({
   }
 
   const isDark = mode === "dark";
-  const tooltipText = `Switch to ${isDark ? "light" : "dark"} mode`;
+  const tooltipText = isDark ? t("switchToLightMode") : t("switchToDarkMode");
+  const lightModeLabel = lightLabel ?? t("lightMode");
+  const darkModeLabel = darkLabel ?? t("darkMode");
 
   if (variant === "switch") {
     return (
@@ -77,7 +81,7 @@ export const ThemeToggleButtonInternal: React.FC<ThemeToggleButtonProps> = ({
     return (
       <Box css={styles(theme)} className={`nodrag theme-toggle ${className || ""}`} sx={{ gap: 1 }}>
         <Typography variant="body2" color="text.secondary">
-          {isDark ? darkLabel : lightLabel}
+          {isDark ? darkModeLabel : lightModeLabel}
         </Typography>
         <IconButton
           className="theme-button"

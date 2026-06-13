@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useShallow } from "zustand/react/shallow";
 import type { DragEvent as ReactDragEvent } from "react";
@@ -155,6 +156,7 @@ const tileStyles = (theme: Theme) =>
   });
 
 const RecentNodesTiles = memo(function RecentNodesTiles() {
+  const { t } = useTranslation("nodeMenu");
   const theme = useTheme();
   const memoizedStyles = useMemo(() => tileStyles(theme), [theme]);
 
@@ -225,7 +227,7 @@ const RecentNodesTiles = memo(function RecentNodesTiles() {
         console.warn(`Metadata not found for node type: ${nodeType}`);
         addNotification({
           type: "warning",
-          content: `Unable to find metadata for ${nodeType}.`,
+          content: t("missingMetadata", { name: nodeType }),
           timeout: NOTIFICATION_TIMEOUT_MEDIUM
         });
         return;
@@ -233,7 +235,7 @@ const RecentNodesTiles = memo(function RecentNodesTiles() {
 
       requestCreate(metadata);
     },
-    [getMetadata, addNotification, requestCreate]
+    [getMetadata, addNotification, requestCreate, t]
   );
 
   const handleTileMouseEnter = useCallback(
@@ -293,15 +295,15 @@ const RecentNodesTiles = memo(function RecentNodesTiles() {
   return (
     <div css={memoizedStyles}>
       <div className="tiles-header">
-        <Text size="normal" weight={600}>Recent Nodes</Text>
+        <Text size="normal" weight={600}>{t("recentNodes")}</Text>
         <ToolbarIconButton
           icon={<ClearIcon fontSize="small" />}
-          tooltip="Clear recent nodes"
+          tooltip={t("clearRecentNodes")}
           tooltipPlacement="top"
           size="small"
           className="clear-button"
           onClick={handleClearRecent}
-          aria-label="Clear recent nodes"
+          aria-label={t("clearRecentNodes")}
         />
       </div>
       <div className="tiles-container">
@@ -325,7 +327,7 @@ const RecentNodesTiles = memo(function RecentNodesTiles() {
                       marginTop: "4px"
                     }}
                   >
-                    Click to place · Drag to canvas
+                    {t("clickToPlaceDragToCanvas")}
                   </div>
                 </div>
               }

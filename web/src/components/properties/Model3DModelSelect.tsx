@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useRef } from "react";
 import isEqual from "fast-deep-equal";
+import { useTranslation } from "react-i18next";
 import useModelPreferencesStore from "../../stores/ModelPreferencesStore";
 import { BASE_URL } from "../../stores/BASE_URL";
 import { Model3DModelValue } from "../../stores/ApiTypes";
@@ -60,6 +61,7 @@ const Model3DModelSelect: React.FC<Model3DModelSelectProps> = ({
   value,
   task
 }) => {
+  const { t } = useTranslation("models");
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const addRecent = useModelPreferencesStore((s) => s.addRecent);
@@ -139,8 +141,8 @@ const Model3DModelSelect: React.FC<Model3DModelSelectProps> = ({
       <ModelSelectButton
         ref={buttonRef}
         active={!!value}
-        label={currentSelectedModelDetails?.name || value || "Select 3D Model"}
-        subLabel="Select 3D Model"
+        label={currentSelectedModelDetails?.name || value || t("select3dModel")}
+        subLabel={t("select3dModel")}
         onClick={handleClick}
       />
       <EditorMenu
@@ -162,12 +164,12 @@ const Model3DModelSelect: React.FC<Model3DModelSelectProps> = ({
       >
         {isLoading && (
           <EditorMenuItem disabled>
-            <ListItemText primary="Loading models..." />
+            <ListItemText primary={t("loadingModels")} />
           </EditorMenuItem>
         )}
         {!isLoading && filteredModels.length === 0 && (
           <EditorMenuItem disabled>
-            <ListItemText primary="No 3D models available" />
+            <ListItemText primary={t("no3dModelsAvailable")} />
           </EditorMenuItem>
         )}
         {Object.entries(modelsByProvider).map(([provider, providerModels], index) => (

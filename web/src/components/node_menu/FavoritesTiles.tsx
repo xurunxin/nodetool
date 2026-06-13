@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import type { CSSProperties, DragEvent as ReactDragEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { EmptyState, Tooltip, Text, ToolbarIconButton, thinScrollbarStyles, Box, MOTION } from "../ui_primitives";
@@ -140,6 +141,7 @@ const FavoritesTiles = memo(function FavoritesTiles({
   showEmpty = false,
   hideHeader = false
 }: FavoritesTilesProps = {}) {
+  const { t } = useTranslation("nodeMenu");
   const theme = useTheme();
   const memoizedStyles = useMemo(() => tileStyles(theme), [theme]);
 
@@ -209,7 +211,7 @@ const FavoritesTiles = memo(function FavoritesTiles({
         console.warn(`Metadata not found for node type: ${nodeType}`);
         addNotification({
           type: "warning",
-          content: `Unable to find metadata for ${nodeType}.`,
+          content: t("missingMetadata", { name: nodeType }),
           timeout: NOTIFICATION_TIMEOUT_MEDIUM
         });
         return;
@@ -217,7 +219,7 @@ const FavoritesTiles = memo(function FavoritesTiles({
 
       requestCreate(metadata);
     },
-    [getMetadata, addNotification, requestCreate]
+    [getMetadata, addNotification, requestCreate, t]
   );
 
   const handleTileMouseEnter = useCallback(
@@ -246,11 +248,11 @@ const FavoritesTiles = memo(function FavoritesTiles({
       removeFavorite(nodeType);
       addNotification({
         type: "info",
-        content: "Node removed from favorites",
+        content: t("nodeRemovedFromFavorites"),
         timeout: NOTIFICATION_TIMEOUT_SHORT
       });
     },
-    [removeFavorite, addNotification]
+    [removeFavorite, addNotification, t]
   );
 
   const handleClearFavorites = useCallback(() => {
@@ -279,14 +281,14 @@ const FavoritesTiles = memo(function FavoritesTiles({
         {!hideHeader && (
           <div className="tiles-header">
             <Text size="normal" weight={600}>
-              Favorites
+              {t("favorites")}
             </Text>
           </div>
         )}
         <EmptyState
           size="small"
-          title="No favorites yet"
-          description="Click the star next to any node to add it here."
+          title={t("noFavoritesTitle")}
+          description={t("noFavoritesDescription")}
         />
       </Box>
     );
@@ -297,16 +299,16 @@ const FavoritesTiles = memo(function FavoritesTiles({
       {!hideHeader && (
         <div className="tiles-header">
           <Text size="normal" weight={600}>
-            Favorites
+            {t("favorites")}
           </Text>
           <ToolbarIconButton
             icon={<ClearIcon fontSize="small" />}
-            tooltip="Clear all favorites"
+            tooltip={t("clearAllFavorites")}
             tooltipPlacement="top"
             size="small"
             className="clear-button"
             onClick={handleClearFavorites}
-            aria-label="Clear all favorites"
+            aria-label={t("clearAllFavorites")}
           />
         </div>
       )}
@@ -322,7 +324,7 @@ const FavoritesTiles = memo(function FavoritesTiles({
                 <div>
                   <div>{displayName}</div>
                   <div style={tooltipHintStyle}>
-                    Click to place · Drag to canvas
+                    {t("clickToPlaceDragToCanvas")}
                   </div>
                 </div>
               }
@@ -352,12 +354,12 @@ const FavoritesTiles = memo(function FavoritesTiles({
               >
                 <ToolbarIconButton
                   icon={<CloseIcon fontSize="small" />}
-                  tooltip={`Remove ${displayName} from favorites`}
+                  tooltip={t("removeFromFavorites", { name: displayName })}
                   size="small"
                   className="unfavorite-btn"
                   onClick={handleUnfavorite}
                   data-node-type={nodeType}
-                  aria-label={`Remove ${displayName} from favorites`}
+                  aria-label={t("removeFromFavorites", { name: displayName })}
                 />
                 <Text className="tile-label">{displayName}</Text>
               </div>

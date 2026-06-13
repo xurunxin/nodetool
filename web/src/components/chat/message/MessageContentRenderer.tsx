@@ -1,4 +1,5 @@
 import React, { useCallback, useRef, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { MessageContent } from "../../../stores/ApiTypes";
 import ImageView from "../../node/ImageView";
 import AudioPlayer from "../../audio/AudioPlayer";
@@ -19,6 +20,7 @@ export const MessageContentRenderer: React.FC<MessageContentRendererProps> = Rea
   renderTextContent,
   index
 }) => {
+  const { t } = useTranslation("chat");
   const objectUrlRef = useRef<string | null>(null);
 
   const createObjectUrl = useCallback(
@@ -104,7 +106,7 @@ export const MessageContentRenderer: React.FC<MessageContentRendererProps> = Rea
       } else if (content.image?.uri) {
         imageSource = content.image.uri;
       } else {
-        return <div>Error: No image source available</div>;
+        return <div>{t("noImageSourceAvailable")}</div>;
       }
 
       return <ImageView source={imageSource} />;
@@ -129,12 +131,12 @@ export const MessageContentRenderer: React.FC<MessageContentRendererProps> = Rea
         "video/mp4"
       );
       return (
-        <video ref={videoRef} controls style={videoStyle} src={uri} aria-label="Video content" />
+        <video ref={videoRef} controls style={videoStyle} src={uri} aria-label={t("videoContent")} />
       );
     }
     case "document":
       // Handle document content in Harmony format
-      return <div>Document</div>;
+      return <div>{t("document")}</div>;
     default:
       return null;
   }

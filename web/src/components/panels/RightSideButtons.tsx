@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import React, { memo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useCombo } from "../../stores/KeyPressedStore";
 import { useMediaQuery } from "@mui/material";
 import { useAppHeaderStore } from "../../stores/AppHeaderStore";
@@ -57,6 +58,7 @@ const styles = (theme: Theme) =>
   });
 
 const RightSideButtons: React.FC = () => {
+  const { t } = useTranslation("navigation");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { helpOpen, handleCloseHelp, handleOpenHelp, setHelpIndex } =
@@ -90,7 +92,7 @@ const RightSideButtons: React.FC = () => {
       <HelpButton
         onClick={handleHelpClick}
         iconVariant="question"
-        tooltip="Help"
+        tooltip={t("help")}
         className="command-icon"
       />
       <SettingsButton />

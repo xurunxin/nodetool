@@ -2,6 +2,7 @@
 import { css } from "@emotion/react";
 
 import { useCallback, memo, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import SelectAllIcon from "@mui/icons-material/SelectAll";
 import DeselectIcon from "@mui/icons-material/Deselect";
@@ -219,6 +220,7 @@ const AssetActions = ({
   maxItemSize = 10
 }: AssetActionsProps) => {
   const theme = useTheme();
+  const { t } = useTranslation("assets");
   const { isLoading } = useAssets();
   const [settings, setAssetItemSize, setAssetsOrder] = useSettingsStore(
     useShallow(
@@ -280,7 +282,7 @@ const AssetActions = ({
       <ButtonGroup className="asset-button-group" size="small" tabIndex={-1}>
         <Tooltip
           delay={TOOLTIP_ENTER_DELAY}
-          title="Select all"
+          title={t("selectAll")}
           disableInteractive
         >
           <EditorButton onClick={handleSelectAllAssets} tabIndex={-1}>
@@ -289,7 +291,7 @@ const AssetActions = ({
         </Tooltip>
         <Tooltip
           delay={TOOLTIP_ENTER_DELAY}
-          title="Deselect"
+          title={t("deselect")}
           disableInteractive
         >
           <EditorButton onClick={handleDeselectAssets} tabIndex={-1}>
@@ -298,7 +300,11 @@ const AssetActions = ({
         </Tooltip>
         <Tooltip
           delay={TOOLTIP_ENTER_DELAY}
-          title={`Switch to ${viewMode === "grid" ? "list" : "grid"} view`}
+          title={
+            viewMode === "grid"
+              ? t("switchToListView")
+              : t("switchToGridView")
+          }
           disableInteractive
         >
           <EditorButton onClick={handleViewModeToggle} tabIndex={-1}>
@@ -319,7 +325,7 @@ const AssetActions = ({
 
       <Tooltip
         delay={TOOLTIP_ENTER_DELAY}
-        title="Sort assets"
+        title={t("sortAssets")}
         placement="bottom"
         disableInteractive
       >
@@ -329,18 +335,18 @@ const AssetActions = ({
           value={settings.assetsOrder}
           onChange={handleSortChange}
           displayEmpty
-          inputProps={{ "aria-label": "Sort assets" }}
+          inputProps={{ "aria-label": t("sortAssets") }}
           tabIndex={-1}
         >
-          <MenuItem value="name">Name</MenuItem>
-          <MenuItem value="date">Date</MenuItem>
-          <MenuItem value="size">Size</MenuItem>
+          <MenuItem value="name">{t("sortByName")}</MenuItem>
+          <MenuItem value="date">{t("sortByDate")}</MenuItem>
+          <MenuItem value="size">{t("sortBySize")}</MenuItem>
         </Select>
       </Tooltip>
 
       <Tooltip
         delay={TOOLTIP_ENTER_DELAY}
-        title="Filter by file size"
+        title={t("filterByFileSize")}
         placement="bottom"
         disableInteractive
       >
@@ -355,12 +361,14 @@ const AssetActions = ({
           }}
           onChange={handleSizeFilter}
           displayEmpty
-          inputProps={{ "aria-label": "Filter by size" }}
+          inputProps={{ "aria-label": t("filterBySize") }}
           tabIndex={-1}
         >
           {SIZE_FILTERS.map((filter) => (
             <MenuItem key={filter.key} value={filter.key}>
-              {filter.label}
+              {t(`sizeFilters.${filter.key}`, {
+                defaultValue: filter.label
+              })}
             </MenuItem>
           ))}
         </Select>
@@ -370,8 +378,8 @@ const AssetActions = ({
         <div className="asset-size-slider">
           <SliderBasic
             defaultValue={settings.assetItemSize}
-            aria-label="Small"
-            tooltipText="Item Size"
+            aria-label={t("small")}
+            tooltipText={t("itemSize")}
             tooltipPlacement="bottom"
             valueLabelDisplay="auto"
             step={1}

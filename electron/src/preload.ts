@@ -77,13 +77,13 @@ const menuEventUnsubscribers = new Map<
  */
 function validatePath(path: string): string {
   if (typeof path !== "string") {
-    throw new Error("Path must be a string");
+    throw new Error("路径必须是字符串");
   }
   if (path.includes("\0")) {
-    throw new Error("Path contains invalid characters");
+    throw new Error("路径包含无效字符");
   }
   if (path.length > 4096) {
-    throw new Error("Path exceeds maximum length");
+    throw new Error("路径超过最大长度");
   }
   return path;
 }
@@ -93,19 +93,19 @@ function validatePath(path: string): string {
  */
 function validateUrl(url: string): string {
   if (typeof url !== "string") {
-    throw new Error("URL must be a string");
+    throw new Error("URL 必须是字符串");
   }
   if (url.length > 8192) {
-    throw new Error("URL exceeds maximum length");
+    throw new Error("URL 超过最大长度");
   }
   // Only allow http, https, and file protocols
   try {
     const parsed = new URL(url);
     if (!["http:", "https:", "file:"].includes(parsed.protocol)) {
-      throw new Error("Invalid URL protocol");
+      throw new Error("URL 协议无效");
     }
   } catch {
-    throw new Error("Invalid URL format");
+    throw new Error("URL 格式无效");
   }
   return url;
 }
@@ -115,10 +115,10 @@ function validateUrl(url: string): string {
  */
 function validateRepoId(repoId: string): string {
   if (typeof repoId !== "string") {
-    throw new Error("Repository ID must be a string");
+    throw new Error("仓库 ID 必须是字符串");
   }
   if (!/^[\w.-]+\/[\w.-]+$/.test(repoId)) {
-    throw new Error("Invalid repository ID format");
+    throw new Error("仓库 ID 格式无效");
   }
   return repoId;
 }
@@ -126,10 +126,10 @@ function validateRepoId(repoId: string): string {
 /** Validate an npm package spec — name with optional scope and version. */
 function validateNpmSpec(spec: string): string {
   if (typeof spec !== "string") {
-    throw new Error("Pack spec must be a string");
+    throw new Error("节点包规格必须是字符串");
   }
   if (!/^(@[a-z0-9][\w.-]*\/)?[a-z0-9][\w.-]*(@[\w.\-^~><=*]+)?$/i.test(spec)) {
-    throw new Error("Invalid npm pack spec");
+    throw new Error("npm 节点包规格无效");
   }
   return spec;
 }
@@ -137,10 +137,10 @@ function validateNpmSpec(spec: string): string {
 /** Validate a bare npm package name (no version). */
 function validateNpmName(name: string): string {
   if (typeof name !== "string") {
-    throw new Error("Pack name must be a string");
+    throw new Error("节点包名称必须是字符串");
   }
   if (!/^(@[a-z0-9][\w.-]*\/)?[a-z0-9][\w.-]*$/i.test(name)) {
-    throw new Error("Invalid npm pack name");
+    throw new Error("npm 节点包名称无效");
   }
   return name;
 }

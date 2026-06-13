@@ -2,6 +2,7 @@
 import { css } from "@emotion/react";
 
 import React, { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Popover } from "../ui_primitives";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import { useNotificationStore } from "../../stores/NotificationStore";
@@ -20,21 +21,8 @@ const popoverStyles = css({
   }
 });
 
-/**
- * Generate an accessible ARIA label for the notification button.
- * Describes the number of unread notifications to screen readers.
- */
-const getNotificationButtonLabel = (unreadCount: number): string => {
-  if (unreadCount === 0) {
-    return "Notifications, no unread notifications";
-  }
-  if (unreadCount === 1) {
-    return "Notifications, 1 unread notification";
-  }
-  return `Notifications, ${unreadCount} unread notifications`;
-};
-
 const NotificationButton: React.FC = React.memo(() => {
+  const { t } = useTranslation(["navigation", "common"]);
   const [notificationAnchor, setNotificationAnchor] =
     useState<null | HTMLElement>(null);
   const { notifications, lastDisplayedTimestamp, updateLastDisplayedTimestamp } =
@@ -51,6 +39,10 @@ const NotificationButton: React.FC = React.memo(() => {
     return notifications.filter((n) => n.timestamp > lastDisplayedTimestamp)
       .length;
   }, [notifications, lastDisplayedTimestamp]);
+  const buttonLabel =
+    unreadCount === 0
+      ? t("notificationsNoUnread")
+      : t("notificationsUnread", { count: unreadCount });
 
   const handleNotificationClick = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
@@ -70,15 +62,15 @@ const NotificationButton: React.FC = React.memo(() => {
         count={unreadCount}
         color="secondary"
         dot
-        tooltip="Notifications"
-        ariaLabel={getNotificationButtonLabel(unreadCount)}
+        tooltip={t("notifications")}
+        ariaLabel={buttonLabel}
       >
         <ToolbarIconButton
           className="notification-button command-button command-icon"
           icon={<NotificationsIcon className="notification-icon" />}
           tooltip=""
           onClick={handleNotificationClick}
-          ariaLabel={getNotificationButtonLabel(unreadCount)}
+          ariaLabel={buttonLabel}
         />
       </NotificationBadge>
       <Popover
@@ -98,7 +90,7 @@ const NotificationButton: React.FC = React.memo(() => {
         <Box
           className="notification-container"
           role="region"
-          aria-label="Notifications"
+          aria-label={t("notifications")}
           sx={{
             p: 3,
             width: "600px",
@@ -122,10 +114,15 @@ const NotificationButton: React.FC = React.memo(() => {
               sx={{ fontSize: "var(--fontSizeNormal)" }}
               weight={400}
             >
-              No notifications
+              {t("noNotifications")}
             </Text>
           ) : (
-            <Box role="list" aria-label={`Notification list, ${notifications.length} item${notifications.length > 1 ? "s" : ""}`}>
+            <Box
+              role="list"
+              aria-label={t("notificationList", {
+                count: notifications.length
+              })}
+            >
               {notifications.map((notification) => (
                 <Box
                   key={notification.id}
@@ -180,7 +177,7 @@ const NotificationButton: React.FC = React.memo(() => {
                   <CopyButton
                     value={notification.content}
                     className="copy-button"
-                    tooltip="Copy to clipboard"
+                    tooltip={t("common:copyToClipboard")}
                   />
                 </Box>
               ))}

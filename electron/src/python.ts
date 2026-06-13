@@ -49,19 +49,19 @@ async function verifyApplicationPaths(): Promise<ValidationResult> {
     {
       path: app.getPath("userData"),
       mode: constants.W_OK,
-      desc: "User data directory",
+      desc: "用户数据目录",
     },
     {
       path: path.dirname(LOG_FILE),
       mode: constants.W_OK,
-      desc: "Log file directory",
+      desc: "日志文件目录",
     },
   ];
 
   const results = await Promise.all(
     pathsToCheck.map(async ({ path, mode, desc }) => {
       const { accessible, error } = await checkPermissions(path, mode);
-      logMessage(`Checking ${desc} permissions: ${accessible ? "OK" : "FAILED"}`);
+      logMessage(`正在检查${desc}权限：${accessible ? "通过" : "失败"}`);
       if (!accessible && error) {
         return `${desc}: ${error}`;
       }
@@ -298,7 +298,7 @@ function normalizePythonPackageName(packageName: string): string {
 async function installRequiredPythonPackages(
   additionalPackages: string[] = []
 ): Promise<void> {
-  emitBootMessage("Installing Nodetool Python packages...");
+  emitBootMessage("正在安装 Nodetool Python 包...");
 
   const uvExecutable = getUVPath();
 
@@ -362,9 +362,9 @@ async function runCommand(command: string[]): Promise<void> {
   // Check if executable exists before attempting to spawn
   const executableExists = await fileExists(executable);
   if (!executableExists) {
-    const errorMsg = `Python environment not properly installed: executable not found at ${executable}. ` +
-      `This may happen if the installation was interrupted (e.g., by a macOS permission dialog). ` +
-      `Please use "Reinstall environment" to set up the Python environment correctly.`;
+    const errorMsg = `Python 环境未正确安装：未在 ${executable} 找到可执行文件。` +
+      `这可能是安装被中断导致的。` +
+      `请使用“重新安装环境”正确设置 Python 环境。`;
     logMessage(errorMsg, "error");
     throw new Error(errorMsg);
   }
@@ -392,19 +392,19 @@ async function runCommand(command: string[]): Promise<void> {
       // Look for lines like "Downloading package-name-version"
       const downloadingMatch = line.match(/Downloading\s+([a-zA-Z0-9_-]+)/i);
       if (downloadingMatch) {
-        emitBootMessage(`Downloading ${downloadingMatch[1]}...`);
+        emitBootMessage(`正在下载 ${downloadingMatch[1]}...`);
       }
       
       // Look for lines like "Installing package-name-version"
       const installingMatch = line.match(/Installing\s+([a-zA-Z0-9_-]+)/i);
       if (installingMatch) {
-        emitBootMessage(`Installing ${installingMatch[1]}...`);
+        emitBootMessage(`正在安装 ${installingMatch[1]}...`);
       }
       
       // Look for lines like "Updating package-name"
       const updatingMatch = line.match(/Updating\s+([a-zA-Z0-9_-]+)/i);
       if (updatingMatch) {
-        emitBootMessage(`Updating ${updatingMatch[1]}...`);
+        emitBootMessage(`正在更新 ${updatingMatch[1]}...`);
       }
     }
   });
@@ -422,12 +422,12 @@ async function runCommand(command: string[]): Promise<void> {
       // Parse package names from pip/uv stderr output (some progress info goes to stderr)
       const downloadingMatch = line.match(/Downloading\s+([a-zA-Z0-9_-]+)/i);
       if (downloadingMatch) {
-        emitBootMessage(`Downloading ${downloadingMatch[1]}...`);
+        emitBootMessage(`正在下载 ${downloadingMatch[1]}...`);
       }
       
       const installingMatch = line.match(/Installing\s+([a-zA-Z0-9_-]+)/i);
       if (installingMatch) {
-        emitBootMessage(`Installing ${installingMatch[1]}...`);
+        emitBootMessage(`正在安装 ${installingMatch[1]}...`);
       }
     }
   });
@@ -437,7 +437,7 @@ async function runCommand(command: string[]): Promise<void> {
       if (code === 0) {
         resolve();
       } else {
-        reject(new Error(`Command failed with code ${code}`));
+        reject(new Error(`命令失败，退出码 ${code}`));
       }
     });
 
@@ -445,9 +445,9 @@ async function runCommand(command: string[]): Promise<void> {
       // Provide a more helpful error message for ENOENT
       if (error.message.includes("ENOENT")) {
         reject(new Error(
-          `Python environment not properly installed: could not run ${executable}. ` +
-          `This may happen if the installation was interrupted. ` +
-          `Please use "Reinstall environment" to fix this issue.`
+          `Python 环境未正确安装：无法运行 ${executable}。` +
+          `这可能是安装被中断导致的。` +
+          `请使用“重新安装环境”修复此问题。`
         ));
       } else {
         reject(error);

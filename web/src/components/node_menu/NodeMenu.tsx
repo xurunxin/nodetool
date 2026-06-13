@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { memo, useMemo, useRef, useEffect, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 // mui
 
@@ -106,6 +107,7 @@ type NodeMenuProps = {
 };
 
 const NodeMenu = ({ focusSearchInput = false }: NodeMenuProps) => {
+  const { t } = useTranslation("nodeMenu");
   const nodeRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState({
     left: 0,
@@ -293,7 +295,7 @@ const NodeMenu = ({ focusSearchInput = false }: NodeMenuProps) => {
                 <SearchInput
                   focusSearchInput={focusSearchInput}
                   focusOnTyping={false}
-                  placeholder="Search for nodes..."
+                  placeholder={t("searchNodes")}
                   debounceTime={80}
                   width={300}
                   maxWidth={"300px"}

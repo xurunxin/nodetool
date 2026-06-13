@@ -14,50 +14,50 @@ import { TextInput, Text } from "../ui_primitives";
 import ExternalLink from "../common/ExternalLink";
 import type { SettingWithValue } from "../../stores/RemoteSettingStore";
 import { useTheme } from "@mui/material/styles";
+import { useTranslation } from "react-i18next";
 
 // Provider configurations
 interface ProviderConfig {
   id: string;
   label: string;
-  description: string;
+  descriptionKey: string;
   credentialFields: string[];
   getApiKeyUrl: string;
-  getApiKeyLabel: string;
+  getApiKeyLabelKey: string;
 }
 
 const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
   serpapi: {
     id: "serpapi",
     label: "SerpAPI",
-    description:
-      "Fast and reliable search API with Google, Bing, and other engines",
+    descriptionKey: "searchProviderSerpApiDescription",
     credentialFields: ["SERPAPI_API_KEY"],
     getApiKeyUrl: "https://serpapi.com/manage-api-key",
-    getApiKeyLabel: "Get SerpAPI Key"
+    getApiKeyLabelKey: "getSerpApiKey"
   },
   dataforseo: {
     id: "dataforseo",
     label: "DataForSEO",
-    description: "Professional SEO and search intelligence platform",
+    descriptionKey: "searchProviderDataForSeoDescription",
     credentialFields: ["DATA_FOR_SEO_LOGIN", "DATA_FOR_SEO_PASSWORD"],
     getApiKeyUrl: "https://app.dataforseo.com/register",
-    getApiKeyLabel: "Get DataForSEO Credentials"
+    getApiKeyLabelKey: "getDataForSeoCredentials"
   },
   brave: {
     id: "brave",
     label: "Brave Search",
-    description: "Privacy-focused search engine with fast, accurate results",
+    descriptionKey: "searchProviderBraveDescription",
     credentialFields: ["BRAVE_API_KEY"],
     getApiKeyUrl: "https://api-dashboard.search.brave.com/",
-    getApiKeyLabel: "Get Brave API Key"
+    getApiKeyLabelKey: "getBraveApiKey"
   },
   apify: {
     id: "apify",
     label: "Apify",
-    description: "Reliable Google search scraping via Apify actors",
+    descriptionKey: "searchProviderApifyDescription",
     credentialFields: ["APIFY_API_KEY"],
     getApiKeyUrl: "https://console.apify.com/account/integrations",
-    getApiKeyLabel: "Get Apify API Key"
+    getApiKeyLabelKey: "getApifyApiKey"
   }
 };
 
@@ -72,6 +72,7 @@ const SearchProviderSection = memo(function SearchProviderSection({
   settingValues,
   onChange
 }: SearchProviderSectionProps) {
+  const { t } = useTranslation("settings");
   const theme = useTheme();
   const selectedProvider = settingValues["SERP_PROVIDER"] || "serpapi";
   const config = PROVIDER_CONFIGS[selectedProvider];
@@ -116,13 +117,13 @@ const SearchProviderSection = memo(function SearchProviderSection({
   return (
     <div className="settings-section">
       <Text size="big" id="search-provider" className="settings-heading">
-        Search Provider
+        {t("searchProvider")}
       </Text>
 
       {/* Provider Selector */}
       <div className="settings-item large">
         <FormControl variant="standard" fullWidth sx={{ marginBottom: "1.5em" }}>
-          <InputLabel id="provider-select-label">Provider</InputLabel>
+          <InputLabel id="provider-select-label">{t("provider")}</InputLabel>
           <Select
             labelId="provider-select-label"
             id="provider-select"
@@ -170,13 +171,15 @@ const SearchProviderSection = memo(function SearchProviderSection({
             }}
           >
             {hasAllCredentials
-              ? "✓ Credentials configured"
-              : "✗ Missing credentials"}
+              ? t("credentialsConfigured")
+              : t("missingCredentials")}
           </Text>
         </FlexRow>
 
         {/* Provider Description */}
-        <Text className="description">{config?.description}</Text>
+        <Text className="description">
+          {config ? t(config.descriptionKey) : null}
+        </Text>
       </div>
 
       {/* Credentials Section */}
@@ -222,7 +225,7 @@ const SearchProviderSection = memo(function SearchProviderSection({
                   {isFilled && (
                     <Chip
                       icon={<CheckCircleIcon />}
-                      label="Configured"
+                      label={t("configured")}
                       size="small"
                       sx={{
                         marginTop: "0.5em",
@@ -240,9 +243,11 @@ const SearchProviderSection = memo(function SearchProviderSection({
             <Box sx={{ marginTop: "1em" }}>
               <ExternalLink
                 href={config.getApiKeyUrl}
-                tooltipText={`Visit ${config.label} to get your credentials`}
+                tooltipText={t("visitProviderForCredentials", {
+                  provider: config.label
+                })}
               >
-                {config.getApiKeyLabel}
+                {t(config.getApiKeyLabelKey)}
               </ExternalLink>
             </Box>
           </Stack>

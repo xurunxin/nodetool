@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Text, EditorButton, BORDER_RADIUS, Box, ListGroup, MOTION } from "../ui_primitives";
 import { NodeMetadata } from "../../stores/ApiTypes";
 import NamespacePanel from "./NamespacePanel";
@@ -318,6 +319,7 @@ const NoSelectionContent = memo(function NoSelectionContent({
   selectedPathString: string;
   minSearchTermLength: number;
 }) {
+  const { t } = useTranslation("nodeMenu");
   const openPacksPanel = useCallback(() => {
     window.api.showPackageManager();
   }, []);
@@ -329,7 +331,7 @@ const NoSelectionContent = memo(function NoSelectionContent({
           <p>
             {selectedPathString ? (
               <>
-                Nothing found in this namespace for
+                {t("nothingFoundInNamespace")}
                 <strong className="highlighted-text">
                   {" "}
                   &quot;{searchTerm}&quot;
@@ -337,7 +339,7 @@ const NoSelectionContent = memo(function NoSelectionContent({
               </>
             ) : (
               <>
-                Nothing found for
+                {t("nothingFoundFor")}
                 <strong className="highlighted-text">
                   {" "}
                   &quot;{searchTerm}&quot;
@@ -348,12 +350,13 @@ const NoSelectionContent = memo(function NoSelectionContent({
           <ul className="no-results">
             {selectedPathString && (
               <li>
-                click on <span className="highlighted">highlighted </span>
-                namespaces to find results.
+                {t("clickHighlightedNamespaces", {
+                  highlighted: t("highlighted")
+                })}
               </li>
             )}
-            <li>just start typing to enter a new search term</li>
-            <li>clear search by clicking the clear button</li>
+            <li>{t("startTypingNewSearch")}</li>
+            <li>{t("clearSearchByButton")}</li>
           </ul>
         </>
       ) : null}
@@ -371,7 +374,7 @@ const NoSelectionContent = memo(function NoSelectionContent({
             padding: "15px"
           }}
         >
-          Install additional node packs
+          {t("installAdditionalNodePacks")}
         </EditorButton>
       </div>
     </div>
@@ -394,20 +397,29 @@ const InfoBox = memo(function InfoBox({
   metadata: NodeMetadata[];
   totalNodes: number;
 }) {
+  const { t } = useTranslation("nodeMenu");
   // Build contextual message
   const buildContextMessage = () => {
     if (searchTerm.length > minSearchTermLength) {
       const matchCount = searchResults.length;
       const totalMatches = allSearchMatches.length;
       if (selectedPathString) {
-        return `${matchCount} results in ${selectedPathString} • ${totalMatches} total match '${searchTerm}'`;
+        return t("resultsIn", {
+          matchCount,
+          namespace: selectedPathString,
+          totalMatches,
+          searchTerm
+        });
       }
-      return `${matchCount} results • Showing most relevant for '${searchTerm}'`;
+      return t("resultsShowingRelevant", { matchCount, searchTerm });
     }
     if (selectedPathString) {
-      return `${searchResults.length} nodes in ${selectedPathString}`;
+      return t("nodesInNamespace", {
+        count: searchResults.length,
+        namespace: selectedPathString
+      });
     }
-    return `${totalNodes} nodes available`;
+    return t("nodesAvailable", { count: totalNodes });
   };
 
   return (

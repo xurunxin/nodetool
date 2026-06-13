@@ -1,5 +1,6 @@
 //mui
 import type { MouseEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { MenuItem } from "@mui/material";
 import { Text, Divider, ContextMenu } from "../ui_primitives";
 import ContextMenuItem from "./ContextMenuItem";
@@ -14,6 +15,7 @@ import { useAssetGridStore } from "../../stores/AssetGridStore";
 import { useSettingsStore } from "../../stores/SettingsStore";
 
 const AssetGridContextMenu = () => {
+  const { t } = useTranslation("assets");
   const currentFolder = useAssetGridStore((state) => state.currentFolder);
   const menuPosition = useContextMenuStore((state) => state.menuPosition);
   const closeContextMenu = useContextMenuStore(
@@ -40,6 +42,8 @@ const AssetGridContextMenu = () => {
 
   if (!menuPosition) {return null;}
 
+  const folderName = currentFolder?.name || t("rootFolder");
+
   return (
     <ContextMenu
       className="context-menu asset-grid-context-menu"
@@ -51,34 +55,34 @@ const AssetGridContextMenu = () => {
     >
       <MenuItem disabled>
         <Text className="title">
-          Folder: {currentFolder?.name || "ASSETS"}
+          {t("folderTitle", { name: folderName })}
         </Text>
       </MenuItem>
       <Divider />
       <ContextMenuItem
         onClick={handleCreateFolder}
-        label="Create new folder"
+        label={t("createNewFolder")}
         IconComponent={<CreateNewFolderIcon />}
-        tooltip={`Create a new folder in '${currentFolder?.name || "ASSETS"}' `}
+        tooltip={t("createNewFolderIn", { name: folderName })}
       />
       <Divider />
       <ContextMenuItem
         onClick={handleSortByName}
-        label={`Sort by name ${assetsOrder === "name" ? "✓" : ""}`}
+        label={`${t("sortByNameAction")} ${assetsOrder === "name" ? "✓" : ""}`}
         IconComponent={<SortByAlphaIcon />}
-        tooltip="Sort assets by name"
+        tooltip={t("sortAssetsByName")}
       />
       <ContextMenuItem
         onClick={handleSortByDate}
-        label={`Sort by date ${assetsOrder === "date" ? "✓" : ""}`}
+        label={`${t("sortByDateAction")} ${assetsOrder === "date" ? "✓" : ""}`}
         IconComponent={<AccessTimeIcon />}
-        tooltip="Sort assets by creation date"
+        tooltip={t("sortAssetsByDate")}
       />
       <ContextMenuItem
         onClick={handleSortBySize}
-        label={`Sort by size ${assetsOrder === "size" ? "✓" : ""}`}
+        label={`${t("sortBySizeAction")} ${assetsOrder === "size" ? "✓" : ""}`}
         IconComponent={<StorageIcon />}
-        tooltip="Sort assets by file size"
+        tooltip={t("sortAssetsByFileSize")}
       />
     </ContextMenu>
   );

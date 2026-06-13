@@ -8,6 +8,7 @@ import dialogStyles from "../../styles/DialogStyles";
 import { useAssetGridStore } from "../../stores/AssetGridStore";
 import { useAssetUpdate } from "../../serverState/useAssetUpdate";
 import useAssets from "../../serverState/useAssets";
+import { useTranslation } from "react-i18next";
 
 interface AssetRenameConfirmationProps {
   assets: string[];
@@ -17,6 +18,7 @@ const AssetRenameConfirmation: React.FC<AssetRenameConfirmationProps> = (
   props
 ) => {
   const { assets } = props;
+  const { t } = useTranslation("assets");
   const setDialogOpen = useAssetGridStore((state) => state.setRenameDialogOpen);
   const dialogOpen = useAssetGridStore((state) => state.renameDialogOpen);
   const [dialogPosition, setDialogPosition] = useState({ x: 0, y: 0 });
@@ -68,7 +70,7 @@ const AssetRenameConfirmation: React.FC<AssetRenameConfirmationProps> = (
       baseNewName.startsWith(" ") ||
       baseNewName.match(/^[-#*&]/)
     ) {
-      setShowAlert("Name cannot start with a special character.");
+      setShowAlert(t("fileNameCannotStartSpecial"));
       return;
     }
 
@@ -77,10 +79,10 @@ const AssetRenameConfirmation: React.FC<AssetRenameConfirmationProps> = (
 
     // Check for empty or overly long names
     if (!baseNewName) {
-      setShowAlert("Name cannot be empty.");
+      setShowAlert(t("fileNameCannotBeEmpty"));
       return;
     } else if (baseNewName.length > 100) {
-      setShowAlert("Max file name length is 100 characters.");
+      setShowAlert(t("fileNameTooLong"));
       return;
     }
 
@@ -89,7 +91,9 @@ const AssetRenameConfirmation: React.FC<AssetRenameConfirmationProps> = (
       const uniqueInvalidChars = invalidCharsFound.filter(
         (char, index, array) => array.indexOf(char) === index
       );
-      setShowAlert(`Invalid characters: ${uniqueInvalidChars.join(", ")}`);
+      setShowAlert(t("invalidCharacters", {
+        chars: uniqueInvalidChars.join(", ")
+      }));
       return;
     }
 
@@ -108,7 +112,7 @@ const AssetRenameConfirmation: React.FC<AssetRenameConfirmationProps> = (
     await mutation.mutateAsync(updatedAssetsToRename);
     setDialogOpen(false);
     refetchAssetsAndFolders();
-  }, [baseNewName, assets, mutation, setDialogOpen, refetchAssetsAndFolders]);
+  }, [baseNewName, assets, mutation, setDialogOpen, refetchAssetsAndFolders, t]);
 
   const screenWidth = window.innerWidth;
   const objectWidth = 600;
@@ -150,14 +154,7 @@ const AssetRenameConfirmation: React.FC<AssetRenameConfirmationProps> = (
             css={dialogStyles(theme)}
             open={dialogOpen}
             onClose={handleClose}
-            title={
-              <span>
-                {`${assets?.length} ${
-                  assets?.length === 1 ? "asset" : "assets"
-                }`}
-                {" will be renamed to:"}
-              </span>
-            }
+            title={t("renameAssetsTitle", { count: assets?.length ?? 0 })}
             content={
               <FlexColumn gap={2}>
                 {showAlert && (
@@ -188,20 +185,20 @@ const AssetRenameConfirmation: React.FC<AssetRenameConfirmationProps> = (
                     className="asset-rename-cancel-button button-cancel"
                     onClick={handleClose}
                   >
-                    Cancel
+                    {t("cancel")}
                   </EditorButton>
                   <EditorButton
                     className="asset-rename-confirm-button button-confirm"
                     onClick={handleRename}
                   >
-                    Rename
+                    {t("rename")}
                   </EditorButton>
                 </FlexRow>
                 {assets && assets.length > 1 && (
                   <FlexColumn className="asset-rename-notice-container" gap={0}>
                     <Text className="asset-rename-notice notice" size="small">
-                      <span>Multiple assets selected:</span> <br />
-                      Names will be appended with a number.
+                      <span>{t("multipleAssetsSelected")}</span> <br />
+                      {t("namesWillBeAppendedWithNumber")}
                     </Text>
                   </FlexColumn>
                 )}

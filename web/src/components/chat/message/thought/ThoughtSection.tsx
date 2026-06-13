@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import ChatMarkdown from "../ChatMarkdown";
 import { ReasoningToggle } from "../../../common/ReasoningToggle";
 import { useTheme } from "@mui/material/styles";
@@ -20,6 +21,7 @@ export const ThoughtSection: React.FC<ThoughtSectionProps> = React.memo(({
   textBefore,
   textAfter
 }) => {
+  const { t } = useTranslation("chat");
   const theme = useTheme();
   const thoughtContentStyles = useMemo(() => css({
     margin: "0 0 1em 00",
@@ -47,8 +49,8 @@ export const ThoughtSection: React.FC<ThoughtSectionProps> = React.memo(({
         <ReasoningToggle
           isOpen={isExpanded}
           onToggle={onToggle}
-          showLabel="Show thought"
-          hideLabel="Hide thought"
+          showLabel={t("showThought")}
+          hideLabel={t("hideThought")}
         />
         {isExpanded && (
           <div className="thought-section-content" css={thoughtContentStyles}>

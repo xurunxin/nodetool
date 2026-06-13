@@ -2,6 +2,7 @@ import { useTheme } from "@mui/material/styles";
 
 import React, { useCallback, useMemo, useState } from "react";
 import { isProduction } from "../../../lib/env";
+import { useTranslation } from "react-i18next";
 import {
   Popover,
   PopoverOrigin,
@@ -61,8 +62,8 @@ function ModelMenuDialogBase<TModel extends ModelSelectorModel>({
   anchorEl,
   modelData,
   onModelChange,
-  title: _title = "Select Model",
-  searchPlaceholder = "Search models...",
+  title: _title,
+  searchPlaceholder,
   storeHook,
   recommendedModels = [],
   modelPacks = []
@@ -71,6 +72,9 @@ function ModelMenuDialogBase<TModel extends ModelSelectorModel>({
 
   const isError = !!fetchedError;
   const theme = useTheme();
+  const { t } = useTranslation(["models", "navigation", "common"]);
+  const resolvedSearchPlaceholder =
+    searchPlaceholder ?? t("models:searchModels");
   // isSmall logic removed as Popover usually not full screen on mobile, but we can keep it if needed.
   // Let's assume desktop-centric for "next to trigger".
 
@@ -242,7 +246,7 @@ function ModelMenuDialogBase<TModel extends ModelSelectorModel>({
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <SearchInput
               onSearchChange={setSearch}
-              placeholder={searchPlaceholder}
+              placeholder={resolvedSearchPlaceholder}
               debounceTime={150}
               focusSearchInput
               focusOnTyping
@@ -251,7 +255,7 @@ function ModelMenuDialogBase<TModel extends ModelSelectorModel>({
           </Box>
           <ToolbarIconButton
             icon={<RefreshIcon fontSize="small" />}
-            tooltip="Refresh models"
+            tooltip={t("models:refreshModels")}
             onClick={handleRefresh}
             disabled={!refetch || !!isFetching}
             size="small"
@@ -281,8 +285,11 @@ function ModelMenuDialogBase<TModel extends ModelSelectorModel>({
               <LoadingSpinner size="small" />
               <Caption sx={{ color: "text.secondary" }}>
                 {loadingProgress
-                  ? `Loading models: ${loadingProgress.loaded}/${loadingProgress.total} providers...`
-                  : "Loading models..."}
+                  ? t("models:loadingModelsProgress", {
+                      loaded: loadingProgress.loaded,
+                      total: loadingProgress.total
+                    })
+                  : t("models:loadingModels")}
               </Caption>
             </>
           )}
@@ -291,11 +298,14 @@ function ModelMenuDialogBase<TModel extends ModelSelectorModel>({
               title={
                 <Box sx={{ maxWidth: 300 }}>
                   <Caption sx={{ fontWeight: 600 }}>
-                    Failed to load models from:
+                    {t("models:failedToLoadModelsFrom")}
                   </Caption>
                   {providerErrors.map((pe) => (
                     <Caption key={pe.provider} component="div" sx={{ mt: 0.5 }}>
-                      • {pe.provider}: {pe.error instanceof Error ? pe.error.message : "Unknown error"}
+                      • {pe.provider}:{" "}
+                      {pe.error instanceof Error
+                        ? pe.error.message
+                        : t("common:unknownError")}
                     </Caption>
                   ))}
                 </Box>
@@ -304,7 +314,9 @@ function ModelMenuDialogBase<TModel extends ModelSelectorModel>({
               <FlexRow gap={0.5} align="center" sx={{ cursor: "help" }}>
                 <WarningAmberIcon sx={{ fontSize: 16, color: "warning.main" }} />
                 <Caption sx={{ color: "warning.main" }}>
-                  {providerErrors.length} provider{providerErrors.length > 1 ? "s" : ""} failed to load
+                  {t("models:providerFailed", {
+                    count: providerErrors.length
+                  })}
                 </Caption>
               </FlexRow>
             </Tooltip>
@@ -349,7 +361,7 @@ function ModelMenuDialogBase<TModel extends ModelSelectorModel>({
               }}
             >
               {isIconOnly ? (
-                <Tooltip title="Favorites" placement="right">
+                <Tooltip title={t("navigation:favorites")} placement="right">
                   <FlexRow
                     align="center"
                     justify="center"
@@ -402,7 +414,7 @@ function ModelMenuDialogBase<TModel extends ModelSelectorModel>({
                     </FlexRow>
                   </ListItemIcon>
                   <ListItemText
-                    primary="Favorites"
+                    primary={t("navigation:favorites")}
                     primaryTypographyProps={{
                       fontSize: "var(--fontSizeNormal)",
                       fontWeight: customView === "favorites" ? 600 : 400
@@ -425,7 +437,7 @@ function ModelMenuDialogBase<TModel extends ModelSelectorModel>({
               }}
             >
               {isIconOnly ? (
-                <Tooltip title="Recent" placement="right">
+                <Tooltip title={t("models:recent")} placement="right">
                   <FlexRow
                     align="center"
                     justify="center"
@@ -478,7 +490,7 @@ function ModelMenuDialogBase<TModel extends ModelSelectorModel>({
                     </FlexRow>
                   </ListItemIcon>
                   <ListItemText
-                    primary="Recent"
+                    primary={t("models:recent")}
                     primaryTypographyProps={{
                       fontSize: "var(--fontSizeNormal)",
                       fontWeight: customView === "recent" ? 600 : 400
@@ -503,7 +515,10 @@ function ModelMenuDialogBase<TModel extends ModelSelectorModel>({
                 }}
               >
                 {isIconOnly ? (
-                  <Tooltip title="Recommended downloads" placement="right">
+                  <Tooltip
+                    title={t("models:recommendedDownloads")}
+                    placement="right"
+                  >
                     <FlexRow
                       align="center"
                       justify="center"
@@ -556,7 +571,7 @@ function ModelMenuDialogBase<TModel extends ModelSelectorModel>({
                       </FlexRow>
                     </ListItemIcon>
                     <ListItemText
-                      primary="Downloads"
+                      primary={t("navigation:downloads")}
                       primaryTypographyProps={{
                         fontSize: "var(--fontSizeNormal)",
                         fontWeight: customView === "downloads" ? 600 : 400
@@ -582,7 +597,7 @@ function ModelMenuDialogBase<TModel extends ModelSelectorModel>({
                 letterSpacing: 0.5
               }}
             >
-              Providers
+              {t("models:providers")}
             </Box>
           )}
           <Box

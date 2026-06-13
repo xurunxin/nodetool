@@ -38,7 +38,7 @@ class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="error-boundary-fallback">
-          <h2>Something went wrong</h2>
+          <h2>出现错误</h2>
           <details style={{ whiteSpace: 'pre-wrap' }}>
             {this.state.error?.toString()}
           </details>

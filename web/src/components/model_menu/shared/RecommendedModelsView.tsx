@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Caption, FlexColumn, Text, Box, ListGroup } from "../../ui_primitives";
 import ModelListItem from "../../hugging_face/model_list/ModelListItem";
 import ModelPackCard from "../../hugging_face/ModelPackCard";
@@ -22,6 +23,7 @@ const RecommendedModelsView: React.FC<RecommendedModelsViewProps> = ({
   modelPacks,
   searchQuery = ""
 }) => {
+  const { t } = useTranslation("models");
 
   const startDownload = useModelDownloadStore((s) => s.startDownload);
   const cacheStatuses = useHfCacheStatusStore((s) => s.statuses);
@@ -101,7 +103,7 @@ const RecommendedModelsView: React.FC<RecommendedModelsViewProps> = ({
                 display: "block"
               }}
             >
-              Model Packs
+              {t("modelPacks")}
             </Caption>
             {modelPacks.map((pack) => (
               <ModelPackCard
@@ -126,12 +128,14 @@ const RecommendedModelsView: React.FC<RecommendedModelsViewProps> = ({
                   display: "block"
                 }}
               >
-                Individual Models
+                {t("individualModels")}
               </Caption>
             )}
             {displayModels.length === 0 ? (
               <Text sx={{ color: "text.secondary", mt: 4 }}>
-                No models found{searchQuery ? ` for "${searchQuery}"` : ""}.
+                {searchQuery
+                  ? t("noModelsFoundFor", { searchTerm: searchQuery })
+                  : t("noModelsFound")}
               </Text>
             ) : (
               <ListGroup flush>
@@ -159,7 +163,7 @@ const RecommendedModelsView: React.FC<RecommendedModelsViewProps> = ({
 
         {modelPacks.length === 0 && recommendedModels.length === 0 && (
           <Text sx={{ color: "text.secondary", mt: 4 }}>
-            No recommended downloads for this node.
+            {t("noRecommendedDownloads")}
           </Text>
         )}
       </Box>

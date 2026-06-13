@@ -2,6 +2,7 @@
 import { css } from "@emotion/react";
 
 import React, { useMemo, useRef, useCallback, useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Text, ToolbarIconButton, MOTION } from "../ui_primitives";
 import DownloadIcon from "@mui/icons-material/Download";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
@@ -42,6 +43,7 @@ interface ImageViewProps {
 }
 
 const ImageView: React.FC<ImageViewProps> = ({ source, bitmap }) => {
+  const { t } = useTranslation("nodeMenu");
   const [openViewer, setOpenViewer] = React.useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
@@ -309,7 +311,7 @@ const ImageView: React.FC<ImageViewProps> = ({ source, bitmap }) => {
   }, []);
 
   if (!imageUrl && !bitmap) {
-    return <Text>No Image found</Text>;
+    return <Text>{t("noImageFound")}</Text>;
   }
 
   return (

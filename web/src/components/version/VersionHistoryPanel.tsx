@@ -6,6 +6,7 @@
 
 import React, { useCallback, useMemo, useState, memo } from "react";
 import { Compare as CompareIcon } from "@mui/icons-material";
+import { useTranslation } from "react-i18next";
 import VersionListItem from "./VersionListItem";
 import { VersionDiff } from "./VersionDiff";
 import { GraphVisualDiff } from "./GraphVisualDiff";
@@ -49,21 +50,6 @@ const getGraphSizeBytes = (graph: Graph): number => {
   }
 };
 
-const getSaveTypeLabel = (saveType: SaveType): string => {
-  switch (saveType) {
-    case "manual":
-      return "manual";
-    case "autosave":
-      return "auto";
-    case "restore":
-      return "restored";
-    case "checkpoint":
-      return "checkpoint";
-    default:
-      return saveType;
-  }
-};
-
 const formatBytes = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -87,6 +73,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
   onRestore,
   onClose
 }) => {
+  const { t } = useTranslation(["navigation", "common"]);
   const selectedVersionId = useVersionHistoryStore((state) => state.selectedVersionId);
   const compareVersionId = useVersionHistoryStore((state) => state.compareVersionId);
   const isCompareMode = useVersionHistoryStore((state) => state.isCompareMode);
@@ -242,6 +229,24 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
     setDeleteDialogOpen(false);
   }, []);
 
+  const getSaveTypeLabel = useCallback(
+    (saveType: SaveType): string => {
+      switch (saveType) {
+        case "manual":
+          return t("common:manual");
+        case "autosave":
+          return t("common:auto");
+        case "restore":
+          return t("common:restored");
+        case "checkpoint":
+          return t("common:checkpoint");
+        default:
+          return saveType;
+      }
+    },
+    [t]
+  );
+
   if (isLoading) {
     return (
       <div
@@ -253,7 +258,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
         }}
       >
         <FlexColumn align="center" justify="center" fullHeight>
-          <LoadingSpinner size="medium" text="Loading versions..." />
+          <LoadingSpinner size="medium" text={t("common:loadingVersions")} />
         </FlexColumn>
       </div>
     );
@@ -269,13 +274,17 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
         }}
       >
         <PanelToolbar
-          title="Version History"
+          title={t("navigation:versions")}
           actions={
-            <CloseButton onClick={onClose} buttonSize="small" tooltip="Close" />
+            <CloseButton
+              onClick={onClose}
+              buttonSize="small"
+              tooltip={t("common:close")}
+            />
           }
         />
         <FlexColumn padding={3} gap={0.5}>
-          <Text color="error">Failed to load versions</Text>
+          <Text color="error">{t("common:failedToLoadVersions")}</Text>
           <Text size="tiny" color="secondary">{String(error)}</Text>
         </FlexColumn>
       </FlexColumn>
@@ -294,7 +303,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
       }}
     >
       <PanelToolbar
-        title="Versions"
+        title={t("navigation:versions")}
         count={versions.length}
         actions={
           <>
@@ -305,10 +314,10 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
                 onClick={handleClearComparison}
                 sx={{ fontSize: "var(--fontSizeSmaller)", py: 0.5, px: 0.5, minWidth: 0 }}
               >
-                Clear
+                {t("common:clear")}
               </EditorButton>
             )}
-            <Tooltip title="Compare two versions side by side">
+            <Tooltip title={t("common:compareVersionsDescription")}>
               <EditorButton
                 density="compact"
                 variant={isCompareMode ? "contained" : "text"}
@@ -322,10 +331,14 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
                 }}
               >
                 <CompareIcon sx={{ fontSize: "14px !important", mr: 0.5 }} />
-                Compare
+                {t("common:compare")}
               </EditorButton>
             </Tooltip>
-            <CloseButton onClick={onClose} buttonSize="small" tooltip="Close" />
+            <CloseButton
+              onClick={onClose}
+              buttonSize="small"
+              tooltip={t("common:close")}
+            />
           </>
         }
       >
@@ -334,11 +347,17 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
           exclusive
           onChange={handleFilterChange}
           compact
-          aria-label="version filter"
+          aria-label={t("common:versionFilter")}
         >
-          <ToggleOption value="all" aria-label="all">All</ToggleOption>
-          <ToggleOption value="manual" aria-label="manual">Manual</ToggleOption>
-          <ToggleOption value="autosave" aria-label="autosave">Auto</ToggleOption>
+          <ToggleOption value="all" aria-label={t("common:all")}>
+            {t("common:all")}
+          </ToggleOption>
+          <ToggleOption value="manual" aria-label={t("common:manual")}>
+            {t("common:manual")}
+          </ToggleOption>
+          <ToggleOption value="autosave" aria-label={t("common:auto")}>
+            {t("common:auto")}
+          </ToggleOption>
         </ToggleGroup>
       </PanelToolbar>
 
@@ -349,8 +368,8 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
         }}>
           <Caption size="tiny" color="primary">
             {!selectedVersionId
-              ? "Select the first version to compare"
-              : "Select the second version to compare"}
+              ? t("common:selectFirstVersionToCompare")
+              : t("common:selectSecondVersionToCompare")}
           </Caption>
         </div>
       )}
@@ -375,9 +394,9 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
         >
           {versions.length === 0 ? (
             <div style={{ padding: "16px", textAlign: "center" }}>
-              <Text color="secondary">No versions saved yet</Text>
+              <Text color="secondary">{t("common:noVersionsSavedYet")}</Text>
               <Caption size="tiny" color="muted">
-                Save your workflow to create a version
+                {t("common:saveWorkflowToCreateVersion")}
               </Caption>
             </div>
           ) : (
@@ -413,9 +432,16 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
             <FlexColumn gap={2} fullHeight>
               <div>
                 <Caption size="tiny" color="muted" sx={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                  Comparing v{Math.min(selectedVersion.version, compareVersion.version)}
-                  {" "}↔{" "}
-                  v{Math.max(selectedVersion.version, compareVersion.version)}
+                  {t("common:comparingVersions", {
+                    oldVersion: Math.min(
+                      selectedVersion.version,
+                      compareVersion.version
+                    ),
+                    newVersion: Math.max(
+                      selectedVersion.version,
+                      compareVersion.version
+                    )
+                  })}
                 </Caption>
               </div>
               <GraphVisualDiff
@@ -506,7 +532,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
                   {isRestoringVersion ? (
                     <LoadingSpinner size="small" />
                   ) : (
-                    "Restore this version"
+                    t("common:restoreThisVersion")
                   )}
                 </EditorButton>
                 <EditorButton
@@ -515,7 +541,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
                   onClick={() => handleDelete(selectedVersion.id)}
                   sx={{ color: "text.secondary" }}
                 >
-                  Delete
+                  {t("common:delete")}
                 </EditorButton>
               </div>
             </FlexColumn>
@@ -528,12 +554,12 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
               sx={{ color: "text.secondary", textAlign: "center" }}
             >
               <Text color="secondary">
-                Select a version to preview
+                {t("common:selectVersionToPreview")}
               </Text>
               <Caption size="tiny" color="muted">
                 {isCompareMode
-                  ? "Pick two versions to see what changed."
-                  : "Click any entry to see its graph and metadata here."}
+                  ? t("common:pickTwoVersionsToSeeChanged")
+                  : t("common:clickEntryToSeeGraphMetadata")}
               </Caption>
             </FlexColumn>
           )}
@@ -543,15 +569,14 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
       <Dialog
         open={deleteDialogOpen}
         onClose={handleCloseDeleteDialog}
-        title="Delete Version"
+        title={t("common:deleteVersion")}
         onConfirm={handleConfirmDelete}
         onCancel={handleCloseDeleteDialog}
-        confirmText="Delete"
+        confirmText={t("common:delete")}
         destructive
       >
         <Text color="secondary">
-          Are you sure you want to delete this version? This action cannot be
-          undone.
+          {t("common:deleteVersionConfirm")}
         </Text>
       </Dialog>
     </div>

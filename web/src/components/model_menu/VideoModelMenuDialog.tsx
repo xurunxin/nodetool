@@ -36,8 +36,6 @@ function VideoModelMenuDialog({
       onClose={onClose}
       modelData={modelData}
       onModelChange={onModelChange}
-      title="Select Video Model"
-      searchPlaceholder="Search text-to-video models..."
       storeHook={useVideoModelMenuStore}
       recommendedModels={recommendedModels}
       modelPacks={modelPacks}

@@ -34,6 +34,8 @@ import { useReactFlow } from "@xyflow/react";
 import isEqual from "fast-deep-equal";
 import { useStoreWithEqualityFn } from "zustand/traditional";
 import { shallow } from "zustand/shallow";
+import { useTranslation } from "react-i18next";
+import { localizeNodeTitle } from "../../i18n/nodeMetadataLocalization";
 
 const styles = (theme: Theme) =>
   css({
@@ -145,6 +147,7 @@ const QuickAddNodeDialog: React.FC<QuickAddNodeDialogProps> = ({
   reactFlowWrapper
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const inputRef = useRef<HTMLInputElement>(null);
   const { getViewport } = useReactFlow();
   const addNode = useNodes((state) => state.addNode);
@@ -280,25 +283,25 @@ const QuickAddNodeDialog: React.FC<QuickAddNodeDialogProps> = ({
   return (
     <Dialog open={open} onClose={handleClose} className="quick-add-node-dialog">
       <div css={styles(theme)}>
-        <Command label="Quick Add Node" className="command-menu">
+        <Command label={t("quickAddNode")} className="command-menu">
           <div className="command-input">
             <CommandInput
               ref={inputRef}
               value={searchTerm}
               onValueChange={handleValueChange}
-              placeholder="Search nodes by name, type, or namespace..."
+              placeholder={t("searchNodesByNameTypeNamespace")}
             />
           </div>
 
           <Command.List className="command-list">
             <Command.Empty className="empty-state">
               <Text size="small">
-                {searchTerm ? "No matching nodes found" : "Type to search for nodes..."}
+                {searchTerm ? t("noMatchingNodesFound") : t("typeToSearchForNodes")}
               </Text>
             </Command.Empty>
 
             {searchResults.map((node, index) => {
-              const title = node.title || node.node_type;
+              const title = localizeNodeTitle(node.title || node.node_type);
               const namespace = node.namespace || "default";
 
               return (
@@ -331,15 +334,15 @@ const QuickAddNodeDialog: React.FC<QuickAddNodeDialogProps> = ({
           {/* Footer with keyboard hints */}
           <div className="footer-hints">
             <Caption>
-              {searchResults.length} {searchResults.length === 1 ? "node" : "nodes"}
+              {t("nodeCount", { count: searchResults.length })}
             </Caption>
             <Caption>
               <span style={{ marginRight: "12px" }}>
-                <kbd>↑↓</kbd> Navigate
+                <kbd>↑↓</kbd> {t("navigate")}
               </span>
-              <kbd>Enter</kbd> Select
+              <kbd>Enter</kbd> {t("select")}
               <span style={{ marginLeft: "12px" }}>
-                <kbd>Esc</kbd> Close
+                <kbd>Esc</kbd> {t("close")}
               </span>
             </Caption>
           </div>

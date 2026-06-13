@@ -216,7 +216,7 @@ async function checkAndInstallExpectedPackages(): Promise<boolean> {
       `Found ${packagesNeedingUpdate.length} package(s) needing update: ${packagesNeedingUpdate.map((p) => p.packageName).join(", ")}`,
     );
 
-    emitBootMessage(`Updating ${packagesNeedingUpdate.length} package(s)...`);
+    emitBootMessage(`正在更新 ${packagesNeedingUpdate.length} 个包...`);
 
     const result = await installExpectedPackages();
 

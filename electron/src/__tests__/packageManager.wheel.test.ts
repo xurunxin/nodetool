@@ -13,14 +13,14 @@ describe('Wheel-based Package Manager', () => {
       const result = validateRepoId('invalid-repo-id');
       
       expect(result.valid).toBe(false);
-      expect(result.error).toContain('Invalid repository ID format');
+      expect(result.error).toContain('仓库 ID 格式无效');
     });
 
     test('rejects empty repo ID', () => {
       const result = validateRepoId('');
       
       expect(result.valid).toBe(false);
-      expect(result.error).toBe('Repository ID cannot be empty');
+      expect(result.error).toBe('仓库 ID 不能为空');
     });
   });
 

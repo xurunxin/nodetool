@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -116,34 +117,30 @@ interface TaskUpdateDisplayProps {
   taskUpdate: TaskUpdate;
 }
 
-const getEventDisplayText = (event: string): string => {
-  switch (event) {
-    case "task_created":
-      return "Task Created";
-    case "step_started":
-      return "Step Started";
-    case "entered_conclusion_stage":
-      return "Entering Conclusion";
-    case "max_iterations_reached":
-      return "Max Iterations Reached";
-    case "max_tool_calls_reached":
-      return "Max Tool Calls Reached";
-    case "step_completed":
-      return "Step Completed";
-    case "step_failed":
-      return "Step Failed";
-    case "task_completed":
-      return "Task Completed";
-    default:
-      return event.replace(/_/g, " ");
-  }
-};
-
 const TaskUpdateDisplay: React.FC<TaskUpdateDisplayProps> = ({
   taskUpdate
 }) => {
+  const { t } = useTranslation("chat");
   const theme = useTheme();
   const cssStyles = useMemo(() => styles(theme), [theme]);
+  const eventDisplayText = useMemo(() => {
+    switch (taskUpdate.event) {
+      case "task_created":
+        return t("taskEventCreated");
+      case "step_started":
+        return t("taskEventStepStarted");
+      case "entered_conclusion_stage":
+        return t("taskEventEnteringConclusion");
+      case "step_completed":
+        return t("taskEventStepCompleted");
+      case "step_failed":
+        return t("taskEventStepFailed");
+      case "task_completed":
+        return t("taskEventCompleted");
+      default:
+        return taskUpdate.event.replace(/_/g, " ");
+    }
+  }, [taskUpdate.event, t]);
   const task = taskUpdate.task;
   const currentStep = taskUpdate.step;
   const currentStepInPlan =
@@ -158,10 +155,10 @@ const TaskUpdateDisplay: React.FC<TaskUpdateDisplayProps> = ({
     <div className="task-update-container noscroll" css={cssStyles}>
       <div className="task-header">
         <Text className="task-animated-heading">
-          Agent Task
+          {t("agentTask")}
         </Text>
         <span className="task-event-badge">
-          {getEventDisplayText(taskUpdate.event)}
+          {eventDisplayText}
         </span>
       </div>
 
@@ -180,7 +177,7 @@ const TaskUpdateDisplay: React.FC<TaskUpdateDisplayProps> = ({
 
       {task?.steps && task.steps.length > 0 && (
         <Box className="steps-section">
-          <Text className="steps-header">Execution Plan</Text>
+          <Text className="steps-header">{t("executionPlan")}</Text>
           {task.steps.map((step, idx) => {
             const isCurrent =
               currentStep &&

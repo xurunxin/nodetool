@@ -4,6 +4,10 @@ import { typeToString } from "../utils/TypeHandler";
 import { TypeMetadata } from "../stores/ApiTypes";
 import useConnectionStore from "../stores/ConnectionStore";
 import { NodeSelectionContext } from "./node/NodeSelectionContext";
+import {
+  localizeDataTypeLabel,
+  localizePropertyName
+} from "../i18n/nodeMetadataLocalization";
 
 const ENTER_DELAY = 1200;
 
@@ -107,15 +111,13 @@ const HandleTooltip = memo(function HandleTooltip({
     setShowTooltip(true);
   }, [nodeSelected, isConnecting, enableHover, isPropertyVariant]);
 
-  const prettyName = displayName ?? paramName
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  const prettyName = displayName ?? localizePropertyName(paramName);
 
-  const displayType = formatTypeString(typeMetadata);
+  const rawDisplayType = formatTypeString(typeMetadata);
+  const displayType = localizeDataTypeLabel(rawDisplayType);
   // Use "float" for color when displaying "number" (float|int union),
   // since both float and int use the same color
-  const typeString = displayType === "number" ? "float" : typeMetadata.type;
+  const typeString = rawDisplayType === "number" ? "float" : typeMetadata.type;
 
   const handleMouseEnter = useCallback(() => {
     if (!enableHover || isConnecting) {

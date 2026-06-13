@@ -4,6 +4,7 @@ import isEqual from "fast-deep-equal";
 import Select from "../inputs/Select";
 import PropertyLabel from "../node/PropertyLabel";
 import { useNodes } from "../../contexts/NodeContext";
+import { localizePropertyName } from "../../i18n/nodeMetadataLocalization";
 
 /**
  * SelectProperty renders a dropdown for Select/SelectInput nodes.
@@ -53,8 +54,8 @@ const SelectProperty: React.FC<PropertyProps> = ({
         value={value || ""}
         onChange={onChange}
         options={selectOptions}
-        label={property.name}
-        placeholder={property.name}
+        label={localizePropertyName(property.name)}
+        placeholder={localizePropertyName(property.name)}
         tabIndex={tabIndex}
         changed={changed}
       />

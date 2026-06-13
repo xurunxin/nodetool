@@ -2,8 +2,10 @@ import { StateIconButton } from "../ui_primitives";
 import { useColorScheme } from "@mui/material/styles";
 import { LightMode, DarkMode } from "@mui/icons-material";
 import { memo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 export const ThemeToggle = memo(function ThemeToggle() {
+  const { t } = useTranslation("navigation");
   const { mode, setMode } = useColorScheme();
 
   const toggleTheme = useCallback(() => {
@@ -19,7 +21,9 @@ export const ThemeToggle = memo(function ThemeToggle() {
   return (
     <StateIconButton
       icon={mode === "dark" ? <LightMode /> : <DarkMode />}
-      tooltip={`Switch to ${mode === "dark" ? "light" : "dark"} mode`}
+      tooltip={
+        mode === "dark" ? t("switchToLightMode") : t("switchToDarkMode")
+      }
       onClick={toggleTheme}
       size="small"
       color="default"

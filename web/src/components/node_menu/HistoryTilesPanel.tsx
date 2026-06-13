@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { memo, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 import { EmptyState, FlexColumn } from "../ui_primitives";
 import SearchResultsPanel from "./SearchResultsPanel";
@@ -32,6 +33,7 @@ const styles = (theme: Theme) =>
  * resolved against MetadataStore. Same compact row style as Search.
  */
 const HistoryTilesPanel = memo(() => {
+  const { t } = useTranslation("nodeMenu");
   const theme = useTheme();
   const recent = useRecentNodesStore((s) => s.recentNodes);
   const metadataRecord = useMetadataStore((s) => s.metadata);
@@ -50,8 +52,8 @@ const HistoryTilesPanel = memo(() => {
         {nodes.length === 0 ? (
           <FlexColumn gap={2} justify="center" align="center" sx={{ flex: 1, px: 2 }}>
             <EmptyState
-              title="No recent nodes yet"
-              description="Nodes you use will appear here."
+              title={t("noRecentTitle")}
+              description={t("noRecentDescription")}
             />
           </FlexColumn>
         ) : (

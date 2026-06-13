@@ -1,4 +1,5 @@
 import React, { forwardRef } from "react";
+import { useTranslation } from "react-i18next";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import { ToolbarIconButton, MOTION } from "../../ui_primitives";
 
@@ -12,12 +13,13 @@ export const SendMessageButton = forwardRef<
   HTMLButtonElement,
   SendMessageButtonProps
 >(({ disabled = false, onClick, hasContent = true }, ref) => {
+  const { t } = useTranslation("chat");
   const isDisabled = disabled || !hasContent;
   return (
     <ToolbarIconButton
       ref={ref}
       icon={<SendRoundedIcon fontSize="small" />}
-      tooltip="Send message"
+      tooltip={t("sendMessage")}
       onClick={onClick}
       disabled={isDisabled}
       nodrag={false}

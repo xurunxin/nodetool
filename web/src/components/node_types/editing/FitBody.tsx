@@ -10,6 +10,7 @@
  */
 
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -156,6 +157,7 @@ const FitBodyInner: React.FC<FitBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(() => styles(theme), [theme]);
 
   const properties = nodeMetadata.properties ?? [];
@@ -227,7 +229,7 @@ const FitBodyInner: React.FC<FitBodyProps> = ({
               id={`fit-width-${id}`}
               nodeId={id}
               name="width"
-              description={widthProperty.description ?? "Target width"}
+              description={widthProperty.description ?? t("targetWidth")}
               value={widthValue}
               min={widthProperty.min ?? 1}
               max={widthProperty.max ?? 8192}
@@ -246,7 +248,7 @@ const FitBodyInner: React.FC<FitBodyProps> = ({
               id={`fit-height-${id}`}
               nodeId={id}
               name="height"
-              description={heightProperty.description ?? "Target height"}
+              description={heightProperty.description ?? t("targetHeight")}
               value={heightValue}
               min={heightProperty.min ?? 1}
               max={heightProperty.max ?? 8192}
@@ -262,7 +264,7 @@ const FitBodyInner: React.FC<FitBodyProps> = ({
       </FlexRow>
 
       <div className="presets-row">
-        <span className="presets-label">Presets</span>
+        <span className="presets-label">{t("presets")}</span>
         {PRESETS.map((size) => {
           const active = widthValue === size && heightValue === size;
           return (
@@ -271,7 +273,7 @@ const FitBodyInner: React.FC<FitBodyProps> = ({
               type="button"
               className={`preset-chip nodrag${active ? " active" : ""}`}
               onClick={() => applyPreset(size)}
-              aria-label={`Set ${size} by ${size}`}
+              aria-label={t("setSizeBySize", { size })}
             >
               {size}
             </button>

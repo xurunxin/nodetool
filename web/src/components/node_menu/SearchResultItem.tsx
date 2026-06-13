@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { memo, useCallback, forwardRef, useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -217,6 +218,7 @@ const SearchResultItem = memo(
       },
       ref
     ) => {
+      const { t } = useTranslation("nodeMenu");
       const theme = useTheme();
       const outputType =
         node.outputs.length > 0 ? node.outputs[0].type.type : "";
@@ -238,12 +240,12 @@ const SearchResultItem = memo(
           addNotification({
             type: "info",
             content: next
-              ? "Node added to favorites"
-              : "Node removed from favorites",
+              ? t("nodeAddedToFavorites")
+              : t("nodeRemovedFromFavorites"),
             timeout: NOTIFICATION_TIMEOUT_SHORT
           });
         },
-        [toggleFavorite, addNotification, node.node_type]
+        [toggleFavorite, addNotification, node.node_type, t]
       );
 
       // Parse description and tags - memoize to avoid re-computation on every render
@@ -349,7 +351,7 @@ const SearchResultItem = memo(
                     : theme.vars.palette.c_provider_local
               }}
             >
-              {providerKind === "api" ? "API" : "Local"}
+              {providerKind === "api" ? t("api") : t("local")}
             </span>
             <FavoriteButton
               isFavorite={isFavorite}
@@ -428,7 +430,7 @@ const SearchResultItem = memo(
                         : theme.vars.palette.c_provider_local
                   }}
                 >
-                  {providerKind === "api" ? "API" : "Local"}
+                  {providerKind === "api" ? t("api") : t("local")}
                 </span>
               </div>
             </div>
@@ -457,7 +459,7 @@ const SearchResultItem = memo(
                     setIsExpanded((prev) => !prev);
                   }
                 }}
-                title={isExpanded ? "Collapse details" : "Show details"}
+                title={isExpanded ? t("collapseDetails") : t("showDetails")}
               >
                 <ExpandMoreIcon />
               </div>
@@ -479,7 +481,7 @@ const SearchResultItem = memo(
             <Box className="io-info">
               {node.properties.length > 0 && (
                 <Box className="io-row">
-                  <span className="io-label">Input:</span>
+                  <span className="io-label">{t("inputLabel")}</span>
                   <Box className="io-items">
                     {node.properties.slice(0, 6).map((prop) => (
                       <span
@@ -502,7 +504,7 @@ const SearchResultItem = memo(
               )}
               {node.outputs.length > 0 && (
                 <Box className="io-row">
-                  <span className="io-label">Output:</span>
+                  <span className="io-label">{t("outputLabel")}</span>
                   <Box className="io-items">
                     {node.outputs.map((output) => (
                       <span

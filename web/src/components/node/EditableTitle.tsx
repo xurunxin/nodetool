@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { css, keyframes } from "@emotion/react";
 import { memo, useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNodes } from "../../contexts/NodeContext";
 import { useTheme } from "@mui/material/styles";
 import CloseIcon from "@mui/icons-material/Close";
@@ -43,6 +44,7 @@ const EditableTitle = memo(function EditableTitle({
   const [isEditing, setIsEditing] = useState(false);
   const updateNodeData = useNodes((state) => state.updateNodeData);
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
 
   const styles = useMemo(() => css({
     position: "absolute",
@@ -268,14 +270,14 @@ const EditableTitle = memo(function EditableTitle({
       <div className="connector-dot" />
       <div className="comment-header">
         <ChatBubbleOutlineIcon className="icon" />
-        <span>Note</span>
+        <span>{t("note")}</span>
       </div>
       {isEditing ? (
         <textarea
           defaultValue={title}
           autoFocus
-          aria-label="Note text"
-          placeholder="Add your note..."
+          aria-label={t("noteText")}
+          placeholder={t("addYourNote")}
           onKeyDown={handleKeyDown}
           onInput={handleInput}
           onBlur={handleBlur}
@@ -288,7 +290,7 @@ const EditableTitle = memo(function EditableTitle({
             type="button"
             className="remove-title"
             onClick={handleRemoveTitle}
-            title="Remove note"
+            title={t("removeNote")}
           >
             <CloseIcon className="icon" />
           </button>

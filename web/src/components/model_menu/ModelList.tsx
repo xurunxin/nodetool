@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 
 import React, { useCallback, useMemo, useRef, memo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ListItemButton,
   ListItemText,
@@ -136,6 +137,7 @@ function ModelList<TModel extends ModelSelectorModel>({
   const enabledProviders = useModelPreferencesStore((s) => s.enabledProviders);
   const { isApiKeySet } = useSecrets();
   const theme = useTheme();
+  const { t } = useTranslation(["models", "navigation"]);
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -204,11 +206,11 @@ function ModelList<TModel extends ModelSelectorModel>({
       const available = providerEnabled && hasKey;
       const tooltipTitle =
         !providerEnabled && !hasKey
-          ? "Enable provider and add API key in Settings to use this model"
+          ? t("models:enableProviderAndAddApiKey")
           : !providerEnabled
-            ? "Enable provider in the left sidebar to use this model"
+            ? t("models:enableProviderInSidebar")
             : !hasKey
-              ? "Add API key in Settings to use this model"
+              ? t("models:addApiKeyInSettings")
               : "";
       return (
         <div role="listitem" style={style}>
@@ -246,21 +248,21 @@ function ModelList<TModel extends ModelSelectorModel>({
                     </span>
                     {available && isLocalProvider(m.provider) && (
                       <Tooltip
-                        title="Runs locally on your device"
+                        title={t("models:runsLocally")}
                         placement="top"
                       >
                         <span
                           className="badge-local"
                           style={badgeStyle}
                         >
-                          Local
+                          {t("models:local")}
                         </span>
                       </Tooltip>
                     )}
                     {available &&
                       isHuggingFaceInferenceProvider(m.provider) && (
                         <Tooltip
-                          title="Hugging Face Inference API (Paid)"
+                          title={t("models:huggingFaceInferenceApiPaid")}
                           placement="top"
                         >
                           <span
@@ -277,8 +279,8 @@ function ModelList<TModel extends ModelSelectorModel>({
                     {available &&
                       isCloudProvider(m.provider) &&
                       !isHuggingFaceInferenceProvider(m.provider) && (
-                        <Tooltip
-                          title="Paid API service (Remote)"
+                         <Tooltip
+                          title={t("models:paidApiServiceRemote")}
                           placement="top"
                         >
                           <span
@@ -296,7 +298,11 @@ function ModelList<TModel extends ModelSelectorModel>({
                 }
                 secondary={
                   <span style={secondaryTextStyle}>
-                    {m.path ? m.name : m.provider ? `Provider: ${m.provider}` : ""}
+                    {m.path
+                      ? m.name
+                      : m.provider
+                        ? `${t("models:provider")}: ${m.provider}`
+                        : ""}
                   </span>
                 }
                 primaryTypographyProps={PRIMARY_TYPOGRAPHY_PROPS}
@@ -317,6 +323,7 @@ function ModelList<TModel extends ModelSelectorModel>({
       badgeWithIconStyle,
       secondaryTextStyle,
       searchTerm,
+      t,
       theme.vars.palette.primary.main
     ]
   );
@@ -328,18 +335,18 @@ function ModelList<TModel extends ModelSelectorModel>({
           <EmptyState
             variant="no-results"
             size="small"
-            title="No models found"
-            description={`No models match "${searchTerm}". Try a different term or enable more providers.`}
+            title={t("models:noModelsFound")}
+            description={t("models:noModelsMatch", { searchTerm })}
           />
         ) : hasDownloads ? (
           <EmptyState
             variant="empty"
             size="small"
             icon={<DownloadIcon className="empty-icon" />}
-            title="No models yet — let's get started"
+            title={t("models:noModelsYet")}
             description={
               <>
-                Download a local model or add an API key for a cloud provider to get going.
+                {t("models:downloadOrAddApiKey")}
                 {" "}
                 <Box
                   component="span"
@@ -351,21 +358,21 @@ function ModelList<TModel extends ModelSelectorModel>({
                   }}
                   onClick={handleOpenSettings}
                 >
-                  Open Settings
+                  {t("models:openSettings")}
                 </Box>
               </>
             }
-            actionText="Browse Recommended Downloads"
+            actionText={t("models:browseRecommendedDownloads")}
             onAction={onGoToDownloads}
           />
         ) : (
           <EmptyState
             variant="empty"
             size="small"
-            title="No models available"
+            title={t("models:noModelsAvailable")}
             description={
               <>
-                Enable a provider in the left sidebar or add an API key in{" "}
+                {t("models:enableProviderOrAddApiKey")}{" "}
                 <Box
                   component="span"
                   sx={{
@@ -376,12 +383,12 @@ function ModelList<TModel extends ModelSelectorModel>({
                   }}
                   onClick={handleOpenSettings}
                 >
-                  Settings
+                  {t("navigation:settings")}
                 </Box>
-                .
+                {t("models:enableProviderOrAddApiKeySuffix")}
               </>
             }
-            actionText="Open Settings"
+            actionText={t("models:openSettings")}
             onAction={handleOpenSettings}
           />
         )

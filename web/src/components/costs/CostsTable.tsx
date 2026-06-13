@@ -1,4 +1,5 @@
 import React, { memo } from "react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import { Box, FlexRow, FlexColumn, Text, MOTION } from "../ui_primitives";
@@ -75,6 +76,7 @@ const ProviderModel: React.FC<{
 
 const ExecutionRows: React.FC<{ rows: Execution[] }> = ({ rows }) => {
   const theme = useTheme();
+  const { t } = useTranslation("costs");
   return (
     <>
       {rows.map((e) => (
@@ -175,7 +177,7 @@ const ExecutionRows: React.FC<{ rows: Execution[] }> = ({ rows }) => {
                     : theme.vars.palette.error.main
               }}
             >
-              {e.status}
+              {e.status === "ok" ? t("statusOk") : t("statusError")}
             </Text>
           </FlexRow>
 
@@ -317,6 +319,7 @@ const CostsTableInternal: React.FC<CostsTableProps> = ({
   groupBy
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("costs");
   const isExecution = groupBy === "execution";
 
   const headerSx = {
@@ -339,12 +342,12 @@ const CostsTableInternal: React.FC<CostsTableProps> = ({
       <Box sx={headerSx}>
         {isExecution ? (
           <>
-            <HeaderText>Node</HeaderText>
-            <HeaderText>Workflow</HeaderText>
-            <HeaderText>Provider / Model</HeaderText>
-            <HeaderText align="right">Tokens (in/out)</HeaderText>
-            <HeaderText align="right">Runtime</HeaderText>
-            <HeaderText>Status</HeaderText>
+            <HeaderText>{t("node")}</HeaderText>
+            <HeaderText>{t("workflow")}</HeaderText>
+            <HeaderText>{t("providerModel")}</HeaderText>
+            <HeaderText align="right">{t("tokensInOut")}</HeaderText>
+            <HeaderText align="right">{t("runtime")}</HeaderText>
+            <HeaderText>{t("status")}</HeaderText>
             <Box
               sx={{
                 display: "flex",
@@ -353,7 +356,7 @@ const CostsTableInternal: React.FC<CostsTableProps> = ({
                 gap: "2px"
               }}
             >
-              <HeaderText align="right">When</HeaderText>
+              <HeaderText align="right">{t("when")}</HeaderText>
               <ArrowDropDownIcon
                 sx={{
                   fontSize: 16,
@@ -361,22 +364,22 @@ const CostsTableInternal: React.FC<CostsTableProps> = ({
                 }}
               />
             </Box>
-            <HeaderText align="right">Cost</HeaderText>
+            <HeaderText align="right">{t("cost")}</HeaderText>
           </>
         ) : (
           <>
             <HeaderText>
               {groupBy === "nodeType"
-                ? "Node type"
+                ? t("groupNodeType")
                 : groupBy === "workflow"
-                  ? "Workflow"
+                  ? t("groupWorkflow")
                   : groupBy === "provider"
-                    ? "Provider"
-                    : "Model"}
+                    ? t("groupProvider")
+                    : t("groupModel")}
             </HeaderText>
-            <HeaderText align="right">Executions</HeaderText>
-            <HeaderText>Share of spend</HeaderText>
-            <HeaderText align="right">Cost</HeaderText>
+            <HeaderText align="right">{t("executions")}</HeaderText>
+            <HeaderText>{t("shareOfSpend")}</HeaderText>
+            <HeaderText align="right">{t("cost")}</HeaderText>
           </>
         )}
       </Box>
@@ -393,7 +396,7 @@ const CostsTableInternal: React.FC<CostsTableProps> = ({
       {executions.length === 0 && (
         <Box sx={{ padding: "32px 24px", textAlign: "center" }}>
           <Text size="small" color="secondary">
-            No executions match the current filters.
+            {t("noExecutionsMatch")}
           </Text>
         </Box>
       )}

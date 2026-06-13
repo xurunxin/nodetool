@@ -24,6 +24,7 @@ import {
   type ComfyResolvedSchema,
   type ComfyDynInput
 } from "../../../utils/comfyDynamicSchema";
+import { useTranslation } from "react-i18next";
 
 interface ComfyWorkflowLoaderProps {
   nodeId: string;
@@ -38,6 +39,7 @@ interface ComfyWorkflowLoaderProps {
  */
 export const ComfyWorkflowLoader: React.FC<ComfyWorkflowLoaderProps> = memo(
   ({ nodeId, data }) => {
+    const { t } = useTranslation("nodeMenu");
     const updateNodeData = useNodes((state) => state.updateNodeData);
     const [open, setOpen] = useState(false);
     const [text, setText] = useState("");
@@ -143,14 +145,18 @@ export const ComfyWorkflowLoader: React.FC<ComfyWorkflowLoaderProps> = memo(
       const nIn = Object.keys(schema.dynamic_inputs).length;
       const nOut = Object.keys(schema.dynamic_outputs).length;
       const nNodes = Object.keys(schema.prompt).length;
-      return `${nNodes} nodes · ${nIn} typed input${nIn === 1 ? "" : "s"} · ${nOut} output${nOut === 1 ? "" : "s"}`;
-    }, [schema]);
+      return t("comfyWorkflowSummary", {
+        nodes: nNodes,
+        inputs: nIn,
+        outputs: nOut
+      });
+    }, [schema, t]);
 
     return (
       <>
-        <Tooltip title="Load Workflow" arrow delay={TOOLTIP_ENTER_DELAY}>
+        <Tooltip title={t("loadWorkflow")} arrow delay={TOOLTIP_ENTER_DELAY}>
           <ToolbarIconButton
-            title="Load Workflow"
+            title={t("loadWorkflow")}
             size="small"
             onClick={() => setOpen(true)}
             sx={{
@@ -168,19 +174,18 @@ export const ComfyWorkflowLoader: React.FC<ComfyWorkflowLoaderProps> = memo(
         <Dialog
           open={open}
           onClose={() => setOpen(false)}
-          title="Load ComfyUI Workflow"
+          title={t("loadComfyWorkflow")}
           maxWidth="sm"
           fullWidth
           showActions
-          confirmText="Apply"
+          confirmText={t("apply")}
           confirmDisabled={!schema}
           onConfirm={handleApply}
           onCancel={() => setOpen(false)}
         >
           <FlexColumn gap={1.5} sx={{ minWidth: 0 }}>
             <Caption>
-              Paste a workflow in API (prompt) format — use “Save (API Format)”
-              in ComfyUI — or drop a .json/.png file exported by ComfyUI.
+              {t("comfyWorkflowLoaderDescription")}
             </Caption>
             <Box
               onDrop={onDrop}
@@ -193,7 +198,7 @@ export const ComfyWorkflowLoader: React.FC<ComfyWorkflowLoaderProps> = memo(
               }}
             >
               <TextInput
-                label="Workflow JSON"
+                label={t("workflowJson")}
                 value={text}
                 onChange={(e) => parseText(e.target.value)}
                 multiline
@@ -203,13 +208,13 @@ export const ComfyWorkflowLoader: React.FC<ComfyWorkflowLoaderProps> = memo(
               />
               <FlexRow gap={1} align="center" sx={{ mt: 1 }}>
                 <ToolbarIconButton
-                  title="Choose file"
+                  title={t("chooseFile")}
                   size="small"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <UploadFileIcon sx={{ fontSize: 18 }} />
                 </ToolbarIconButton>
-                <Caption>or drop a .json / .png here</Caption>
+                <Caption>{t("orDropJsonPngHere")}</Caption>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -235,7 +240,7 @@ export const ComfyWorkflowLoader: React.FC<ComfyWorkflowLoaderProps> = memo(
                 <Text size="small">{summary}</Text>
                 {schema.availableParams.length > 0 && (
                   <>
-                    <Caption>Expose additional parameters as inputs:</Caption>
+                    <Caption>{t("exposeAdditionalParameters")}</Caption>
                     <ScrollArea style={{ maxHeight: 180 }}>
                       <FlexColumn gap={0}>
                         {schema.availableParams.map((param) => (

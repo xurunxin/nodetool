@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { css, keyframes } from "@emotion/react";
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 const rotate = keyframes`
   0% { transform: rotate(0deg); }
@@ -89,16 +90,19 @@ export interface LoadingIndicatorProps {
 }
 
 export const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
-  ariaLabel = "Loading",
+  ariaLabel,
   className
 }) => {
+  const { t } = useTranslation("chat");
+  const resolvedAriaLabel = ariaLabel ?? t("loading");
+
   return (
     <div
       css={styles.container}
       className={`loading-container${className ? ` ${className}` : ""}`}
       role="status"
       aria-live="polite"
-      aria-label={ariaLabel}
+      aria-label={resolvedAriaLabel}
     >
       <div css={styles.wrapper}>
         <svg css={styles.svg} viewBox="0 0 28 28" aria-hidden="true">

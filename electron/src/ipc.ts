@@ -180,16 +180,16 @@ function assertLocalhostUrl(
   try {
     parsed = new URL(urlValue);
   } catch {
-    throw new Error("Invalid proxy URL");
+    throw new Error("代理 URL 无效");
   }
 
   if (!allowedProtocols.includes(parsed.protocol)) {
     throw new Error(
-      `Only ${allowedProtocols.join("/")} URLs are allowed`,
+      `只允许 ${allowedProtocols.join("/")} URL`,
     );
   }
   if (!LOCALHOST_HOSTNAMES.has(parsed.hostname)) {
-    throw new Error("Only localhost URLs are allowed");
+    throw new Error("只允许 localhost URL");
   }
   return parsed;
 }
@@ -206,7 +206,7 @@ function sanitizeProxyMethod(method?: string): string {
     "OPTIONS",
   ]);
   if (!allowedMethods.has(normalized)) {
-    throw new Error(`Unsupported method: ${normalized}`);
+    throw new Error(`不支持的请求方法：${normalized}`);
   }
   return normalized;
 }
@@ -688,19 +688,19 @@ export function initializeIpcHandlers(): void {
 
   // Continue to app handler
   createIpcMainHandler(IpcChannels.START_SERVER, async () => {
-    logMessage("User continued to app from package manager");
+    logMessage("用户从包管理器继续进入应用");
     await initializeBackendServer();
-    logMessage("Setting up workflow shortcuts after server start...");
+    logMessage("服务启动后正在设置工作流快捷方式...");
     await setupWorkflowShortcuts();
   });
 
   // Restart server handler
   createIpcMainHandler(IpcChannels.RESTART_SERVER, async () => {
-    logMessage("Restarting backend server by user request");
+    logMessage("根据用户请求重启后端服务");
     try {
       await stopServer();
     } catch (e) {
-      logMessage(`Error while stopping server for restart: ${e}`, "warn");
+      logMessage(`重启前停止服务时出错：${e}`, "warn");
     }
     // Small delay to ensure ports and resources are released before restart
     await new Promise((resolve) => setTimeout(resolve, 300));
@@ -710,13 +710,13 @@ export function initializeIpcHandlers(): void {
 
   // Restart llama-server handler (used after downloading new models)
   createIpcMainHandler(IpcChannels.RESTART_LLAMA_SERVER, async () => {
-    logMessage("Restarting llama-server to pick up new models");
+    logMessage("正在重启 llama-server 以加载新模型");
     await restartLlamaServer();
   });
 
   // App control handlers
   createIpcMainHandler(IpcChannels.RUN_APP, async (_event, workflowId) => {
-    logMessage(`Running app with workflow ID: ${workflowId}`);
+    logMessage(`正在运行应用，工作流 ID：${workflowId}`);
     await runApp(workflowId);
   });
 
@@ -725,8 +725,8 @@ export function initializeIpcHandlers(): void {
     IpcChannels.SHOW_PACKAGE_MANAGER,
     async (_event, nodeSearch) => {
       logMessage(
-        `Opening Package Manager window${
-          nodeSearch ? ` with search: ${nodeSearch}` : ""
+        `正在打开包管理器窗口${
+          nodeSearch ? `，搜索：${nodeSearch}` : ""
         }`,
       );
       createPackageManagerWindow(nodeSearch);
@@ -735,7 +735,7 @@ export function initializeIpcHandlers(): void {
 
   createIpcMainHandler(IpcChannels.INSTALL_UPDATE, async () => {
     const { autoUpdater } = await import("electron-updater");
-    logMessage("User requested to install update and restart");
+    logMessage("用户请求安装更新并重启");
     autoUpdater.quitAndInstall();
   });
 
@@ -747,7 +747,7 @@ export function initializeIpcHandlers(): void {
         window.close();
       }
     } catch (error) {
-      logMessage(`Error in window close: ${error}`, "error");
+      logMessage(`关闭窗口时出错：${error}`, "error");
     }
   });
 
@@ -758,7 +758,7 @@ export function initializeIpcHandlers(): void {
         window.minimize();
       }
     } catch (error) {
-      logMessage(`Error in window minimize: ${error}`, "error");
+      logMessage(`最小化窗口时出错：${error}`, "error");
     }
   });
 
@@ -773,14 +773,14 @@ export function initializeIpcHandlers(): void {
         }
       }
     } catch (error) {
-      logMessage(`Error in window maximize: ${error}`, "error");
+      logMessage(`最大化窗口时出错：${error}`, "error");
     }
   });
 
   createIpcMainHandler(
     IpcChannels.ON_CREATE_WORKFLOW,
     async (event, workflow) => {
-      logMessage(`Creating workflow: ${workflow.name}`);
+      logMessage(`正在创建工作流：${workflow.name}`);
       registerWorkflowShortcut(workflow);
       emitWorkflowsChanged();
     },
@@ -789,7 +789,7 @@ export function initializeIpcHandlers(): void {
   createIpcMainHandler(
     IpcChannels.ON_UPDATE_WORKFLOW,
     async (event, workflow) => {
-      logMessage(`Updating workflow: ${workflow.name}`);
+      logMessage(`正在更新工作流：${workflow.name}`);
       registerWorkflowShortcut(workflow);
       emitWorkflowsChanged();
     },
@@ -798,7 +798,7 @@ export function initializeIpcHandlers(): void {
   createIpcMainHandler(
     IpcChannels.ON_DELETE_WORKFLOW,
     async (event, workflow) => {
-      logMessage(`Deleting workflow: ${workflow.name}`);
+      logMessage(`正在删除工作流：${workflow.name}`);
       if (workflow.settings?.shortcut) {
         globalShortcut.unregister(workflow.settings.shortcut);
       }
@@ -808,22 +808,22 @@ export function initializeIpcHandlers(): void {
 
   // Package manager handlers
   createIpcMainHandler(IpcChannels.PACKAGE_LIST_AVAILABLE, async () => {
-    logMessage("Fetching available packages");
+    logMessage("正在获取可用包");
     return await fetchAvailablePackages();
   });
 
   createIpcMainHandler(IpcChannels.PACKAGE_LIST_INSTALLED, async () => {
-    logMessage("Listing installed packages");
+    logMessage("正在列出已安装包");
     return await listInstalledPackages();
   });
 
   createIpcMainHandler(IpcChannels.PACKAGE_INSTALL, async (_event, request) => {
-    logMessage(`Installing package: ${request.repo_id}`);
+    logMessage(`正在安装包：${request.repo_id}`);
     const validation = validateRepoId(request.repo_id);
     if (!validation.valid) {
       return {
         success: false,
-        message: validation.error || "Invalid repository ID",
+        message: validation.error || "仓库 ID 无效",
       };
     }
     return await installPackage(request.repo_id);
@@ -832,12 +832,12 @@ export function initializeIpcHandlers(): void {
   createIpcMainHandler(
     IpcChannels.PACKAGE_UNINSTALL,
     async (_event, request) => {
-      logMessage(`Uninstalling package: ${request.repo_id}`);
+      logMessage(`正在卸载包：${request.repo_id}`);
       const validation = validateRepoId(request.repo_id);
       if (!validation.valid) {
         return {
           success: false,
-          message: validation.error || "Invalid repository ID",
+          message: validation.error || "仓库 ID 无效",
         };
       }
       return await uninstallPackage(request.repo_id);
@@ -845,12 +845,12 @@ export function initializeIpcHandlers(): void {
   );
 
   createIpcMainHandler(IpcChannels.PACKAGE_UPDATE, async (_event, repoId) => {
-    logMessage(`Updating package: ${repoId}`);
+    logMessage(`正在更新包：${repoId}`);
     const validation = validateRepoId(repoId);
     if (!validation.valid) {
       return {
         success: false,
-        message: validation.error || "Invalid repository ID",
+        message: validation.error || "仓库 ID 无效",
       };
     }
     return await updatePackage(repoId);
@@ -863,7 +863,7 @@ export function initializeIpcHandlers(): void {
         const results = await searchNodes(query || "");
         return results;
       } catch (e) {
-        logMessage(`Error in PACKAGE_SEARCH_NODES: ${String(e)}`, "warn");
+        logMessage(`搜索节点时出错：${String(e)}`, "warn");
         return [];
       }
     },
@@ -874,19 +874,19 @@ export function initializeIpcHandlers(): void {
     async (_event, url) => {
       if (!isSafeExternalUrl(url)) {
         logMessage(
-          `Refusing PACKAGE_OPEN_EXTERNAL for unsafe URL: ${String(url)}`,
+          `已拒绝打开不安全的外部 URL：${String(url)}`,
           "warn",
         );
         return;
       }
-      logMessage(`Opening external URL: ${url}`);
+      logMessage(`正在打开外部 URL：${url}`);
       void shell.openExternal(url);
     },
   );
 
   // Package version check handler
   createIpcMainHandler(IpcChannels.PACKAGE_VERSION_CHECK, async () => {
-    logMessage("Checking expected package versions");
+    logMessage("正在检查预期包版本");
     return await checkExpectedPackageVersions();
   });
 
@@ -895,11 +895,11 @@ export function initializeIpcHandlers(): void {
     return await listInstalledNodePacks();
   });
   createIpcMainHandler(IpcChannels.NODE_PACK_INSTALL, async (_event, req) => {
-    logMessage(`Installing node pack: ${req.spec}`);
+    logMessage(`正在安装节点包：${req.spec}`);
     return await installNodePack(req.spec);
   });
   createIpcMainHandler(IpcChannels.NODE_PACK_UNINSTALL, async (_event, req) => {
-    logMessage(`Uninstalling node pack: ${req.name}`);
+    logMessage(`正在卸载节点包：${req.name}`);
     return await uninstallNodePack(req.name);
   });
   createIpcMainHandler(IpcChannels.NODE_PACK_GET_INSTALL_DIR, async () => {
@@ -914,7 +914,7 @@ export function initializeIpcHandlers(): void {
     IpcChannels.BUILTIN_PACK_SET_ENABLED,
     async (_event, req) => {
       logMessage(
-        `${req.enabled ? "Enabling" : "Disabling"} built-in node pack: ${req.id}`,
+        `${req.enabled ? "正在启用" : "正在停用"}内置节点包：${req.id}`,
       );
       return setBuiltinPackEnabled(req.id, req.enabled);
     },
@@ -922,7 +922,7 @@ export function initializeIpcHandlers(): void {
 
   // Runtime package handlers
   createIpcMainHandler(IpcChannels.RUNTIME_PACKAGE_STATUSES, async () => {
-    logMessage("Fetching runtime package statuses");
+    logMessage("正在获取运行时包状态");
     return await getRuntimePackageStatuses();
   });
 
@@ -930,9 +930,9 @@ export function initializeIpcHandlers(): void {
     IpcChannels.RUNTIME_PACKAGE_INSTALL,
     async (_event, data: { packageId: string; installLocation?: string }) => {
       if (!RUNTIME_PACKAGE_IDS.includes(data.packageId as RuntimePackageId)) {
-        return { success: false, message: `Unknown package ID: ${data.packageId}` };
+        return { success: false, message: `未知包 ID：${data.packageId}` };
       }
-      logMessage(`Installing runtime package: ${data.packageId}`);
+      logMessage(`正在安装运行时包：${data.packageId}`);
       return await installRuntimePackage(
         data.packageId as RuntimePackageId,
         data.installLocation,
@@ -944,9 +944,9 @@ export function initializeIpcHandlers(): void {
     IpcChannels.RUNTIME_PACKAGE_UNINSTALL,
     async (_event, data: { packageId: string }) => {
       if (!RUNTIME_PACKAGE_IDS.includes(data.packageId as RuntimePackageId)) {
-        return { success: false, message: `Unknown package ID: ${data.packageId}` };
+        return { success: false, message: `未知包 ID：${data.packageId}` };
       }
-      logMessage(`Uninstalling runtime package: ${data.packageId}`);
+      logMessage(`正在卸载运行时包：${data.packageId}`);
       const { uninstallRuntimePackage } = await import("./packageManager");
       return await uninstallRuntimePackage(data.packageId as RuntimePackageId);
     },
@@ -961,8 +961,8 @@ export function initializeIpcHandlers(): void {
     async () => {
       const { filePaths, canceled } = await dialog.showOpenDialog({
         properties: ["openDirectory", "createDirectory"],
-        title: "Select folder for the conda environment",
-        buttonLabel: "Select Folder",
+        title: "选择 conda 环境安装文件夹",
+        buttonLabel: "选择文件夹",
       });
       if (canceled || !filePaths?.[0]) {
         return null;
@@ -973,12 +973,12 @@ export function initializeIpcHandlers(): void {
 
   // Log viewer handlers
   createIpcMainHandler(IpcChannels.GET_LOGS, async () => {
-    logMessage("Getting server logs");
+    logMessage("正在获取服务日志");
     return getServerState().logs;
   });
 
   createIpcMainHandler(IpcChannels.CLEAR_LOGS, async () => {
-    logMessage("Clearing server logs");
+    logMessage("正在清空服务日志");
     getServerState().logs = [];
   });
 
@@ -1242,7 +1242,7 @@ export function initializeIpcHandlers(): void {
   );
 
   createIpcMainHandler(IpcChannels.SHELL_TRASH_ITEM, async (_event, path) => {
-    logMessage(`Moving to trash: ${path}`);
+    logMessage(`正在移入回收站：${path}`);
     await shell.trashItem(path);
   });
 
@@ -1252,12 +1252,12 @@ export function initializeIpcHandlers(): void {
 
   createIpcMainHandler(
     IpcChannels.SHELL_WRITE_SHORTCUT_LINK,
-    async (_event, request) => {
+      async (_event, request) => {
       if (process.platform !== "win32") {
-        logMessage("Shortcut links are only supported on Windows", "warn");
+        logMessage("快捷方式链接仅支持 Windows", "warn");
         return false;
       }
-      logMessage(`Writing shortcut: ${request.shortcutPath}`);
+      logMessage(`正在写入快捷方式：${request.shortcutPath}`);
       return shell.writeShortcutLink(
         request.shortcutPath,
         request.operation || "create",
@@ -1268,12 +1268,12 @@ export function initializeIpcHandlers(): void {
 
   createIpcMainHandler(
     IpcChannels.SHELL_READ_SHORTCUT_LINK,
-    async (_event, shortcutPath) => {
+      async (_event, shortcutPath) => {
       if (process.platform !== "win32") {
-        logMessage("Shortcut links are only supported on Windows", "warn");
-        throw new Error("Shortcut links are only supported on Windows");
+        logMessage("快捷方式链接仅支持 Windows", "warn");
+        throw new Error("快捷方式链接仅支持 Windows");
       }
-      logMessage(`Reading shortcut: ${shortcutPath}`);
+      logMessage(`正在读取快捷方式：${shortcutPath}`);
       return shell.readShortcutLink(shortcutPath);
     },
   );
@@ -1288,7 +1288,7 @@ export function initializeIpcHandlers(): void {
   createIpcMainHandler(
     IpcChannels.SETTINGS_SET_CLOSE_BEHAVIOR,
     async (_event, action) => {
-      logMessage(`Setting window close behavior to: ${action}`);
+      logMessage(`正在设置窗口关闭行为：${action}`);
       updateSetting("windowCloseAction", action);
       emitServerStateChanged();
     },
@@ -1304,7 +1304,7 @@ export function initializeIpcHandlers(): void {
   createIpcMainHandler(
     IpcChannels.SETTINGS_SET_AUTO_UPDATES,
     async (_event, enabled) => {
-      logMessage(`Setting auto-updates to: ${enabled}`);
+      logMessage(`正在设置自动更新：${enabled}`);
       updateSetting("autoUpdatesEnabled", enabled);
     },
   );
@@ -1319,9 +1319,9 @@ export function initializeIpcHandlers(): void {
     async (_event, channel) => {
       const nextChannel = normalizeUpdateChannel(channel);
       if (!nextChannel) {
-        throw new Error(`Invalid update channel: ${String(channel)}`);
+        throw new Error(`更新频道无效：${String(channel)}`);
       }
-      logMessage(`Setting update channel to: ${nextChannel}`);
+      logMessage(`正在设置更新频道：${nextChannel}`);
       return setUpdateChannel(nextChannel);
     },
   );
@@ -1338,7 +1338,7 @@ export function initializeIpcHandlers(): void {
     IpcChannels.SETTINGS_SET_MODEL_SERVICES_STARTUP,
     async (_event, update) => {
       logMessage(
-        `Updating model services startup settings: ${JSON.stringify(update)}`
+        `正在更新模型服务启动设置：${JSON.stringify(update)}`
       );
       const next = updateModelServiceStartupSettings(update);
       emitServerStateChanged();
@@ -1348,7 +1348,7 @@ export function initializeIpcHandlers(): void {
 
   // Show settings window
   createIpcMainHandler(IpcChannels.SHOW_SETTINGS, async () => {
-    logMessage("Opening Settings window");
+    logMessage("正在打开设置窗口");
     createSettingsWindow();
   });
 
@@ -1361,14 +1361,14 @@ export function initializeIpcHandlers(): void {
   createIpcMainHandler(
     IpcChannels.DIALOG_OPEN_FILE,
     async (_event, request) => {
-      logMessage("Opening native file dialog");
+      logMessage("正在打开原生文件选择对话框");
       const properties: ("openFile" | "multiSelections")[] = ["openFile"];
       if (request.multiSelections) {
         properties.push("multiSelections");
       }
 
       const { canceled, filePaths } = await dialog.showOpenDialog({
-        title: request.title || "Select File",
+        title: request.title || "选择文件",
         defaultPath: request.defaultPath,
         filters: request.filters,
         properties,
@@ -1381,11 +1381,11 @@ export function initializeIpcHandlers(): void {
   createIpcMainHandler(
     IpcChannels.DIALOG_OPEN_FOLDER,
     async (_event, request) => {
-      logMessage("Opening native folder dialog");
+      logMessage("正在打开原生文件夹选择对话框");
       const { canceled, filePaths } = await dialog.showOpenDialog({
-        title: request.title || "Select Folder",
+        title: request.title || "选择文件夹",
         defaultPath: request.defaultPath,
-        buttonLabel: request.buttonLabel || "Select Folder",
+        buttonLabel: request.buttonLabel || "选择文件夹",
         properties: ["openDirectory", "createDirectory"],
       });
 

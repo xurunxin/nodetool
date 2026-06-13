@@ -81,12 +81,13 @@ class RuntimeRegistry {
   ): AsyncIterable<RuntimeProgress> {
     const pkg = this.get(id);
     if (!pkg) {
-      yield { type: "error", message: `Unknown runtime: ${id}` };
+      yield { type: "error", message: `未知运行时：${id}` };
       return;
     }
 
     if (this.inProgress.has(id)) {
-      yield { type: "error", message: `${id} is already being ${op}ed` };
+      const opLabel = op === "install" ? "安装" : op === "update" ? "更新" : "修复";
+      yield { type: "error", message: `${id} 正在${opLabel}中` };
       return;
     }
 
@@ -97,7 +98,7 @@ class RuntimeRegistry {
         if (!dep) continue;
         const depStatus = await dep.status(ctx);
         if (!depStatus.installed) {
-          yield { type: "error", message: `${id} requires ${depId} to be installed first` };
+          yield { type: "error", message: `${id} 需要先安装 ${depId}` };
           return;
         }
       }
@@ -126,7 +127,7 @@ class RuntimeRegistry {
 
   async uninstall(id: RuntimePackageId): Promise<void> {
     const pkg = this.get(id);
-    if (!pkg) throw new Error(`Unknown runtime: ${id}`);
+    if (!pkg) throw new Error(`未知运行时：${id}`);
     const ctx = buildRuntimeContext();
     await pkg.uninstall(ctx);
   }
@@ -158,7 +159,8 @@ export async function runLifecycleToCompletion(
         return { success: false, message: ev.message };
       }
     }
-    return { success: true, message: lastStage || `${id} ${op} completed` };
+    const opLabel = op === "install" ? "安装" : op === "update" ? "更新" : "修复";
+    return { success: true, message: lastStage || `${id} ${opLabel}完成` };
   } catch (error) {
     return {
       success: false,

@@ -3,6 +3,10 @@ import { PropertyProps } from "../node/PropertyInput";
 import isEqual from "fast-deep-equal";
 import Select from "../inputs/Select";
 import PropertyLabel from "../node/PropertyLabel";
+import {
+  localizeOptionLabel,
+  localizePropertyName
+} from "../../i18n/nodeMetadataLocalization";
 
 const formatEnumLabel = (value: string | number): string => {
   if (typeof value !== "string") {
@@ -49,7 +53,7 @@ const EnumProperty: React.FC<PropertyProps> = ({
 
   const options = useMemo(() => {
     return values?.map((val: string | number) => ({
-      label: formatEnumLabel(val),
+      label: localizeOptionLabel(formatEnumLabel(val)),
       value: String(val)
     })) || [];
   }, [values]);
@@ -65,8 +69,8 @@ const EnumProperty: React.FC<PropertyProps> = ({
         value={value || ""}
         onChange={onChange}
         options={options}
-        label={property.name}
-        placeholder={property.name}
+        label={localizePropertyName(property.name)}
+        placeholder={localizePropertyName(property.name)}
         tabIndex={tabIndex}
         changed={changed}
       />

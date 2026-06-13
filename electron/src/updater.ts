@@ -202,10 +202,10 @@ function setupAutoUpdaterEvents(): void {
       if (Notification.isSupported()) {
         const autoUpdateEnabled = await isAutoUpdatesEnabledAsync();
         const notification = new Notification({
-          title: "NodeTool Update Available",
+          title: "NodeTool 有可用更新",
           body: autoUpdateEnabled
-            ? `Version ${info.version} is available. Downloading in the background...`
-            : `Version ${info.version} is available. Click to open NodeTool.`,
+            ? `版本 ${info.version} 可用，正在后台下载...`
+            : `版本 ${info.version} 可用。点击打开 NodeTool。`,
         });
         notification.on("click", () => {
           const win = getMainWindow();

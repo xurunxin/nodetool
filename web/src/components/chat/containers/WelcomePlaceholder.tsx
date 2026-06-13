@@ -1,10 +1,11 @@
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { Text, Chip, MOTION } from "../../ui_primitives";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import { memo, useCallback } from "react";
+import { memo, useCallback, useMemo } from "react";
 
 const styles = (theme: Theme) =>
   css({
@@ -62,14 +63,6 @@ const styles = (theme: Theme) =>
     }
   });
 
-const SUGGESTIONS = [
-  "Summarize a document",
-  "Analyze an image",
-  "Generate creative text",
-  "Build a workflow",
-  "Help me with code"
-];
-
 interface WelcomePlaceholderProps {
   onSuggestionClick?: (suggestion: string) => void;
 }
@@ -77,7 +70,18 @@ interface WelcomePlaceholderProps {
 const WelcomePlaceholder: React.FC<WelcomePlaceholderProps> = ({
   onSuggestionClick
 }) => {
+  const { t } = useTranslation("chat");
   const theme = useTheme();
+  const suggestions = useMemo(
+    () => [
+      t("suggestionSummarizeDocument"),
+      t("suggestionAnalyzeImage"),
+      t("suggestionGenerateCreativeText"),
+      t("suggestionBuildWorkflow"),
+      t("suggestionHelpWithCode")
+    ],
+    [t]
+  );
 
   const handleClick = useCallback(
     (suggestion: string) => {
@@ -91,12 +95,12 @@ const WelcomePlaceholder: React.FC<WelcomePlaceholderProps> = ({
       <div className="welcome-inner">
         <div className="chat-suggestions-block">
           <AutoAwesomeIcon className="welcome-icon" />
-          <Text className="welcome-title">How can I help you today?</Text>
+          <Text className="welcome-title">{t("welcomeTitle")}</Text>
           <Text className="welcome-subtitle">
-            Ask me anything, drop files to analyze, or try one of these:
+            {t("welcomeSubtitle")}
           </Text>
           <div className="suggestions">
-            {SUGGESTIONS.map((suggestion) => (
+            {suggestions.map((suggestion) => (
               <Chip
                 key={suggestion}
                 label={suggestion}

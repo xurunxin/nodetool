@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Caption, Text, MOTION } from "../ui_primitives";
 import FavoriteButton from "../ui_primitives/FavoriteButton";
@@ -77,6 +78,7 @@ interface NodeLibraryRowProps {
  */
 const NodeLibraryRow = memo<NodeLibraryRowProps>(
   ({ node, onDragStart, onDragEnd, onClick, onHover }) => {
+    const { t } = useTranslation("nodeMenu");
     const theme = useTheme();
     const outputType =
       node.outputs.length > 0 ? node.outputs[0].type.type : "";
@@ -109,6 +111,12 @@ const NodeLibraryRow = memo<NodeLibraryRowProps>(
     const replacementTitle = node.replaced_by
       ? nodeTypeDisplayName(node.replaced_by)
       : null;
+    const replacementHint = replacementTitle
+      ? t("useReplacement", { name: replacementTitle })
+      : "";
+    const rowTitle = node.deprecated
+      ? `${node.title}${replacementHint ? ` - ${replacementHint}` : ""}`
+      : node.title;
 
     const containerStyle = useMemo(
       () => ({
@@ -148,11 +156,7 @@ const NodeLibraryRow = memo<NodeLibraryRowProps>(
             handleClick();
           }
         }}
-        title={
-          node.deprecated
-            ? `${node.title}${replacementTitle ? ` — use ${replacementTitle}` : ""}`
-            : node.title
-        }
+        title={rowTitle}
       >
         <IconForType
           iconName={outputType}
@@ -165,7 +169,7 @@ const NodeLibraryRow = memo<NodeLibraryRowProps>(
           {node.title}
           {node.deprecated && (
             <Caption component="span" sx={{ marginLeft: "6px", color: "warning.main" }}>
-              Deprecated
+              {t("deprecated")}
             </Caption>
           )}
         </Text>

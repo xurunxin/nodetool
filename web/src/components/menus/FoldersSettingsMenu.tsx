@@ -23,6 +23,7 @@ import { isElectron } from "../../utils/browser";
 import { isLocalhost } from "../../lib/env";
 import { NavButton, NodeTextField, ToolbarIconButton } from "../ui_primitives";
 import { SettingWithValue } from "../../stores/RemoteSettingStore";
+import { useTranslation } from "react-i18next";
 
 interface FolderButtonProps {
   label: string;
@@ -45,9 +46,10 @@ const FolderButton = ({ label, onClick }: FolderButtonProps) => (
 
 interface OpenFolderButtonProps {
   settingValue: string | undefined;
+  tooltip: string;
 }
 
-const OpenFolderButton = memo(({ settingValue }: OpenFolderButtonProps) => {
+const OpenFolderButton = memo(({ settingValue, tooltip }: OpenFolderButtonProps) => {
   const handleClick = useCallback(() => {
     if (settingValue) {
       openInExplorer(settingValue);
@@ -61,7 +63,7 @@ const OpenFolderButton = memo(({ settingValue }: OpenFolderButtonProps) => {
   return (
     <ToolbarIconButton
       icon={<FolderOutlinedIcon fontSize="small" />}
-      tooltip="Open folder in file explorer"
+      tooltip={tooltip}
       onClick={handleClick}
       sx={{ ml: 1 }}
     />
@@ -71,6 +73,7 @@ const OpenFolderButton = memo(({ settingValue }: OpenFolderButtonProps) => {
 OpenFolderButton.displayName = "OpenFolderButton";
 
 const FoldersSettings = () => {
+  const { t } = useTranslation("settings");
   const queryClient = useQueryClient();
   const updateSettings = useRemoteSettingsStore((state) => state.updateSettings);
   const fetchSettings = useRemoteSettingsStore((state) => state.fetchSettings);
@@ -163,14 +166,14 @@ const FoldersSettings = () => {
       {
         onSuccess: () => {
           addNotification({
-            content: "Folder settings have been saved successfully",
+            content: t("folderSettingsSaved"),
             type: "success",
             alert: true
           });
         }
       }
     );
-  }, [addNotification, settingValues, updateSettingsMutation, data]);
+  }, [addNotification, settingValues, updateSettingsMutation, data, t]);
 
   const theme = useTheme();
 
@@ -182,7 +185,7 @@ const FoldersSettings = () => {
     <>
       {isLoading && (
         <Text sx={{ textAlign: "center", padding: "2em" }}>
-          Loading folder settings…
+          {t("loadingFolderSettings")}
         </Text>
       )}
       <div
@@ -190,7 +193,7 @@ const FoldersSettings = () => {
         css={getSharedSettingsStyles(theme)}
       >
         <div className="settings-main-content">
-          <Text size="giant">Folder Settings</Text>
+          <Text size="giant">{t("folderSettings")}</Text>
 
           {/* System Folders Section - Always show when in Electron */}
           {canOpenSystemFolders && (
@@ -199,22 +202,22 @@ const FoldersSettings = () => {
                 size="bigger"
                 id="system-folders"
               >
-                System Folders
+                {t("systemFolders")}
               </Text>
               <Text className="description" sx={{ mb: 2 }}>
-                Open important Nodetool directories in your file explorer.
+                {t("systemFoldersDescription")}
               </Text>
               <FlexColumn gap={1.5}>
                 <FolderButton
-                  label="Nodetool Installation"
+                  label={t("nodetoolInstallation")}
                   onClick={openInstallationPath}
                 />
                 <FolderButton
-                  label="Nodetool Logs"
+                  label={t("nodetoolLogs")}
                   onClick={openLogsPath}
                 />
                 <FolderButton
-                  label="Assets Storage"
+                  label={t("assetsStorage")}
                   onClick={openAssetsPath}
                 />
               </FlexColumn>
@@ -228,18 +231,18 @@ const FoldersSettings = () => {
                 size="bigger"
                 id="model-folders"
               >
-                Model Folders
+                {t("modelFolders")}
               </Text>
               <Text className="description" sx={{ mb: 2 }}>
-                Open model cache directories in your file explorer.
+                {t("modelFoldersDescription")}
               </Text>
               <FlexColumn gap={1.5}>
                 <FolderButton
-                  label="HuggingFace Models"
+                  label={t("huggingFaceModels")}
                   onClick={openHuggingfacePath}
                 />
                 <FolderButton
-                  label="Ollama Models"
+                  label={t("ollamaModels")}
                   onClick={openOllamaPath}
                 />
               </FlexColumn>
@@ -253,7 +256,11 @@ const FoldersSettings = () => {
                 ([groupName, groupSettings]) => {
                   // Only add "Custom" prefix if system or model folders are visible, to differentiate
                   const showCustomPrefix = canOpenFolders || canOpenSystemFolders;
-                  const sectionTitle = showCustomPrefix ? `Custom ${groupName}` : groupName;
+                  const localizedGroupName =
+                    groupName === "Folders" ? t("folders") : groupName;
+                  const sectionTitle = showCustomPrefix ?
+                    t("customGroup", { group: localizedGroupName }) :
+                    localizedGroupName;
                   
                   return (
                     <div key={groupName} className="settings-section">
@@ -278,7 +285,10 @@ const FoldersSettings = () => {
                               onKeyDown={(e) => e.stopPropagation()}
                               sx={{ flex: 1 }}
                             />
-                            <OpenFolderButton settingValue={settingValues[setting.env_var]} />
+                            <OpenFolderButton
+                              settingValue={settingValues[setting.env_var]}
+                              tooltip={t("openFolderInFileExplorer")}
+                            />
                           </FlexRow>
                           {setting.description && (
                             <Text className="description">
@@ -295,7 +305,7 @@ const FoldersSettings = () => {
               <div className="save-button-container">
                 <NavButton
                   icon={<SaveIcon />}
-                  label="SAVE FOLDER SETTINGS"
+                  label={t("saveFolderSettings")}
                   onClick={handleSave}
                   color="primary"
                   className="save-button"
@@ -312,8 +322,7 @@ const FoldersSettings = () => {
             
             return showNoSettingsMessage ? (
               <Text sx={{ textAlign: "center", padding: "2em" }}>
-                No folder settings available or defined in the &apos;Folders&apos;
-                group.
+                {t("noFolderSettingsAvailable")}
               </Text>
             ) : null;
           })()}

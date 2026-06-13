@@ -3,6 +3,7 @@ import React, { memo } from "react";
 import { useTheme } from "@mui/material/styles";
 import { MaybeMarkdown } from "./markdown";
 import { outputStyles } from "./styles";
+import { useTranslation } from "react-i18next";
 
 export type Email = {
   sender: string;
@@ -13,23 +14,24 @@ export type Email = {
 };
 
 export const EmailRenderer: React.FC<{ value: Email }> = ({ value }) => {
+  const { t } = useTranslation("nodeMenu");
   const theme = useTheme();
   return (
     <div css={outputStyles(theme)}>
       <div className="email-header">
         <p>
-          <strong>From:</strong> {value.sender}
+          <strong>{t("emailFrom")}:</strong> {value.sender}
         </p>
         <p>
-          <strong>To:</strong> {value.to}
+          <strong>{t("emailTo")}:</strong> {value.to}
         </p>
         {value.cc && (
           <p>
-            <strong>CC:</strong> {value.cc}
+            <strong>{t("emailCc")}:</strong> {value.cc}
           </p>
         )}
         <p>
-          <strong>Subject:</strong> {value.subject}
+          <strong>{t("emailSubject")}:</strong> {value.subject}
         </p>
       </div>
       <div className="email-body">

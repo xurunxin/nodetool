@@ -11,12 +11,26 @@
  */
 
 import React, { memo, useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { MOTION } from "./tokens";
 
 const DEFAULT_CHECKER_SIZE = 12;
+
+const localizeCheckerMessage = (
+  message: string | undefined,
+  t: (key: string) => string
+): string | undefined => {
+  if (message === "Connect an image, then run") {
+    return t("connectImageThenRun");
+  }
+  if (message === "Drop files here") {
+    return t("dropFilesHere");
+  }
+  return message;
+};
 
 const styles = (theme: Theme, checkerSize: number, isOver: boolean) =>
   css({
@@ -91,7 +105,9 @@ const CheckerDropzoneInner: React.FC<CheckerDropzoneProps> = ({
   className
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const [isOver, setIsOver] = useState(false);
+  const localizedMessage = localizeCheckerMessage(message, t);
 
   const handleDragOver = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
@@ -133,12 +149,14 @@ const CheckerDropzoneInner: React.FC<CheckerDropzoneProps> = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       role={onDrop ? "button" : undefined}
-      aria-label={onDrop ? message ?? "Drop files here" : undefined}
+      aria-label={onDrop ? localizedMessage ?? t("dropFilesHere") : undefined}
     >
       {children ?? (
         <>
           {icon && <span className="checker-icon">{icon}</span>}
-          {message && <span className="checker-message">{message}</span>}
+          {localizedMessage && (
+            <span className="checker-message">{localizedMessage}</span>
+          )}
         </>
       )}
     </div>

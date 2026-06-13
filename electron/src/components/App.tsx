@@ -107,7 +107,7 @@ const App: React.FC = () => {
     (message: string) => {
       setServerStatus((prev) => (prev === "error" ? prev : "starting"));
       setBootMessage(message);
-      if (message.includes("Setting up Python")) {
+      if (message.includes("Setting up Python") || message.includes("正在设置 Python")) {
         setShowLogs(true);
       }
     },
@@ -224,11 +224,11 @@ const App: React.FC = () => {
   const handleRetryStart = useCallback(() => {
     setServerError(null);
     setServerStatus("starting");
-    setBootMessage("Retrying backend start...");
+    setBootMessage("正在重试启动后端...");
     setShowBootMessage(true);
     setShowLogs(true);
     void window.api.server.restart().catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : "Failed to restart backend server.";
+      const message = error instanceof Error ? error.message : "后端服务器重启失败。";
       setServerStatus("error");
       setServerError(message);
       setBootMessage(message);
@@ -246,11 +246,11 @@ const App: React.FC = () => {
 
   const handleSkipPackageManager = useCallback(() => {
     setShowBootMessage(true);
-    setBootMessage("Starting server...");
+    setBootMessage("正在启动服务器...");
     setServerStatus("starting");
     setServerError(null);
     void window.api.server.start().catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : "Failed to start backend server.";
+      const message = error instanceof Error ? error.message : "后端服务器启动失败。";
       setServerStatus("error");
       setServerError(message);
       setBootMessage(message);

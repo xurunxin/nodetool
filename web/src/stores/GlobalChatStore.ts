@@ -841,7 +841,7 @@ const useGlobalChatStore = create<GlobalChatState>()(
         const now = new Date().toISOString();
         const localThread: Thread = {
           id,
-          title: safeTitle || "New conversation",
+          title: safeTitle || "",
           created_at: now,
           updated_at: now
         } as Thread;

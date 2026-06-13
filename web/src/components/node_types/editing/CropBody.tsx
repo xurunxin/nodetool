@@ -24,6 +24,7 @@ import React, {
   useRef,
   useState
 } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -47,8 +48,8 @@ import { CROP_NODE_TYPE } from "../../../constants/nodeTypes";
 
 /** Aspect-ratio dropdown options. `free` means no constraint. */
 const ASPECT_OPTIONS = [
-  { value: "free", label: "Free" },
-  { value: "1:1", label: "1:1 Square" },
+  { value: "free", labelKey: "freeAspect" },
+  { value: "1:1", labelKey: "squareAspect" },
   { value: "4:3", label: "4:3" },
   { value: "3:2", label: "3:2" },
   { value: "16:9", label: "16:9" },
@@ -286,6 +287,7 @@ const CropBodyInner: React.FC<CropBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(() => styles(theme), [theme]);
 
   const properties = useMemo(
@@ -678,31 +680,31 @@ const CropBodyInner: React.FC<CropBodyProps> = ({
       </div>
 
       <div className="controls">
-        <span className="ctrl-label">Aspect</span>
+        <span className="ctrl-label">{t("aspect")}</span>
         <Select
           className="aspect-select nodrag"
           size="small"
           variant="standard"
           value={aspect}
           onChange={handleAspectChange}
-          aria-label="Aspect ratio"
+          aria-label={t("aspectRatio")}
           disableUnderline
         >
           {ASPECT_OPTIONS.map((o) => (
             <MenuItem key={o.value} value={o.value} dense>
-              {o.label}
+              {"labelKey" in o ? t(o.labelKey) : o.value}
             </MenuItem>
           ))}
         </Select>
 
-        <span className="ctrl-label">Size</span>
+        <span className="ctrl-label">{t("size")}</span>
         <div className="dims-cluster">
           <div className="dim-field">
             <NumberInput
               id={`crop-width-${id}`}
               nodeId={id}
               name="width"
-              description={widthProperty?.description ?? "Crop width"}
+              description={widthProperty?.description ?? t("cropWidth")}
               value={cropW}
               min={1}
               max={imgDims?.w ?? 8192}
@@ -721,7 +723,7 @@ const CropBodyInner: React.FC<CropBodyProps> = ({
               id={`crop-height-${id}`}
               nodeId={id}
               name="height"
-              description={heightProperty?.description ?? "Crop height"}
+              description={heightProperty?.description ?? t("cropHeight")}
               value={cropH}
               min={1}
               max={imgDims?.h ?? 8192}
@@ -739,8 +741,8 @@ const CropBodyInner: React.FC<CropBodyProps> = ({
           type="button"
           className="reset-btn"
           onClick={handleReset}
-          aria-label="Reset crop"
-          title="Reset crop"
+          aria-label={t("resetCrop")}
+          title={t("resetCrop")}
         >
           <RestartAltIcon fontSize="small" />
         </button>

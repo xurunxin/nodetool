@@ -1,4 +1,5 @@
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Text, FlexRow, EditorButton } from "../ui_primitives";
 import useModelPreferencesStore from "../../stores/ModelPreferencesStore";
 import LanguageModelSelect from "../properties/LanguageModelSelect";
@@ -11,29 +12,30 @@ import VideoModelSelect from "../properties/VideoModelSelect";
 const MODEL_TYPE_CONFIG = [
   {
     type: "language_model",
-    label: "Language Model",
+    labelKey: "languageModel",
     Select: LanguageModelSelect
   },
-  { type: "image_model", label: "Image Model", Select: ImageModelSelect },
+  { type: "image_model", labelKey: "imageModel", Select: ImageModelSelect },
   {
     type: "embedding_model",
-    label: "Embedding Model",
+    labelKey: "embeddingModel",
     Select: EmbeddingModelSelect
   },
   {
     type: "tts_model",
-    label: "Text-to-Speech Model",
+    labelKey: "textToSpeechModel",
     Select: TTSModelSelect
   },
   {
     type: "asr_model",
-    label: "Speech Recognition Model",
+    labelKey: "speechRecognitionModel",
     Select: ASRModelSelect
   },
-  { type: "video_model", label: "Video Model", Select: VideoModelSelect }
+  { type: "video_model", labelKey: "videoModel", Select: VideoModelSelect }
 ] as const;
 
 function DefaultModelsMenu() {
+  const { t } = useTranslation(["settings", "models", "common"]);
   const defaults = useModelPreferencesStore((s) => s.defaults);
   const setDefault = useModelPreferencesStore((s) => s.setDefault);
   const clearDefault = useModelPreferencesStore((s) => s.clearDefault);
@@ -41,23 +43,23 @@ function DefaultModelsMenu() {
   return (
     <div>
       <Text size="big" id="default-models" className="settings-heading">
-        Default Models
+        {t("settings:defaultModels")}
       </Text>
       <Text className="description" sx={{ mb: 2 }}>
-        Set default models for each type. These will auto-fill when you create
-        new nodes.
+        {t("settings:defaultModelsDescription")}
       </Text>
 
       <div className="default-models-list">
-        {MODEL_TYPE_CONFIG.map(({ type, label, Select }) => (
+        {MODEL_TYPE_CONFIG.map(({ type, labelKey, Select }) => (
           <DefaultModelRow
             key={type}
             modelType={type}
-            label={label}
+            label={t(`models:${labelKey}`)}
             Select={Select}
             current={defaults[type]}
             onSelect={setDefault}
             onClear={clearDefault}
+            clearLabel={t("common:clear")}
           />
         ))}
       </div>
@@ -73,6 +75,7 @@ interface DefaultModelRowProps {
     value: string;
   }>;
   current?: { provider: string; id: string; name: string };
+  clearLabel: string;
   onSelect: (
     modelType: string,
     model: { provider: string; id: string; name: string }
@@ -85,6 +88,7 @@ function DefaultModelRow({
   label,
   Select,
   current,
+  clearLabel,
   onSelect,
   onClear
 }: DefaultModelRowProps) {
@@ -113,7 +117,7 @@ function DefaultModelRow({
         <Select onChange={handleChange} value={current?.id || ""} />
         {current && (
           <EditorButton size="small" onClick={handleClear}>
-            Clear
+            {clearLabel}
           </EditorButton>
         )}
       </FlexRow>

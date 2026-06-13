@@ -8,6 +8,7 @@
  */
 
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -30,10 +31,10 @@ import { BLUR_NODE_TYPE } from "../../../constants/nodeTypes";
 
 type BlurType = "gaussian" | "box" | "motion";
 
-const BLUR_TYPES: ReadonlyArray<{ value: BlurType; label: string }> = [
-  { value: "gaussian", label: "Gaussian" },
-  { value: "box", label: "Box" },
-  { value: "motion", label: "Motion" }
+const BLUR_TYPES: ReadonlyArray<{ value: BlurType; labelKey: string }> = [
+  { value: "gaussian", labelKey: "gaussianBlur" },
+  { value: "box", labelKey: "boxBlur" },
+  { value: "motion", labelKey: "motionBlur" }
 ];
 
 const styles = (theme: Theme) =>
@@ -149,6 +150,7 @@ const BlurBodyInner: React.FC<BlurBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(() => styles(theme), [theme]);
 
   const properties = nodeMetadata.properties ?? [];
@@ -199,24 +201,24 @@ const BlurBodyInner: React.FC<BlurBodyProps> = ({
       </div>
 
       <div className="controls">
-        <span className="ctrl-label">Type</span>
+        <span className="ctrl-label">{t("type")}</span>
         <Select
           className="type-select nodrag"
           size="small"
           variant="standard"
           value={blurType}
           onChange={handleTypeChange}
-          aria-label="Blur type"
+          aria-label={t("blurType")}
           disableUnderline
         >
-          {BLUR_TYPES.map((t) => (
-            <MenuItem key={t.value} value={t.value} dense>
-              {t.label}
+          {BLUR_TYPES.map((option) => (
+            <MenuItem key={option.value} value={option.value} dense>
+              {t(option.labelKey)}
             </MenuItem>
           ))}
         </Select>
 
-        <span className="ctrl-label">Size</span>
+        <span className="ctrl-label">{t("size")}</span>
         <NodeSlider
           min={0}
           max={100}
@@ -224,7 +226,7 @@ const BlurBodyInner: React.FC<BlurBodyProps> = ({
           value={size}
           onChange={handleSizeChange}
           onChangeCommitted={handleSizeCommitted}
-          aria-label="Blur size"
+          aria-label={t("blurSize")}
         />
         <span className="ctrl-value">{Math.round(size)}</span>
       </div>

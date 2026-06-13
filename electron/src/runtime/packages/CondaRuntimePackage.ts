@@ -93,7 +93,7 @@ export class CondaRuntimePackage implements RuntimePackage {
       if (!(await fileExists(this.binaryPath(ctx, basename)))) {
         return {
           installed: true,
-          brokenReason: `Missing binary: ${logical} (${basename})`,
+          brokenReason: `缺少二进制文件：${logical} (${basename})`,
         };
       }
     }
@@ -101,21 +101,21 @@ export class CondaRuntimePackage implements RuntimePackage {
   }
 
   async *install(ctx: RuntimeContext, signal: AbortSignal): AsyncIterable<RuntimeProgress> {
-    yield { type: "stage", label: `Installing ${this.name}` };
+    yield { type: "stage", label: `正在安装 ${this.name}` };
     try {
       const { ensureCondaEnvironment, installCondaPackageBySpec } = await import("../../installer");
       if (signal.aborted) throw new Error("aborted");
 
-      yield { type: "stage", label: "Preparing conda environment" };
+      yield { type: "stage", label: "正在准备 conda 环境" };
       const condaEnvPath = await ensureCondaEnvironment();
 
       if (this.condaPackages.length > 0) {
-        yield { type: "stage", label: `Installing conda packages: ${this.condaPackages.join(", ")}` };
-        await installCondaPackageBySpec(condaEnvPath, this.condaPackages, `Installing ${this.name}`);
+        yield { type: "stage", label: `正在安装 conda 包：${this.condaPackages.join(", ")}` };
+        await installCondaPackageBySpec(condaEnvPath, this.condaPackages, `正在安装 ${this.name}`);
       }
 
       if (this.postInstall) {
-        yield { type: "stage", label: "Running post-install" };
+        yield { type: "stage", label: "正在运行安装后步骤" };
         await this.postInstall(ctx);
       }
 
@@ -128,7 +128,7 @@ export class CondaRuntimePackage implements RuntimePackage {
   async *update(ctx: RuntimeContext, signal: AbortSignal): AsyncIterable<RuntimeProgress> {
     const current = await this.status(ctx);
     if (!current.installed) {
-      yield { type: "error", message: `${this.name} is not installed — install it first.` };
+      yield { type: "error", message: `${this.name} 尚未安装，请先安装。` };
       return;
     }
     // For conda runtimes update is implemented as re-running install with the
@@ -137,13 +137,13 @@ export class CondaRuntimePackage implements RuntimePackage {
   }
 
   async *repair(ctx: RuntimeContext, signal: AbortSignal): AsyncIterable<RuntimeProgress> {
-    yield { type: "stage", label: `Repairing ${this.name}` };
+    yield { type: "stage", label: `正在修复 ${this.name}` };
     yield* this.install(ctx, signal);
   }
 
   async uninstall(ctx: RuntimeContext): Promise<void> {
     const { removeCondaPackageBySpec } = await import("../../installer");
-    await removeCondaPackageBySpec(ctx.condaEnvPath, this.condaPackages, `Removing ${this.name}`);
+    await removeCondaPackageBySpec(ctx.condaEnvPath, this.condaPackages, `正在移除 ${this.name}`);
   }
 
   async resolve(ctx: RuntimeContext): Promise<RuntimeResolution | null> {

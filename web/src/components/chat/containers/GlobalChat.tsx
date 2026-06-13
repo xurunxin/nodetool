@@ -36,6 +36,7 @@ import { usePanelStore } from "../../../stores/PanelStore";
 import { globalWebSocketManager } from "../../../lib/websocket/GlobalWebSocketManager";
 import { ChatSidebar, SIDEBAR_WIDTH } from "../sidebar/ChatSidebar";
 import { useShallow } from "zustand/react/shallow";
+import { getLocalizedThreadTitle } from "../utils/threadUtils";
 
 const GlobalChat: React.FC = () => {
   const { thread_id } = useParams<{ thread_id?: string }>();
@@ -401,7 +402,7 @@ const GlobalChat: React.FC = () => {
 
       // Use thread title if available
       if (thread.title) {
-        return thread.title;
+        return getLocalizedThreadTitle(thread.title, t("chat:newConversation"));
       }
 
       // Check if we have cached messages for this thread
@@ -439,13 +440,15 @@ const GlobalChat: React.FC = () => {
         id,
         {
           id: thread.id,
-          title: thread.title ?? undefined,
+          title: thread.title
+            ? getLocalizedThreadTitle(thread.title, t("chat:newConversation"))
+            : undefined,
           updatedAt: thread.updated_at,
           messages: messageCache[id] || []
         }
       ])
     );
-  }, [threads, messageCache]);
+  }, [threads, messageCache, t]);
 
   // Show loading state if threads are still loading
   if (isLoadingThreads) {

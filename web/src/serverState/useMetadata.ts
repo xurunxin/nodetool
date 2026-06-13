@@ -8,6 +8,7 @@ import { generateSnippetMetadata } from "../config/snippetMetadata";
 import { attachBundleFalUnitPricing } from "../utils/attachBundleFalUnitPricing";
 import { attachBundleKieUnitPricing } from "../utils/attachBundleKieUnitPricing";
 import { WORKFLOW_NODE_TYPE, PREVIEW_NODE_TYPE } from "../constants/nodeTypes";
+import { localizeMetadataRecord } from "../i18n/nodeMetadataLocalization";
 
 export { WORKFLOW_NODE_TYPE };
 
@@ -112,11 +113,13 @@ export const loadMetadata = async (): Promise<"success" | "error"> => {
   attachBundleFalUnitPricing(metadataByType);
   attachBundleKieUnitPricing(metadataByType);
 
-  useMetadataStore.getState().setMetadata(metadataByType);
+  const localizedMetadataByType = localizeMetadataRecord(metadataByType);
+
+  useMetadataStore.getState().setMetadata(localizedMetadataByType);
   useMetadataStore.getState().setRecommendedModels(uniqueRecommendedModels);
   useMetadataStore.getState().setNodeTypes(nodeTypes);
 
-  createConnectabilityMatrix(Object.values(metadataByType));
+  createConnectabilityMatrix(Object.values(localizedMetadataByType));
 
   return "success";
 };

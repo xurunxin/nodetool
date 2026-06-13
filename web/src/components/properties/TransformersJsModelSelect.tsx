@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useRef } from "react";
 import isEqual from "fast-deep-equal";
+import { useTranslation } from "react-i18next";
 import TransformersJsModelMenuDialog from "../model_menu/TransformersJsModelMenuDialog";
 import useModelPreferencesStore from "../../stores/ModelPreferencesStore";
 import type {
@@ -21,6 +22,7 @@ const TransformersJsModelSelect: React.FC<TransformersJsModelSelectProps> = ({
   onChange,
   value
 }) => {
+  const { t } = useTranslation("models");
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const addRecent = useModelPreferencesStore((s) => s.addRecent);
@@ -48,10 +50,10 @@ const TransformersJsModelSelect: React.FC<TransformersJsModelSelectProps> = ({
       };
     }
     return {
-      repoId: "Select Transformers.js Model",
+      repoId: t("selectTransformersJsModel"),
       path: undefined
     };
-  }, [currentSelectedModelDetails, value]);
+  }, [currentSelectedModelDetails, value, t]);
 
   const handleClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -86,7 +88,7 @@ const TransformersJsModelSelect: React.FC<TransformersJsModelSelectProps> = ({
         active={!!(value?.repo_id || value?.id)}
         label={displayInfo.repoId}
         secondaryLabel={displayInfo.path}
-        subLabel="Select Transformers.js Model"
+        subLabel={t("selectTransformersJsModel")}
         onClick={handleClick}
       />
       <TransformersJsModelMenuDialog

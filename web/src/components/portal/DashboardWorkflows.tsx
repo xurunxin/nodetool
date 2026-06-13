@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import type { Theme } from "@mui/material/styles";
 import { useTheme } from "@mui/material/styles";
 import React, { memo, useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Workflow, WorkflowList as WorkflowListType } from "../../stores/ApiTypes";
@@ -127,6 +128,7 @@ const DashboardWorkflows: React.FC<DashboardWorkflowsProps> = ({
   onCreateNew
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("workflows");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const copyWorkflow = useWorkflowManager((state) => state.copy);
@@ -202,18 +204,18 @@ const DashboardWorkflows: React.FC<DashboardWorkflowsProps> = ({
         workflowsToDelete={workflowsToDelete}
       />
       <div css={wrapStyles(theme)}>
-        <SectionHeader title="Recent workflows" count={countLabel}>
+        <SectionHeader title={t("recentWorkflows")} count={countLabel}>
           <DashboardSearchBox
             value={query}
             onChange={setQuery}
-            placeholder="Search my files…"
-            aria-label="Search workflows"
+            placeholder={t("searchMyFiles")}
+            aria-label={t("searchWorkflows")}
           />
           <div className="viewtog" role="group" aria-label="View mode">
             <button
               type="button"
               className={view === "list" ? "on" : ""}
-              aria-label="List view"
+              aria-label={t("listView")}
               aria-pressed={view === "list"}
               onClick={() => setView("list")}
             >
@@ -224,7 +226,7 @@ const DashboardWorkflows: React.FC<DashboardWorkflowsProps> = ({
             <button
               type="button"
               className={view === "grid" ? "on" : ""}
-              aria-label="Grid view"
+              aria-label={t("gridView")}
               aria-pressed={view === "grid"}
               onClick={() => setView("grid")}
             >
@@ -249,8 +251,8 @@ const DashboardWorkflows: React.FC<DashboardWorkflowsProps> = ({
                 </span>
               </div>
               <div>
-                <div className="rec-new-label">New workflow</div>
-                <div className="rec-new-hint">Start from blank</div>
+                <div className="rec-new-label">{t("newWorkflow")}</div>
+                <div className="rec-new-hint">{t("startFromBlank")}</div>
               </div>
             </button>
             {filtered.map((workflow) => (
@@ -262,7 +264,7 @@ const DashboardWorkflows: React.FC<DashboardWorkflowsProps> = ({
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="rec-empty">No workflows yet. Create one to get started.</div>
+          <div className="rec-empty">{t("noWorkflowsYetCreateOne")}</div>
         ) : (
           <div className="rec-list">
             <WorkflowListView

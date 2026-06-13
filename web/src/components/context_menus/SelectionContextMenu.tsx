@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, memo } from "react";
+import { useTranslation } from "react-i18next";
 import { MenuItem } from "@mui/material";
 import { Text, Divider, ContextMenu } from "../ui_primitives";
 import ContextMenuItem from "./ContextMenuItem";
@@ -31,6 +32,7 @@ interface SelectionContextMenuProps {
 }
 
 const SelectionContextMenu: React.FC<SelectionContextMenuProps> = () => {
+  const { t } = useTranslation("nodeMenu");
   const { handleCopy } = useCopyPaste();
   const { deleteNodes, toggleBypassSelected } = useNodes((state) => ({
     deleteNodes: state.deleteNodes,
@@ -163,32 +165,32 @@ const SelectionContextMenu: React.FC<SelectionContextMenuProps> = () => {
             padding: "0"
           }}
         >
-          SELECTION
+          {t("selection").toUpperCase()}
         </Text>
       </MenuItem>
 
       <ContextMenuItem
         onClick={handleDuplicateNodes}
-        label="Duplicate"
+        label={t("duplicate")}
         IconComponent={<QueueIcon />}
         tooltip={
           <div className="tooltip-span">
-            <div className="tooltip-title">Duplicate</div>
+            <div className="tooltip-title">{t("duplicate")}</div>
             <div className="tooltip-key">
-              <kbd>CTRL</kbd>+<kbd>D</kbd> / <kbd>⌘</kbd>+<kbd>D</kbd>
+              <kbd>{t("ctrlKey")}</kbd>+<kbd>D</kbd> / <kbd>⌘</kbd>+<kbd>D</kbd>
             </div>
           </div>
         }
       />
       <ContextMenuItem
         onClick={handleCopyNodes}
-        label="Copy"
+        label={t("copy")}
         IconComponent={<CopyAllIcon />}
         tooltip={
           <div className="tooltip-span">
-            <div className="tooltip-title">Copy</div>
+            <div className="tooltip-title">{t("copy")}</div>
             <div className="tooltip-key">
-              <kbd>CTRL</kbd>+<kbd>C</kbd> / <kbd>⌘</kbd>+<kbd>C</kbd>
+              <kbd>{t("ctrlKey")}</kbd>+<kbd>C</kbd> / <kbd>⌘</kbd>+<kbd>C</kbd>
             </div>
           </div>
         }
@@ -196,11 +198,11 @@ const SelectionContextMenu: React.FC<SelectionContextMenuProps> = () => {
       {selectedNodes?.length > 1 && (
         <ContextMenuItem
           onClick={handleAlignNodesFalse}
-          label="Align"
+          label={t("align")}
           IconComponent={<FormatAlignLeftIcon />}
           tooltip={
             <div className="tooltip-span">
-              <div className="tooltip-title">Align</div>
+              <div className="tooltip-title">{t("align")}</div>
               <div className="tooltip-key">
                 <kbd>A</kbd>
               </div>
@@ -211,13 +213,13 @@ const SelectionContextMenu: React.FC<SelectionContextMenuProps> = () => {
       {selectedNodes?.length > 1 && (
         <ContextMenuItem
           onClick={handleAlignNodesTrue}
-          label="Arrange"
+          label={t("arrange")}
           IconComponent={<FormatAlignLeftIcon />}
           tooltip={
             <div className="tooltip-span">
-              <div className="tooltip-title">Arrange</div>
+              <div className="tooltip-title">{t("arrange")}</div>
               <div className="tooltip-key">
-                <kbd>SHIFT</kbd>+<kbd>A</kbd>
+                <kbd>{t("shiftKey")}</kbd>+<kbd>A</kbd>
               </div>
             </div>
           }
@@ -226,12 +228,12 @@ const SelectionContextMenu: React.FC<SelectionContextMenuProps> = () => {
 
       <ContextMenuItem
         onClick={handleToggleBypass}
-        label={majorityBypassed ? "Enable All" : "Bypass All"}
+        label={majorityBypassed ? t("enableAll") : t("bypassAll")}
         IconComponent={<BlockIcon />}
         tooltip={
           <div className="tooltip-span">
             <div className="tooltip-title">
-              {majorityBypassed ? "Enable Nodes" : "Bypass Nodes"}
+              {majorityBypassed ? t("enableNodes") : t("bypassNodes")}
             </div>
             <div className="tooltip-key">
               <kbd>B</kbd>
@@ -243,13 +245,13 @@ const SelectionContextMenu: React.FC<SelectionContextMenuProps> = () => {
       {!anyHasParent && (
         <ContextMenuItem
           onClick={handleSurroundWithGroup}
-          label="Surrround With Group"
+          label={t("surroundWithGroup")}
           IconComponent={<GroupWorkIcon />}
           tooltip={
             <div className="tooltip-span">
-              <div className="tooltip-title">Surround With Group</div>
+              <div className="tooltip-title">{t("surroundWithGroup")}</div>
               <div className="tooltip-key">
-                <kbd>CTRL</kbd>/<kbd>⌘</kbd>+<kbd>G</kbd>
+                <kbd>{t("ctrlKey")}</kbd>/<kbd>⌘</kbd>+<kbd>G</kbd>
               </div>
             </div>
           }
@@ -262,13 +264,13 @@ const SelectionContextMenu: React.FC<SelectionContextMenuProps> = () => {
       {anyHasParent && (
         <ContextMenuItem
           onClick={handleRemoveFromGroup}
-          label="Remove From Group"
+          label={t("removeFromGroup")}
           IconComponent={<GroupWorkIcon />}
           tooltip={
             <div className="tooltip-span">
-              <div className="tooltip-title">Remove From Group</div>
+              <div className="tooltip-title">{t("removeFromGroup")}</div>
               <div className="tooltip-key">
-                <kbd>Right-Click</kbd>
+                <kbd>{t("rightClick")}</kbd>
               </div>
             </div>
           }
@@ -287,19 +289,19 @@ const SelectionContextMenu: React.FC<SelectionContextMenuProps> = () => {
             padding: "0"
           }}
         >
-          CONNECTED
+          {t("connected").toUpperCase()}
         </Text>
       </MenuItem>
 
       <ContextMenuItem
         onClick={handleSelectConnectedAll}
-        label="Select All Connected"
+        label={t("selectAllConnected")}
         IconComponent={<CallSplitIcon />}
         tooltip={
           <div className="tooltip-span">
-            <div className="tooltip-title">Select All Connected</div>
+            <div className="tooltip-title">{t("selectAllConnected")}</div>
             <div className="tooltip-key">
-              <kbd>SHIFT</kbd>+<kbd>C</kbd>
+              <kbd>{t("shiftKey")}</kbd>+<kbd>C</kbd>
             </div>
           </div>
         }
@@ -309,13 +311,13 @@ const SelectionContextMenu: React.FC<SelectionContextMenuProps> = () => {
       />
       <ContextMenuItem
         onClick={handleSelectConnectedInputs}
-        label="Select Inputs"
+        label={t("selectInputs")}
         IconComponent={<ArrowBackIcon />}
         tooltip={
           <div className="tooltip-span">
-            <div className="tooltip-title">Select Inputs</div>
+            <div className="tooltip-title">{t("selectInputs")}</div>
             <div className="tooltip-key">
-              <kbd>SHIFT</kbd>+<kbd>I</kbd>
+              <kbd>{t("shiftKey")}</kbd>+<kbd>I</kbd>
             </div>
           </div>
         }
@@ -325,13 +327,13 @@ const SelectionContextMenu: React.FC<SelectionContextMenuProps> = () => {
       />
       <ContextMenuItem
         onClick={handleSelectConnectedOutputs}
-        label="Select Outputs"
+        label={t("selectOutputs")}
         IconComponent={<ArrowForwardIcon />}
         tooltip={
           <div className="tooltip-span">
-            <div className="tooltip-title">Select Outputs</div>
+            <div className="tooltip-title">{t("selectOutputs")}</div>
             <div className="tooltip-key">
-              <kbd>SHIFT</kbd>+<kbd>O</kbd>
+              <kbd>{t("shiftKey")}</kbd>+<kbd>O</kbd>
             </div>
           </div>
         }
@@ -343,13 +345,13 @@ const SelectionContextMenu: React.FC<SelectionContextMenuProps> = () => {
       <Divider />
       <ContextMenuItem
         onClick={handleDelete}
-        label="Delete"
+        label={t("deleteSelected")}
         IconComponent={<RemoveCircleIcon />}
         tooltip={
           <div className="tooltip-span">
-            <div className="tooltip-title">Delete</div>
+            <div className="tooltip-title">{t("deleteSelected")}</div>
             <div className="tooltip-key">
-              <kbd>Backspace</kbd> / <kbd>Del</kbd>
+              <kbd>{t("backspaceKey")}</kbd> / <kbd>{t("delKey")}</kbd>
             </div>
           </div>
         }

@@ -25,10 +25,13 @@ import { filterTypesByInputType } from "../node_menu/typeFilterUtils";
 import { rankSearchNodes } from "../../utils/nodeSearch";
 import { useRecentNodesStore } from "../../stores/RecentNodesStore";
 import NodeItem from "../node_menu/NodeItem";
+import { useTranslation } from "react-i18next";
+import { localizeDataTypeLabel } from "../../i18n/nodeMetadataLocalization";
 
 const NODE_ROW_HEIGHT = 28;
 
 const OutputContextMenu: React.FC = () => {
+  const { t } = useTranslation("nodeMenu");
   const theme = useTheme();
   const {
     nodeId,
@@ -395,14 +398,15 @@ const OutputContextMenu: React.FC = () => {
     return () => window.clearTimeout(timeout);
   }, [menuPosition]);
 
-  const saveLabel = `Save${
+  const saveTypeLabel =
     sourceType?.type === "string"
-      ? "Text"
+      ? localizeDataTypeLabel("Text")
       : sourceType?.type_name
-      ? sourceType.type_name?.charAt(0).toUpperCase() +
-        sourceType.type_name?.slice(1)
-      : ""
-  }`;
+        ? localizeDataTypeLabel(sourceType.type_name)
+        : "";
+  const saveLabel = saveTypeLabel
+    ? t("saveTypedValue", { type: saveTypeLabel })
+    : t("save");
   const showStaticActions = searchTerm.trim().length === 0;
 
   const actionRowStyles = {
@@ -472,12 +476,12 @@ const OutputContextMenu: React.FC = () => {
             inputRef={searchInputRef}
             size="small"
             fullWidth
-            placeholder="Search nodes..."
+            placeholder={t("searchNodes")}
             value={searchTerm}
             onChange={handleSearchChange}
             onClick={(event) => event.stopPropagation()}
             onKeyDown={handleSearchKeyDown}
-            aria-label="Search connectable nodes"
+            aria-label={t("searchConnectableNodes")}
             sx={{
               "& .MuiOutlinedInput-root": {
                 backgroundColor: "action.disabledBackground",
@@ -511,7 +515,7 @@ const OutputContextMenu: React.FC = () => {
                 endAdornment: searchTerm ? (
                   <InputAdornment position="end">
                     <ToolbarIconButton
-                      aria-label="clear search"
+                      aria-label={t("clearSearch")}
                       onClick={handleClearSearch}
                       size="small"
                       icon={<ClearIcon sx={{ fontSize: 16 }} />}
@@ -533,7 +537,7 @@ const OutputContextMenu: React.FC = () => {
             sx={actionRowStyles}
           >
             <span className="icon-bg"><VisibilityIcon /></span>
-            <Text size="small">Preview</Text>
+            <Text size="small">{t("preview")}</Text>
           </Box>
           {outputNodeMetadata != null && (
             <Box
@@ -544,7 +548,7 @@ const OutputContextMenu: React.FC = () => {
               sx={actionRowStyles}
             >
               <span className="icon-bg"><DataObjectIcon /></span>
-              <Text size="small">Output</Text>
+              <Text size="small">{t("outputNode")}</Text>
             </Box>
           )}
           <Box
@@ -555,7 +559,7 @@ const OutputContextMenu: React.FC = () => {
             sx={actionRowStyles}
           >
             <span className="icon-bg"><AltRouteIcon /></span>
-            <Text size="small">Reroute</Text>
+            <Text size="small">{t("reroute")}</Text>
           </Box>
             {saveNodeMetadata != null && (
               <Box

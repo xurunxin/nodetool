@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { useRef, useEffect, useState, useCallback, useMemo, memo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -205,6 +206,7 @@ const PreviewImageGrid: React.FC<PreviewImageGridProps> = ({
   showActions = true
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Memoize Emotion CSS object — styles() traverses the theme and builds a large
@@ -462,7 +464,7 @@ const PreviewImageGrid: React.FC<PreviewImageGridProps> = ({
                   draggable={false}
                 />
               ) : (
-                <div className="placeholder">IMAGE</div>
+                <div className="placeholder">{t("imagePlaceholder")}</div>
               )}
               {/* Action buttons on hover */}
               {showActions && !selectionMode && (
@@ -473,22 +475,22 @@ const PreviewImageGrid: React.FC<PreviewImageGridProps> = ({
                     className="tile-action-btn"
                   />
                   <ToolbarIconButton
-                    tooltip="Download"
+                    tooltip={t("download")}
                     tooltipPlacement="top"
                     icon={<DownloadIcon />}
                     className="tile-action-btn"
                     size="small"
                     onClick={(e) => handleDownloadImage(idx, e)}
-                    ariaLabel={`Download image ${idx + 1}`}
+                    ariaLabel={t("downloadImage", { index: idx + 1 })}
                   />
                   <ToolbarIconButton
-                    tooltip="Open in Viewer (double-click)"
+                    tooltip={t("openInViewerDoubleClick")}
                     tooltipPlacement="top"
                     icon={<OpenInNewIcon />}
                     className="tile-action-btn"
                     size="small"
                     onClick={(e) => handleOpenInViewer(idx, e)}
-                    ariaLabel={`Open image ${idx + 1} in viewer`}
+                    ariaLabel={t("openImageInViewer", { index: idx + 1 })}
                   />
                 </div>
               )}

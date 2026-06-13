@@ -63,7 +63,7 @@ function createMiniAppWindow(workflowId: string, workflowName?: string): Browser
     height: windowHeight,
     minWidth: 800,
     minHeight: 600,
-    title: workflowName ? `${workflowName} - NodeTool` : "Mini App - NodeTool",
+    title: workflowName ? `${workflowName} - NodeTool` : "迷你应用 - NodeTool",
     backgroundColor: "#181a1b",
     webPreferences: {
       nodeIntegration: false,
@@ -117,7 +117,7 @@ function createChatWindow(): BrowserWindow {
     height: windowHeight,
     minWidth: 800,
     minHeight: 600,
-    title: "Chat - NodeTool",
+    title: "聊天 - NodeTool",
     backgroundColor: "#181a1b",
     webPreferences: {
       nodeIntegration: false,

@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { useCallback, useEffect, useMemo, useRef, memo } from "react";
+import { useTranslation } from "react-i18next";
 import { Text, Tooltip, Divider, Box } from "../ui_primitives";
 import { useTheme } from "@mui/material/styles";
 
@@ -69,6 +70,7 @@ const SelectedItemsInfo: React.FC<{
   selectedAssetIds: string[];
   assets: Asset[];
 }> = memo(({ selectedAssetIds, assets }) => {
+  const { t } = useTranslation("assets");
   const totalSize = useMemo(() => {
     if (selectedAssetIds.length === 0) return 0;
     const selectedSet = new Set(selectedAssetIds);
@@ -86,10 +88,9 @@ const SelectedItemsInfo: React.FC<{
     <div className="header-info">
       <div className="selected-asset-info">
         <Text className="selected-info">
-          {selectedAssetIds.length}{" "}
-          {selectedAssetIds.length === 1 ? "item" : "items"} selected
+          {t("selectedItems", { count: selectedAssetIds.length })}
           {totalSize > 0 && (
-            <Tooltip title="Total size of selected items" disableInteractive>
+            <Tooltip title={t("selectedItemsSizeTooltip")} disableInteractive>
               <span style={{ marginLeft: "0.5em", opacity: 0.7 }}>
                 ({formatFileSize(totalSize)})
               </span>
@@ -120,6 +121,7 @@ const AssetGrid: React.FC<AssetGridProps> = ({
   isFullscreenAssets,
   isMobile = false
 }) => {
+  const { t } = useTranslation("assets");
   const { error, folderFilesFiltered } = useAssets();
   const {
     setOpenAsset,
@@ -223,7 +225,7 @@ const AssetGrid: React.FC<AssetGridProps> = ({
       const foldersPanel: IDockviewPanelWithGroup = api.addPanel({
         id: "asset-folders",
         component: "asset-folders",
-        title: "Folders",
+        title: t("folders"),
         position: api.getPanel("asset-files")
           ? {
               referencePanel: "asset-files",
@@ -244,7 +246,7 @@ const AssetGrid: React.FC<AssetGridProps> = ({
         }
       }
     },
-    [isFullscreenAssets]
+    [isFullscreenAssets, t]
   );
 
   useEffect(() => {
@@ -268,7 +270,7 @@ const AssetGrid: React.FC<AssetGridProps> = ({
         api.addPanel({
           id: "asset-files",
           component: "asset-files",
-          title: "Files",
+          title: t("files"),
           params: { isHorizontal, itemSpacing }
         });
         return;
@@ -278,7 +280,7 @@ const AssetGrid: React.FC<AssetGridProps> = ({
       const foldersPanel: IDockviewPanelWithGroup = api.addPanel({
         id: "asset-folders",
         component: "asset-folders",
-        title: "Folders",
+        title: t("folders"),
         ...(isFullscreenAssets
           ? { initialWidth: FOLDERS_PANEL_WIDTH }
           : { initialHeight: FOLDERS_PANEL_HEIGHT })
@@ -288,7 +290,7 @@ const AssetGrid: React.FC<AssetGridProps> = ({
       api.addPanel({
         id: "asset-files",
         component: "asset-files",
-        title: "Files",
+        title: t("files"),
         params: { isHorizontal, itemSpacing },
         position: {
           referencePanel: "asset-folders",
@@ -310,7 +312,7 @@ const AssetGrid: React.FC<AssetGridProps> = ({
       };
       applyInitialSize();
     },
-    [isFullscreenAssets, isHorizontal, itemSpacing, isMobile]
+    [isFullscreenAssets, isHorizontal, itemSpacing, isMobile, t]
   );
 
   return (

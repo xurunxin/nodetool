@@ -5,6 +5,7 @@ import mockTheme from "../../../__mocks__/themeMock";
 import AssetItem from "../AssetItem";
 import { Asset } from "../../../stores/ApiTypes";
 import { useSettingsStore } from "../../../stores/SettingsStore";
+import i18n from "../../../i18n";
 
 // Mock the settings store to return a larger assetItemSize so the name is rendered
 jest.mock("../../../stores/SettingsStore", () => ({
@@ -54,7 +55,8 @@ const baseImageAsset: Asset = {
 const mockUseSettingsStore = useSettingsStore as jest.MockedFunction<typeof useSettingsStore>;
 
 describe("AssetItem", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
     mockUseSettingsStore.mockReturnValue(4);  // Return assetItemSize directly
   });
   it("renders name and filetype info", () => {

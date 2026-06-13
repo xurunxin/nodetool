@@ -7,6 +7,7 @@
  */
 
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -139,6 +140,7 @@ const OffsetBodyInner: React.FC<OffsetBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(
     () => [styles(theme), adjustmentSliderStyles(theme)],
     [theme]
@@ -202,17 +204,17 @@ const OffsetBodyInner: React.FC<OffsetBodyProps> = ({
         })}
 
         <div className="wrap-row">
-          <span className="wrap-label">Wrap</span>
+          <span className="wrap-label">{t("wrap")}</span>
           <ToggleButtonGroup
             value={String(Math.round(wrapValue))}
             exclusive
             onChange={handleWrapChange}
             size="small"
-            aria-label="Wrap mode"
+            aria-label={t("wrapMode")}
           >
             {WRAP_LABELS.map((label, i) => (
-              <ToggleButton key={i} value={String(i)} aria-label={label}>
-                {label}
+              <ToggleButton key={i} value={String(i)} aria-label={t(label.toLowerCase())}>
+                {t(label.toLowerCase())}
               </ToggleButton>
             ))}
           </ToggleButtonGroup>

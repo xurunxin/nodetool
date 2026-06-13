@@ -15,6 +15,7 @@
  */
 
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import type { Theme } from "@mui/material/styles";
 
@@ -22,6 +23,42 @@ import { NodeSlider } from "../../ui_primitives";
 
 const TRACK_HEIGHT = 4;
 const THUMB_SIZE = 12;
+
+const ADJUSTMENT_LABEL_KEYS: Record<string, string> = {
+  "Black Point": "blackPoint",
+  "White Point": "whitePoint",
+  Shadows: "shadows",
+  Midtones: "midtones",
+  Highlights: "highlights",
+  Red: "red",
+  Green: "green",
+  Blue: "blue",
+  "Offset X": "offsetX",
+  "Offset Y": "offsetY",
+  "Radius (px)": "radiusPx",
+  Intensity: "intensity",
+  Hue: "hue",
+  Sat: "sat",
+  Lum: "lum",
+  "Width (px)": "widthPx",
+  "Alpha threshold": "alphaThreshold",
+  Left: "left",
+  Top: "top",
+  Right: "right",
+  Bottom: "bottom",
+  Tolerance: "tolerance",
+  Softness: "softness",
+  Spill: "spill",
+  Amount: "amount"
+};
+
+const localizeAdjustmentLabel = (
+  label: string,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string => {
+  const key = ADJUSTMENT_LABEL_KEYS[label];
+  return key ? t(key) : label;
+};
 
 export interface SliderSpec {
   name: string;
@@ -152,6 +189,8 @@ export const AdjustmentSlider: React.FC<AdjustmentSliderProps> = ({
   onCommit,
   labelClassName
 }) => {
+  const { t } = useTranslation("nodeMenu");
+  const label = localizeAdjustmentLabel(spec.label, t);
   const handleChange = useCallback(
     (_: Event, v: number | number[]) => {
       const next = Array.isArray(v) ? v[0] : v;
@@ -172,7 +211,7 @@ export const AdjustmentSlider: React.FC<AdjustmentSliderProps> = ({
   return (
     <>
       <span className={`ctrl-label${labelClassName ? ` ${labelClassName}` : ""}`}>
-        {spec.label}
+        {label}
       </span>
       <span className={`slider-wrap${spec.bipolar ? " is-bipolar" : ""}`}>
         {spec.bipolar && (
@@ -194,7 +233,7 @@ export const AdjustmentSlider: React.FC<AdjustmentSliderProps> = ({
           track={spec.bipolar ? false : "normal"}
           onChange={handleChange}
           onChangeCommitted={onCommit}
-          aria-label={`${spec.label} adjustment`}
+          aria-label={t("adjustmentAria", { label })}
         />
       </span>
       <span className="ctrl-value">{formatSliderValue(spec, value)}</span>

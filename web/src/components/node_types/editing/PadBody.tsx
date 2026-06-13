@@ -7,6 +7,7 @@
  */
 
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
@@ -124,6 +125,7 @@ const PadBodyInner: React.FC<PadBodyProps> = ({
   isOutputNode
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const cssStyles = useMemo(
     () => [styles(theme), adjustmentSliderStyles(theme)],
     [theme]
@@ -172,7 +174,7 @@ const PadBodyInner: React.FC<PadBodyProps> = ({
       </div>
 
       <div className="controls">
-        <span className="ctrl-label">Fill</span>
+        <span className="ctrl-label">{t("fill")}</span>
         <div style={{ gridColumn: "2 / 4" }}>
           <ColorPicker
             color={colorValue}

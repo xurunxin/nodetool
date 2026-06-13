@@ -63,8 +63,6 @@ function TransformersJsModelMenuDialog({
       onClose={onClose}
       modelData={modelData}
       onModelChange={onModelChange}
-      title="Select Transformers.js Model"
-      searchPlaceholder="Search Transformers.js models..."
       storeHook={useTransformersJsModelMenuStore}
       recommendedModels={recommendedModels}
     />

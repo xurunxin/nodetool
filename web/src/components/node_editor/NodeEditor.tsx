@@ -41,6 +41,7 @@ import { useInspectedNodeStore } from "../../stores/InspectedNodeStore";
 import { useNodes } from "../../contexts/NodeContext";
 import { useWorkflowRuntimeCheck } from "../../hooks/useWorkflowRuntimeCheck";
 import { useRightPanelStore } from "../../stores/RightPanelStore";
+import { useTranslation } from "react-i18next";
 
 declare global {
   interface Window {
@@ -55,6 +56,7 @@ interface NodeEditorProps {
 
 const NodeEditor: React.FC<NodeEditorProps> = ({ workflowId, active }) => {
   const theme = useTheme();
+  const { t } = useTranslation("assets");
   /* USE STORE */
   const { isUploading } = useAssetUpload();
   // Use getSelectedNodeCount to avoid re-renders when nodes are moved (getSelectedNodes returns new array reference on move)
@@ -170,7 +172,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({ workflowId, active }) => {
         >
           {isUploading && (
             <div className="loading-overlay">
-              <LoadingSpinner variant="circular" size="medium" /> Uploading assets…
+              <LoadingSpinner variant="circular" size="medium" /> {t("uploadingAssets")}
             </div>
           )}
           <ReactFlowWrapper workflowId={workflowId} active={active} />

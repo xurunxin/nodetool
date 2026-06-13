@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Text, FlexRow, AlertBanner, Surface, TextInput } from "../ui_primitives";
 import { EditorButton } from "../editor_ui";
 import { getMousePosition } from "../../utils/MousePosition";
@@ -10,6 +11,7 @@ import { Asset } from "../../stores/ApiTypes";
 import { useTheme } from "@mui/material/styles";
 
 const AssetCreateFolderConfirmation: React.FC = () => {
+  const { t } = useTranslation("assets");
   const setDialogOpen = useAssetGridStore(
     (state) => state.setCreateFolderDialogOpen
   );
@@ -24,7 +26,7 @@ const AssetCreateFolderConfirmation: React.FC = () => {
   );
 
   const [dialogPosition, setDialogPosition] = useState({ x: 0, y: 0 });
-  const [folderName, setFolderName] = useState("New Folder");
+  const [folderName, setFolderName] = useState(() => t("newFolderDefault"));
   const [showAlert, setShowAlert] = useState<string | null>(null);
   const handleClose = useCallback(() => {
     setDialogOpen(false);
@@ -64,7 +66,7 @@ const AssetCreateFolderConfirmation: React.FC = () => {
 
   useEffect(() => {
     if (dialogOpen) {
-      setFolderName("New Folder");
+      setFolderName(t("newFolderDefault"));
       const mousePosition = getMousePosition();
       setDialogPosition({ x: mousePosition.x, y: mousePosition.y });
       setShowAlert(null);
@@ -75,7 +77,7 @@ const AssetCreateFolderConfirmation: React.FC = () => {
       }, 10);
       return () => clearTimeout(timer);
     }
-  }, [dialogOpen]);
+  }, [dialogOpen, t]);
 
   const handleCreateFolder = useCallback(async () => {
     const invalidCharsRegex = /[/*?"<>|#%{}^[\]`'=&$§!°äüö;+~|$!]+/g;
@@ -95,7 +97,7 @@ const AssetCreateFolderConfirmation: React.FC = () => {
       folderName.startsWith(" ") ||
       folderName.match(/^[-#*&]/)
     ) {
-      setShowAlert("Name cannot start with a special character.");
+      setShowAlert(t("folderNameCannotStartSpecial"));
       return;
     }
 
@@ -104,10 +106,10 @@ const AssetCreateFolderConfirmation: React.FC = () => {
 
     // Check for empty or overly long names
     if (!folderName) {
-      setShowAlert("Name cannot be empty.");
+      setShowAlert(t("folderNameCannotBeEmpty"));
       return;
     } else if (folderName.length > 100) {
-      setShowAlert("Max folder name length is 100 characters.");
+      setShowAlert(t("folderNameTooLong"));
       return;
     }
 
@@ -116,7 +118,9 @@ const AssetCreateFolderConfirmation: React.FC = () => {
       const uniqueInvalidChars = invalidCharsFound.filter(
         (char, index, array) => array.indexOf(char) === index
       );
-      setShowAlert(`Invalid characters: ${uniqueInvalidChars.join(", ")}`);
+      setShowAlert(
+        t("invalidCharacters", { chars: uniqueInvalidChars.join(", ") })
+      );
       return;
     }
 
@@ -138,7 +142,10 @@ const AssetCreateFolderConfirmation: React.FC = () => {
 
         addNotification({
           type: "success",
-          content: `CREATE FOLDER: ${cleanedName} and moved ${selectedAssetIds.length} items`
+          content: t("createFolderAndMovedSuccess", {
+            name: cleanedName,
+            count: selectedAssetIds.length
+          })
         });
 
         // Clear selection since assets were moved
@@ -147,7 +154,7 @@ const AssetCreateFolderConfirmation: React.FC = () => {
       } else {
         addNotification({
           type: "success",
-          content: `CREATE FOLDER: ${cleanedName}`
+          content: t("createFolderSuccess", { name: cleanedName })
         });
       }
 
@@ -155,7 +162,7 @@ const AssetCreateFolderConfirmation: React.FC = () => {
       refetchAssetsAndFolders();
     } catch (error) {
       console.error("Failed to create folder", error);
-      setShowAlert("Failed to create folder. Please try again.");
+      setShowAlert(t("createFolderFailed"));
     }
   }, [
     folderName,
@@ -168,7 +175,8 @@ const AssetCreateFolderConfirmation: React.FC = () => {
     setDialogOpen,
     refetchAssetsAndFolders,
     setSelectedAssetIds,
-    setSelectedAssets
+    setSelectedAssets,
+    t
   ]);
 
   const screenWidth = window.innerWidth;
@@ -234,8 +242,8 @@ const AssetCreateFolderConfirmation: React.FC = () => {
           }}
         >
           {hasSelectedAssets
-            ? "Move selected to new folder"
-            : "Create new folder"}
+            ? t("moveSelectedToNewFolder")
+            : t("createNewFolder")}
         </Text>
 
         <div style={{ padding: "0 .5em" }}>
@@ -283,7 +291,7 @@ const AssetCreateFolderConfirmation: React.FC = () => {
             onClick={handleClose}
             sx={{ color: theme.vars.palette.grey[100] }}
           >
-            Cancel
+            {t("cancel")}
           </EditorButton>
           <EditorButton
             className="asset-create-folder-confirm-button"
@@ -293,7 +301,9 @@ const AssetCreateFolderConfirmation: React.FC = () => {
               fontWeight: 600
             }}
           >
-            {hasSelectedAssets ? "Move to New Folder" : "Create Folder"}
+            {hasSelectedAssets
+              ? t("moveToNewFolderButton")
+              : t("createFolderButton")}
           </EditorButton>
         </FlexRow>
 
@@ -310,10 +320,10 @@ const AssetCreateFolderConfirmation: React.FC = () => {
               }}
             >
               <span className="asset-create-folder-selected-count">
-                {selectedAssets.length} assets selected:
+                {t("selectedAssetsCount", { count: selectedAssets.length })}
               </span>{" "}
               <br />
-              They will be moved to the new folder.
+              {t("selectedAssetsMoveNotice")}
             </Text>
           </div>
         )}

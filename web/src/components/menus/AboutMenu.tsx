@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { useState, useEffect, useCallback, memo } from "react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
@@ -110,6 +111,7 @@ const FeatureStatus: React.FC<{
   version?: string | null;
 }> = memo(({ label, available, version }) => {
   const theme = useTheme();
+  const { t } = useTranslation("settings");
 
   return (
     <FlexRow
@@ -131,7 +133,7 @@ const FeatureStatus: React.FC<{
           <>
             <Chip
               icon={<CheckCircleIcon />}
-              label={version || "Available"}
+              label={version || t("aboutAvailable")}
               size="small"
               color="success"
               variant="outlined"
@@ -141,7 +143,7 @@ const FeatureStatus: React.FC<{
         ) : (
           <Chip
             icon={<CancelIcon />}
-            label="Not Available"
+            label={t("aboutNotAvailable")}
             size="small"
             color="default"
             variant="outlined"
@@ -154,6 +156,7 @@ const FeatureStatus: React.FC<{
 FeatureStatus.displayName = "FeatureStatus";
 
 const AboutMenu: React.FC = memo(() => {
+  const { t } = useTranslation(["settings", "common"]);
   const [systemInfo, setSystemInfo] = useState<SystemInfoData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -174,7 +177,7 @@ const AboutMenu: React.FC = memo(() => {
         const info = await window.api?.settings?.getSystemInfo();
         setSystemInfo(info ?? null);
       } catch (err) {
-        setError("Failed to load system information");
+        setError(t("settings:aboutSystemInfoLoadFailed"));
         console.error("Failed to fetch system info:", err);
       } finally {
         setLoading(false);
@@ -182,7 +185,7 @@ const AboutMenu: React.FC = memo(() => {
     };
 
     fetchSystemInfo();
-  }, []);
+  }, [t]);
 
   const handleCopy = useCallback(async (value: string) => {
     try {
@@ -190,17 +193,17 @@ const AboutMenu: React.FC = memo(() => {
       addNotification({
         type: "info",
         alert: true,
-        content: "Copied to clipboard!"
+        content: t("common:copiedToClipboard")
       });
     } catch (error) {
       console.error("Failed to copy to clipboard:", error);
       addNotification({
         type: "error",
         alert: true,
-        content: "Failed to copy to clipboard"
+        content: t("common:failedToCopyToClipboard")
       });
     }
-  }, [addNotification]);
+  }, [addNotification, t]);
 
   const handleCopyAll = useCallback(async () => {
     if (!systemInfo) {
@@ -230,10 +233,22 @@ NPM Packages: ${systemInfo.optionalNodePath}
 
 Features & Versions
 -------------------
-Python: ${systemInfo.pythonVersion || "Not available"}
-CUDA: ${systemInfo.cudaAvailable ? systemInfo.cudaVersion || "Available" : "Not available"}
-Ollama: ${systemInfo.ollamaInstalled ? systemInfo.ollamaVersion || "Installed" : "Not installed"}
-Llama Server: ${systemInfo.llamaServerInstalled ? systemInfo.llamaServerVersion || "Installed" : "Not installed"}
+Python: ${systemInfo.pythonVersion || t("settings:aboutNotAvailable")}
+CUDA: ${
+      systemInfo.cudaAvailable
+        ? systemInfo.cudaVersion || t("settings:aboutAvailable")
+        : t("settings:aboutNotAvailable")
+    }
+Ollama: ${
+      systemInfo.ollamaInstalled
+        ? systemInfo.ollamaVersion || t("settings:aboutInstalled")
+        : t("settings:aboutNotInstalled")
+    }
+Llama Server: ${
+      systemInfo.llamaServerInstalled
+        ? systemInfo.llamaServerVersion || t("settings:aboutInstalled")
+        : t("settings:aboutNotInstalled")
+    }
 `;
 
     try {
@@ -241,17 +256,17 @@ Llama Server: ${systemInfo.llamaServerInstalled ? systemInfo.llamaServerVersion 
       addNotification({
         type: "info",
         alert: true,
-        content: "System information copied to clipboard!"
+        content: t("settings:aboutSystemInfoCopied")
       });
     } catch (error) {
       console.error("Failed to copy to clipboard:", error);
       addNotification({
         type: "error",
         alert: true,
-        content: "Failed to copy system information to clipboard"
+        content: t("settings:aboutSystemInfoCopyFailed")
       });
     }
-  }, [systemInfo, addNotification]);
+  }, [systemInfo, addNotification, t]);
 
   if (loading) {
     return (
@@ -279,10 +294,10 @@ Llama Server: ${systemInfo.llamaServerInstalled ? systemInfo.llamaServerVersion 
     <Box>
       {/* Application Info */}
       <Text size="big" id="application">
-        Application
+        {t("settings:aboutApplicationSection")}
       </Text>
       <div className="settings-section">
-        <InfoRow label="Version" value={VERSION} />
+        <InfoRow label={t("settings:aboutVersion")} value={VERSION} />
         {systemInfo && (
           <>
             <InfoRow label="Electron" value={systemInfo.electronVersion} />
@@ -294,19 +309,19 @@ Llama Server: ${systemInfo.llamaServerInstalled ? systemInfo.llamaServerVersion 
 
       {/* Operating System */}
       <Text size="big" id="operating-system">
-        Operating System
+        {t("settings:aboutOperatingSystem")}
       </Text>
       <div className="settings-section">
         {systemInfo ? (
           <>
             <InfoRow label="OS" value={systemInfo.os} />
-            <InfoRow label="Version" value={systemInfo.osVersion} />
-            <InfoRow label="Architecture" value={systemInfo.arch} />
+            <InfoRow label={t("settings:aboutVersion")} value={systemInfo.osVersion} />
+            <InfoRow label={t("settings:aboutArchitecture")} value={systemInfo.arch} />
           </>
         ) : (
           <>
-            <InfoRow label="Platform" value={navigator.platform} />
-            <InfoRow label="User Agent" value={navigator.userAgent} />
+            <InfoRow label={t("settings:aboutPlatform")} value={navigator.platform} />
+            <InfoRow label={t("settings:aboutUserAgent")} value={navigator.userAgent} />
           </>
         )}
       </div>
@@ -315,35 +330,35 @@ Llama Server: ${systemInfo.llamaServerInstalled ? systemInfo.llamaServerVersion 
       {systemInfo && !isProduction && (
         <>
           <Text size="big" id="installation-paths">
-            Installation Paths
+            {t("settings:aboutInstallationPaths")}
           </Text>
           <div className="settings-section">
             <InfoRow
-              label="Application"
+              label={t("settings:aboutApplicationSection")}
               value={systemInfo.installPath}
               copyable
               onCopy={handleCopy}
             />
             <InfoRow
-              label="Conda Environment"
+              label={t("settings:aboutCondaEnvironment")}
               value={systemInfo.condaEnvPath}
               copyable
               onCopy={handleCopy}
             />
             <InfoRow
-              label="Data"
+              label={t("settings:aboutData")}
               value={systemInfo.dataPath}
               copyable
               onCopy={handleCopy}
             />
             <InfoRow
-              label="Logs"
+              label={t("settings:aboutLogs")}
               value={systemInfo.logsPath}
               copyable
               onCopy={handleCopy}
             />
             <InfoRow
-              label="NPM Packages"
+              label={t("settings:aboutNpmPackages")}
               value={systemInfo.optionalNodePath}
               copyable
               onCopy={handleCopy}
@@ -356,7 +371,7 @@ Llama Server: ${systemInfo.llamaServerInstalled ? systemInfo.llamaServerVersion 
       {systemInfo && (
         <>
           <Text size="big" id="features">
-            Features & Versions
+            {t("settings:aboutFeaturesVersions")}
           </Text>
           <div className="settings-section">
             <InfoRow label="Python" value={systemInfo.pythonVersion} />
@@ -397,14 +412,14 @@ Llama Server: ${systemInfo.llamaServerInstalled ? systemInfo.llamaServerVersion 
             }}
           >
             <ContentCopyIcon sx={{ fontSize: "1.2em" }} />
-            Copy all system information
+            {t("settings:aboutCopyAllSystemInfo")}
           </Text>
         </Box>
       )}
 
       {/* Links */}
       <Text size="big" id="links">
-        Links
+        {t("settings:aboutLinks")}
       </Text>
       <div className="settings-section">
         <FlexColumn
@@ -422,7 +437,7 @@ Llama Server: ${systemInfo.llamaServerInstalled ? systemInfo.llamaServerVersion 
               textDecoration: "none"
             }}
           >
-            GitHub Repository
+            {t("settings:aboutGitHubRepository")}
           </a>
           <a
             href="https://forum.nodetool.ai"
@@ -433,7 +448,7 @@ Llama Server: ${systemInfo.llamaServerInstalled ? systemInfo.llamaServerVersion 
               textDecoration: "none"
             }}
           >
-            NodeTool Forum
+            {t("settings:aboutForum")}
           </a>
           <a
             href="https://nodetool.ai"
@@ -444,7 +459,7 @@ Llama Server: ${systemInfo.llamaServerInstalled ? systemInfo.llamaServerVersion 
               textDecoration: "none"
             }}
           >
-            Website
+            {t("settings:aboutWebsite")}
           </a>
           <a
             href="https://nodetool.ai/privacy"
@@ -455,7 +470,7 @@ Llama Server: ${systemInfo.llamaServerInstalled ? systemInfo.llamaServerVersion 
               textDecoration: "none"
             }}
           >
-            Privacy Policy
+            {t("settings:aboutPrivacyPolicy")}
           </a>
           <a
             href="https://nodetool.ai/terms"
@@ -466,7 +481,7 @@ Llama Server: ${systemInfo.llamaServerInstalled ? systemInfo.llamaServerVersion 
               textDecoration: "none"
             }}
           >
-            Terms of Use
+            {t("settings:aboutTermsOfUse")}
           </a>
         </FlexColumn>
       </div>

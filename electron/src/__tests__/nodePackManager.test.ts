@@ -70,13 +70,13 @@ describe("nodePackManager", () => {
     it("rejects invalid spec characters", async () => {
       const result = await installNodePack("rm -rf /");
       expect(result.success).toBe(false);
-      expect(result.message).toContain("Invalid npm pack spec");
+      expect(result.message).toContain("npm 节点包规格无效");
     });
 
     it("rejects empty string spec", async () => {
       const result = await installNodePack("");
       expect(result.success).toBe(false);
-      expect(result.message).toContain("Invalid npm pack spec");
+      expect(result.message).toContain("npm 节点包规格无效");
     });
 
     it("succeeds with a valid spec and npm exit 0", async () => {
@@ -88,7 +88,7 @@ describe("nodePackManager", () => {
       const result = await promise;
 
       expect(result.success).toBe(true);
-      expect(result.message).toContain("Installed @acme/cool-nodes");
+      expect(result.message).toContain("@acme/cool-nodes 已安装");
     });
 
     it("fails when npm exits non-zero", async () => {
@@ -100,7 +100,7 @@ describe("nodePackManager", () => {
       const result = await promise;
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain("npm exited with code 1");
+      expect(result.message).toContain("npm 已退出，退出码 1");
     });
 
     it("accepts scoped packages with version", async () => {
@@ -119,7 +119,7 @@ describe("nodePackManager", () => {
     it("rejects invalid name characters", async () => {
       const result = await uninstallNodePack("../../etc/passwd");
       expect(result.success).toBe(false);
-      expect(result.message).toContain("Invalid npm pack name");
+      expect(result.message).toContain("npm 节点包名称无效");
     });
 
     it("succeeds with valid name and npm exit 0", async () => {
@@ -131,13 +131,13 @@ describe("nodePackManager", () => {
       const result = await promise;
 
       expect(result.success).toBe(true);
-      expect(result.message).toContain("Uninstalled @acme/cool-nodes");
+      expect(result.message).toContain("@acme/cool-nodes 已卸载");
     });
 
     it("rejects name with version suffix", async () => {
       const result = await uninstallNodePack("pkg@1.0.0");
       expect(result.success).toBe(false);
-      expect(result.message).toContain("Invalid npm pack name");
+      expect(result.message).toContain("npm 节点包名称无效");
     });
   });
 

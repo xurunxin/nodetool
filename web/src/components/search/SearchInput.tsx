@@ -3,6 +3,7 @@ import { css } from "@emotion/react";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import React, { useCallback, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { MOTION, Tooltip } from "../ui_primitives";
 import BackspaceIcon from "@mui/icons-material/Backspace";
 import SearchIcon from "@mui/icons-material/Search";
@@ -114,6 +115,7 @@ interface SearchInputProps {
   searchTerm?: string;
   searchResults?: NodeMetadata[];
   width?: number | string;
+  clearLabel?: string;
 }
 
 const SearchInput: React.FC<SearchInputProps> = ({
@@ -129,8 +131,10 @@ const SearchInput: React.FC<SearchInputProps> = ({
   debounceTime = 50,
   searchTerm: externalSearchTerm = "",
   searchResults = [],
-  width = 150
+  width = 150,
+  clearLabel
 }) => {
+  const { t } = useTranslation("common");
   const theme = useTheme();
   const inputRef = useRef<HTMLInputElement>(null);
   const [localSearchTerm, setLocalSearchTerm] = useState(externalSearchTerm);
@@ -293,7 +297,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
           className={`clear-search-btn ${localSearchTerm.trim() === "" ? "disabled" : ""
             }`}
           tabIndex={-1}
-          aria-label="Clear search"
+          aria-label={clearLabel ?? t("clearSearch")}
           onClick={clearSearch}
           data-testid="search-clear-btn"
         >

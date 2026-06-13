@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { memo, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 import { createStyles } from "./ThreadList.styles";
@@ -10,9 +11,41 @@ import {
 } from "./";
 import { ThreadInfo } from "../types/thread.types";
 import { sortThreadsByDate } from "../utils/threadUtils";
-import { groupByDate } from "../../../utils/groupByDate";
 
 export type { ThreadInfo } from "./";
+
+function getGroupDateLabel(
+  date: Date,
+  now: Date,
+  language: string,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string {
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const nowStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  );
+  const dateStart = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  );
+  const diffDays = Math.floor(
+    (nowStart.getTime() - dateStart.getTime()) / msPerDay
+  );
+
+  if (diffDays === 0) {
+    return t("today");
+  }
+  if (diffDays === 1) {
+    return t("yesterday");
+  }
+  if (diffDays > 1 && diffDays < 7) {
+    return t("daysAgo", { count: diffDays });
+  }
+  return date.toLocaleDateString(language, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit"
+  });
+}
 
 function formatGroupDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -30,6 +63,7 @@ const ThreadList: React.FC<ThreadListProps> = ({
   getThreadPreview
 }) => {
   const theme = useTheme<Theme>();
+  const { i18n, t } = useTranslation("chat");
   const componentStyles = createStyles(theme);
 
   // Memoize list elements to avoid rebuilding on every render
@@ -63,7 +97,12 @@ const ThreadList: React.FC<ThreadListProps> = ({
           const dateStr = thread.updatedAt;
           const updatedAt = new Date(dateStr);
 
-          const headerLabel = groupByDate(updatedAt, now);
+          const headerLabel = getGroupDateLabel(
+            updatedAt,
+            now,
+            i18n.language,
+            t
+          );
 
           if (headerLabel !== lastHeaderLabel) {
             elements.push(
@@ -91,7 +130,15 @@ const ThreadList: React.FC<ThreadListProps> = ({
     }
 
     return elements;
-  }, [threads, currentThreadId, onSelectThread, onDeleteThread, getThreadPreview]);
+  }, [
+    threads,
+    currentThreadId,
+    onSelectThread,
+    onDeleteThread,
+    getThreadPreview,
+    i18n.language,
+    t
+  ]);
 
   return (
     <div className="thread-list-container" css={componentStyles}>

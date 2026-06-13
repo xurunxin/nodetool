@@ -21,6 +21,7 @@ import React, {
   useRef,
   useEffect
 } from "react";
+import { useTranslation } from "react-i18next";
 import { Handle, NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import { Box, Text, MOTION } from "../../ui_primitives";
 import { useNavigate } from "react-router-dom";
@@ -480,6 +481,7 @@ interface SketchNodeProps extends NodeProps {
 
 const SketchNode: React.FC<SketchNodeProps> = (props) => {
   const theme = useTheme();
+  const { t } = useTranslation("nodeMenu");
   const hasParent = props.parentId !== undefined;
   const isFocused = useNodeFocusStore(
     (state) => state.focusedNodeId === props.id
@@ -1336,16 +1338,16 @@ const SketchNode: React.FC<SketchNodeProps> = (props) => {
                     <img
                       className="preview-image"
                       src={displayPreviewUri}
-                      alt="Image editor preview"
+                      alt={t("imageEditorPreview")}
                     />
                     <div className="edit-overlay">
                       <EditIcon sx={{ fontSize: 32, color: "white" }} />
-                      <span className="edit-overlay-label">Edit Sketch</span>
+                      <span className="edit-overlay-label">{t("editSketch")}</span>
                     </div>
                   </>
                 ) : (
                   <Text className="hint">
-                    Click to open sketch editor
+                    {t("clickToOpenSketchEditor")}
                   </Text>
                 )}
               </div>

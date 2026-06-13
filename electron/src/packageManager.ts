@@ -49,9 +49,9 @@ interface RegistryPackageItem {
 
 const PACKAGE_DESCRIPTION_OVERRIDES: Record<string, string> = {
   "nodetool-ai/nodetool-core":
-    "Essential NodeTool core nodes and shared runtime components. Install this package in every NodeTool environment.",
+    "NodeTool 核心节点和共享运行时组件。每个 NodeTool 环境都需要安装此包。",
   "nunchaku-tech/nunchaku":
-    "Accelerates FLUX and Qwen image models with Nunchaku quantization kernels. Install this only if you plan to run Nunchaku-optimized HuggingFace models.",
+    "使用 Nunchaku 量化内核加速 FLUX 和 Qwen 图像模型。仅在需要运行 Nunchaku 优化的 HuggingFace 模型时安装。",
 };
 
 export function getPackageDescription(pkg: Pick<RegistryPackageItem, "repo_id" | "description">): string {
@@ -81,7 +81,7 @@ async function ensureTorchPlatformDetectedForPackage(
     return;
   }
 
-  const message = `Detecting GPU platform before installing ${packageName}...`;
+  const message = `安装 ${packageName} 前正在检测 GPU 平台...`;
   logMessage(message);
   emitServerLog(message);
   emitBootMessage(message);
@@ -840,7 +840,7 @@ async function ensurePythonRuntimeAvailable(): Promise<void> {
     return;
   }
 
-  emitBootMessage("Setting up Python runtime (one-time, ~1-2 min)...");
+  emitBootMessage("正在设置 Python 运行时（一次性操作，约 1-2 分钟）...");
   logMessage(
     `uv not found at ${uvPath} — auto-installing Python runtime before uv operation`,
     "warn"
@@ -849,8 +849,8 @@ async function ensurePythonRuntimeAvailable(): Promise<void> {
   const result = await installRuntimePackage("python");
   if (!result.success) {
     throw new Error(
-      `Could not set up Python runtime automatically: ${result.message}. ` +
-      `Open the Runtimes panel and install Python manually, then retry.`
+      `无法自动设置 Python 运行时：${result.message}。` +
+      `请打开运行时面板手动安装 Python，然后重试。`
     );
   }
 
@@ -858,8 +858,8 @@ async function ensurePythonRuntimeAvailable(): Promise<void> {
   // reported success but landed something unexpected.
   if (!(await fileExists(uvPath))) {
     throw new Error(
-      `Python runtime install reported success but uv was not found at ${uvPath}. ` +
-      `Open the Runtimes panel and reinstall Python.`
+      `Python 运行时安装已报告成功，但未在 ${uvPath} 找到 uv。` +
+      `请打开运行时面板重新安装 Python。`
     );
   }
 }
@@ -942,8 +942,8 @@ async function runUvCommand(
       // Provide a more helpful error message for ENOENT
       if (error.message.includes("ENOENT")) {
         reject(new Error(
-          `Python environment not properly installed: could not run uv at ${uvPath}. ` +
-          `Please use "Reinstall environment" to fix this issue.`
+          `Python 环境未正确安装：无法运行 ${uvPath} 处的 uv。` +
+          `请使用“重新安装环境”修复此问题。`
         ));
       } else {
         reject(new Error(`Failed to run command: ${error.message}`));
@@ -1071,12 +1071,12 @@ export async function installPackage(repoId: string): Promise<PackageResponse> {
     if (!installTarget) {
       return {
         success: false,
-        message: `Could not find package ${packageName} in the package index`,
+        message: `在包索引中找不到 ${packageName}`,
       };
     }
 
     const { installSpec, displayVersion } = installTarget;
-    const message = `Installing ${packageName} v${displayVersion}...`;
+    const message = `正在安装 ${packageName} v${displayVersion}...`;
     logMessage(message);
     emitServerLog(message);
 
@@ -1104,7 +1104,7 @@ export async function installPackage(repoId: string): Promise<PackageResponse> {
 
     return {
       success: true,
-      message: `Package ${repoId} v${displayVersion} installed successfully from wheel index`,
+      message: `${repoId} v${displayVersion} 已从 wheel 索引安装成功`,
     };
   } catch (error: unknown) {
     logMessage(
@@ -1141,7 +1141,7 @@ export async function uninstallPackage(
 
     return {
       success: true,
-      message: `Package ${repoId} uninstalled successfully`,
+      message: `${repoId} 已卸载成功`,
     };
   } catch (error: unknown) {
     logMessage(
@@ -1174,12 +1174,12 @@ export async function updatePackage(repoId: string): Promise<PackageResponse> {
     if (!installTarget) {
       return {
         success: false,
-        message: `Could not find package ${packageName} in the package index`,
+        message: `在包索引中找不到 ${packageName}`,
       };
     }
 
     const { installSpec, displayVersion } = installTarget;
-    const message = `Updating ${packageName} to v${displayVersion}...`;
+    const message = `正在将 ${packageName} 更新到 v${displayVersion}...`;
     logMessage(message);
     emitServerLog(message);
     emitBootMessage(message);
@@ -1211,7 +1211,7 @@ export async function updatePackage(repoId: string): Promise<PackageResponse> {
 
     return {
       success: true,
-      message: `Package ${repoId} updated to v${displayVersion} successfully from wheel index`,
+      message: `${repoId} 已从 wheel 索引成功更新到 v${displayVersion}`,
     };
   } catch (error: unknown) {
     logMessage(`Failed to update package ${repoId}: ${errorMsg(error)}`, "error");
@@ -1304,7 +1304,7 @@ export async function installExpectedPackages(): Promise<{
     );
 
     try {
-      const message = `Installing ${packagesNeedingUpdate.length} packages (v${expectedVersion})...`;
+      const message = `正在安装 ${packagesNeedingUpdate.length} 个包（v${expectedVersion}）...`;
       logMessage(message);
       emitServerLog(message);
       emitBootMessage(message);
@@ -1333,7 +1333,7 @@ export async function installExpectedPackages(): Promise<{
       }
 
       await runUvCommand(args);
-      const successMessage = `Successfully installed ${packageNames} (v${expectedVersion})`;
+      const successMessage = `已成功安装 ${packageNames}（v${expectedVersion}）`;
       logMessage(successMessage);
       emitServerLog(successMessage);
       emitBootMessage(successMessage);
@@ -1367,14 +1367,14 @@ export function validateRepoId(repoId: string): {
   error?: string;
 } {
   if (!repoId) {
-    return { valid: false, error: "Repository ID cannot be empty" };
+    return { valid: false, error: "仓库 ID 不能为空" };
   }
 
   const pattern = /^[a-zA-Z0-9][-a-zA-Z0-9_]*\/[a-zA-Z0-9][-a-zA-Z0-9_]*$/;
   if (!pattern.test(repoId)) {
     return {
       valid: false,
-      error: `Invalid repository ID format: ${repoId}. Must be in the format <owner>/<project>`,
+      error: `仓库 ID 格式无效：${repoId}。格式必须为 <owner>/<project>`,
     };
   }
 
@@ -1441,7 +1441,7 @@ export async function installRuntimePackage(
 ): Promise<{ success: boolean; message: string }> {
   const pkg = RUNTIME_PACKAGES[packageId];
   if (!pkg) {
-    return { success: false, message: `Unknown runtime: ${packageId}` };
+    return { success: false, message: `未知运行时：${packageId}` };
   }
 
   if (installLocation) {
@@ -1449,15 +1449,15 @@ export async function installRuntimePackage(
     setCondaInstallLocation(installLocation);
   }
 
-  emitBootMessage(`Installing ${pkg.name}...`);
+  emitBootMessage(`正在安装 ${pkg.name}...`);
   logMessage(`Installing runtime: ${packageId}`);
 
   const result = await runLifecycleToCompletion(packageId, "install");
   if (result.success) {
-    return { success: true, message: `${pkg.name} installed successfully` };
+    return { success: true, message: `${pkg.name} 安装成功` };
   }
   logMessage(`Failed to install runtime package ${packageId}: ${result.message}`, "error");
-  return { success: false, message: `Failed to install: ${result.message}` };
+  return { success: false, message: `安装失败：${result.message}` };
 }
 
 /**
@@ -1468,17 +1468,17 @@ export async function uninstallRuntimePackage(
 ): Promise<{ success: boolean; message: string }> {
   const pkg = RUNTIME_PACKAGES[packageId];
   if (!pkg) {
-    return { success: false, message: `Unknown runtime: ${packageId}` };
+    return { success: false, message: `未知运行时：${packageId}` };
   }
 
   try {
     logMessage(`Uninstalling runtime: ${packageId}`);
-    emitBootMessage(`Removing ${pkg.name}...`);
+    emitBootMessage(`正在移除 ${pkg.name}...`);
     await runtimeRegistry.uninstall(packageId);
-    return { success: true, message: `${pkg.name} removed successfully` };
+    return { success: true, message: `${pkg.name} 移除成功` };
   } catch (error: unknown) {
     logMessage(`Failed to uninstall runtime package ${packageId}: ${errorMsg(error)}`, "error");
-    return { success: false, message: `Failed to uninstall: ${errorMsg(error)}` };
+    return { success: false, message: `卸载失败：${errorMsg(error)}` };
   }
 }
 

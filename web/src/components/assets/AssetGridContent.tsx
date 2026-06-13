@@ -8,6 +8,7 @@ import React, {
   useRef,
   useState
 } from "react";
+import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useSettingsStore } from "../../stores/SettingsStore";
 import useAssets from "../../serverState/useAssets";
@@ -82,6 +83,7 @@ const AssetGridContent: React.FC<AssetGridContentProps> = memo(({
   isHorizontal,
   onDoubleClick
 }) => {
+  const { t } = useTranslation("assets");
   const { folderFilesFiltered } = useAssets();
   const assetItemSize = useSettingsStore(
     (state) => state.settings.assetItemSize
@@ -363,8 +365,8 @@ const AssetGridContent: React.FC<AssetGridContentProps> = memo(({
       >
         <EmptyState
           variant="no-data"
-          title="This folder is empty"
-          description="Drop files here or use the upload button to add assets"
+          title={t("folderEmptyTitle")}
+          description={t("folderEmptyDescription")}
           size="small"
         />
       </div>

@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
 import React, { memo, useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { IconForType } from "../../config/IconForType";
 import {
   Autocomplete,
@@ -31,20 +32,17 @@ const TYPE_CATEGORIES = [
 ];
 
 const TYPE_CHIP_ICON_CONTAINER_STYLE = { width: 16, height: 16 } as const;
+const TYPE_LABEL_KEYS: Record<string, "image" | "text" | "audio" | "video" | "number"> = {
+  image: "image",
+  text: "text",
+  audio: "audio",
+  video: "video",
+  float: "number"
+};
 
 type TypeOption = {
   value: string;
   label: string;
-};
-
-const ALL_INPUT_OPTION: TypeOption = {
-  value: "",
-  label: "All input types"
-};
-
-const ALL_OUTPUT_OPTION: TypeOption = {
-  value: "",
-  label: "All output types"
 };
 
 const typeFilterChipsStyles = (theme: Theme) =>
@@ -224,6 +222,7 @@ const TypeFilterChips: React.FC<TypeFilterChipsProps> = memo(
     selectedOutputType,
     setSelectedOutputType
   }) => {
+    const { t } = useTranslation("nodeMenu");
     const theme = useTheme();
     const { selectedProviderType, setSelectedProviderType } = useNodeMenuStore(
       useShallow((state) => ({
@@ -236,6 +235,26 @@ const TypeFilterChips: React.FC<TypeFilterChipsProps> = memo(
     const totalNodeCount = useMemo(
       () => Object.keys(metadata).length,
       [metadata]
+    );
+
+    const getTypeLabel = useCallback(
+      (value: string) => {
+        const labelKey = TYPE_LABEL_KEYS[value];
+        return labelKey
+          ? t(`typeLabels.${labelKey}`)
+          : value;
+      },
+      [t]
+    );
+
+    const allInputOption = useMemo<TypeOption>(
+      () => ({ value: "", label: t("allInputTypes") }),
+      [t]
+    );
+
+    const allOutputOption = useMemo<TypeOption>(
+      () => ({ value: "", label: t("allOutputTypes") }),
+      [t]
     );
 
     const allTypeOptions = useMemo<TypeOption[]>(() => {
@@ -256,32 +275,41 @@ const TypeFilterChips: React.FC<TypeFilterChipsProps> = memo(
       const sorted = Array.from(allTypes).sort((a, b) => a.localeCompare(b));
       return sorted.map((value) => ({
         value,
-        label: value === "float" ? "Number" : value
+        label: getTypeLabel(value)
       }));
-    }, [metadata]);
+    }, [metadata, getTypeLabel]);
 
     const inputTypeOptions = useMemo<TypeOption[]>(
-      () => [ALL_INPUT_OPTION, ...allTypeOptions],
-      [allTypeOptions]
+      () => [allInputOption, ...allTypeOptions],
+      [allInputOption, allTypeOptions]
     );
     const outputTypeOptions = useMemo<TypeOption[]>(
-      () => [ALL_OUTPUT_OPTION, ...allTypeOptions],
-      [allTypeOptions]
+      () => [allOutputOption, ...allTypeOptions],
+      [allOutputOption, allTypeOptions]
+    );
+
+    const quickTypes = useMemo(
+      () =>
+        TYPE_CATEGORIES.map((type) => ({
+          ...type,
+          label: getTypeLabel(type.value)
+        })),
+      [getTypeLabel]
     );
 
     const selectedInputOption = useMemo<TypeOption>(
       () =>
         inputTypeOptions.find((option) => option.value === selectedInputType) ??
-        ALL_INPUT_OPTION,
-      [inputTypeOptions, selectedInputType]
+        allInputOption,
+      [inputTypeOptions, selectedInputType, allInputOption]
     );
 
     const selectedOutputOption = useMemo<TypeOption>(
       () =>
         outputTypeOptions.find(
           (option) => option.value === selectedOutputType
-        ) ?? ALL_OUTPUT_OPTION,
-      [outputTypeOptions, selectedOutputType]
+        ) ?? allOutputOption,
+      [outputTypeOptions, selectedOutputType, allOutputOption]
     );
 
     const filterTypeOptions = useCallback(
@@ -352,22 +380,22 @@ const TypeFilterChips: React.FC<TypeFilterChipsProps> = memo(
             <Chip
               className={`provider-quick-chip ${selectedProviderType === "local" ? "selected" : ""}`}
               size="small"
-              label="Local"
+              label={t("local")}
               onClick={handleLocalProviderClick}
             />
             <Chip
               className={`provider-quick-chip ${selectedProviderType === "api" ? "selected" : ""}`}
               size="small"
-              label="API"
+              label={t("api")}
               onClick={handleApiProviderClick}
             />
           </Box>
-          <span className="quick-label">Output:</span>
+          <span className="quick-label">{t("output")}</span>
           <Box className="type-chips filter-section">
-            {TYPE_CATEGORIES.map((type) => (
+            {quickTypes.map((type) => (
               <Tooltip
                 key={type.value}
-                title={`Filter by ${type.label}`}
+                title={t("filterByType", { type: type.label })}
                 placement="top"
               >
                 <Chip
@@ -400,10 +428,10 @@ const TypeFilterChips: React.FC<TypeFilterChipsProps> = memo(
             startIcon={<FilterListIcon fontSize="small" />}
             onClick={handleOpenMenu}
           >
-            Filters
+            {t("filters")}
           </EditorButton>
           <span className="node-count">
-            {totalNodeCount} {totalNodeCount === 1 ? "node" : "nodes"}
+            {t("nodeCount", { count: totalNodeCount })}
           </span>
         </Box>
 
@@ -435,7 +463,7 @@ const TypeFilterChips: React.FC<TypeFilterChipsProps> = memo(
                   marginBottom: "1em"
                 }}
               >
-                Filter nodes by input and output data types
+                {t("filterByIoTypes")}
               </Text>
             </Box>
 
@@ -444,7 +472,7 @@ const TypeFilterChips: React.FC<TypeFilterChipsProps> = memo(
                 marginBottom: "0.25em"
               }}
             >
-              Input Type
+              {t("inputType")}
             </Text>
             <Autocomplete<TypeOption, false, false, false>
               className="filter-select"
@@ -465,7 +493,7 @@ const TypeFilterChips: React.FC<TypeFilterChipsProps> = memo(
                 <TextField
                   {...params}
                   size="small"
-                  placeholder="Search input type..."
+                  placeholder={t("searchInputType")}
                 />
               )}
               slotProps={{
@@ -491,7 +519,7 @@ const TypeFilterChips: React.FC<TypeFilterChipsProps> = memo(
                 marginBottom: "0.25em"
               }}
             >
-              Output Type
+              {t("outputType")}
             </Text>
             <Autocomplete<TypeOption, false, false, false>
               className="filter-select"
@@ -512,7 +540,7 @@ const TypeFilterChips: React.FC<TypeFilterChipsProps> = memo(
                 <TextField
                   {...params}
                   size="small"
-                  placeholder="Search output type..."
+                  placeholder={t("searchOutputType")}
                 />
               )}
               slotProps={{

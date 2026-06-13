@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
+import { useTranslation } from "react-i18next";
 import useContextMenuStore from "../../stores/ContextMenuStore";
 import useLogsStore, { nodeLogKey } from "../../stores/LogStore";
 import { shallow } from "zustand/shallow";
@@ -59,8 +60,9 @@ export const NodeHeader: React.FC<NodeHeaderProps> = ({
   externalLinkTitle,
   isTitleEditable = false,
   showCodeBadge = false,
-  codeBadgeTooltip = "Code node"
+  codeBadgeTooltip
 }: NodeHeaderProps) => {
+  const { t } = useTranslation("nodeMenu");
   const openContextMenu = useContextMenuStore((state) => state.openContextMenu);
   // Combine multiple useNodes subscriptions into a single selector with shallow equality
   // to reduce unnecessary re-renders when other parts of the node state change
@@ -331,14 +333,14 @@ export const NodeHeader: React.FC<NodeHeaderProps> = ({
           onDoubleClick={handleTitleDoubleClick}
         >
           {showCodeBadge && (
-            <Tooltip title={codeBadgeTooltip} placement="top" delay={400}>
+            <Tooltip title={codeBadgeTooltip ?? t("codeNode")} placement="top" delay={400}>
               <span className="code-badge">C</span>
             </Tooltip>
           )}
           {isEditingTitle ? (
             <input
               className="node-title-input nodrag nopan"
-              aria-label="Node title"
+              aria-label={t("nodeTitle")}
               autoFocus
               value={draftTitle}
               onBlur={commitTitleEdit}
@@ -352,7 +354,7 @@ export const NodeHeader: React.FC<NodeHeaderProps> = ({
         </span>
         {externalLink && (
           <ToolbarIconButton
-            title={externalLinkTitle || "Open link"}
+            title={externalLinkTitle || t("openLink")}
             size="small"
             onClick={(e) => {
               e.stopPropagation();
@@ -372,11 +374,11 @@ export const NodeHeader: React.FC<NodeHeaderProps> = ({
           </ToolbarIconButton>
         )}
         {data.bypassed && (
-          <span className="bypass-badge">Bypassed</span>
+          <span className="bypass-badge">{t("bypassed")}</span>
         )}
         {logCount > 0 && !hideLogs && (
           <ToolbarIconButton
-            title={`${logCount} logs`}
+            title={t("logCount", { count: logCount })}
             size="small"
             onClick={handleOpenLogsDialog}
             sx={{ padding: "4px" }}

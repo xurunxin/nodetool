@@ -5,6 +5,7 @@
  */
 
 import React, { memo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   List,
   ListItem,
@@ -80,81 +81,92 @@ const renderPropertyChange = (change: PropertyChange) => {
 const NodeDiffItem: React.FC<{
   node: { id: string; type?: string };
   type: "added" | "removed";
-}> = memo(({ node, type }) => (
-  <ListItem
-    sx={{
-      bgcolor: type === "added" ? "rgba(46, 125, 50, 0.1)" : "rgba(211, 47, 47, 0.1)",
-      borderRadius: 1,
-      mb: 0.5
-    }}
-  >
-    <ListItemIcon sx={{ minWidth: 36 }}>
-      {type === "added" ? (
-        <AddIcon color="success" fontSize="small" />
-      ) : (
-        <RemoveIcon color="error" fontSize="small" />
-      )}
-    </ListItemIcon>
-    <ListItemText
-      primary={
-        <Text size="small">
-          {node.type?.split(".").pop() || "Node"}
-        </Text>
-      }
-      secondary={
-        <Caption color="secondary">
-          ID: {node.id.substring(0, 8)}...
-        </Caption>
-      }
-    />
-    <Chip
-      label={type === "added" ? "Added" : "Removed"}
-      size="small"
-      color={type === "added" ? "success" : "error"}
-      sx={{ height: 20, fontSize: "var(--fontSizeSmaller)" }}
-    />
-  </ListItem>
-));
+}> = memo(({ node, type }) => {
+  const { t } = useTranslation("common");
+
+  return (
+    <ListItem
+      sx={{
+        bgcolor:
+          type === "added"
+            ? "rgba(46, 125, 50, 0.1)"
+            : "rgba(211, 47, 47, 0.1)",
+        borderRadius: 1,
+        mb: 0.5
+      }}
+    >
+      <ListItemIcon sx={{ minWidth: 36 }}>
+        {type === "added" ? (
+          <AddIcon color="success" fontSize="small" />
+        ) : (
+          <RemoveIcon color="error" fontSize="small" />
+        )}
+      </ListItemIcon>
+      <ListItemText
+        primary={
+          <Text size="small">
+            {node.type?.split(".").pop() || t("node")}
+          </Text>
+        }
+        secondary={
+          <Caption color="secondary">
+            {t("id")}: {node.id.substring(0, 8)}...
+          </Caption>
+        }
+      />
+      <Chip
+        label={type === "added" ? t("added") : t("removed")}
+        size="small"
+        color={type === "added" ? "success" : "error"}
+        sx={{ height: 20, fontSize: "var(--fontSizeSmaller)" }}
+      />
+    </ListItem>
+  );
+});
 
 const ModifiedNodeItem: React.FC<{ nodeChange: NodeChange }> = memo(({
   nodeChange
-}) => (
-  <Accordion
-    sx={{
-      bgcolor: "rgba(237, 108, 2, 0.1)",
-      mb: 0.5,
-      "&:before": { display: "none" }
-    }}
-    disableGutters
-  >
-    <AccordionSummary
-      expandIcon={<ExpandMoreIcon />}
-      sx={{ minHeight: 48 }}
+}) => {
+  const { t } = useTranslation("common");
+
+  return (
+    <Accordion
+      sx={{
+        bgcolor: "rgba(237, 108, 2, 0.1)",
+        mb: 0.5,
+        "&:before": { display: "none" }
+      }}
+      disableGutters
     >
-      <FlexRow
-        gap={1}
-        align="center"
-        fullWidth
+      <AccordionSummary
+        expandIcon={<ExpandMoreIcon />}
+        sx={{ minHeight: 48 }}
       >
-        <EditIcon color="warning" fontSize="small" />
-        <Text size="small">
-          {nodeChange.nodeType?.split(".").pop() || "Node"}
-        </Text>
-        <Chip
-          label={`${nodeChange.changes.length} change(s)`}
-          size="small"
-          color="warning"
-          sx={{ height: 20, fontSize: "var(--fontSizeSmaller)", ml: "auto", mr: 1 }}
-        />
-      </FlexRow>
-    </AccordionSummary>
-    <AccordionDetails sx={{ pt: 0 }}>
-      {nodeChange.changes.map((change) =>
-        renderPropertyChange(change)
-      )}
-    </AccordionDetails>
-  </Accordion>
-));
+        <FlexRow
+          gap={1}
+          align="center"
+          fullWidth
+        >
+          <EditIcon color="warning" fontSize="small" />
+          <Text size="small">
+            {nodeChange.nodeType?.split(".").pop() || t("node")}
+          </Text>
+          <Chip
+            label={t("changesCount", { count: nodeChange.changes.length })}
+            size="small"
+            color="warning"
+            sx={{ height: 20, fontSize: "var(--fontSizeSmaller)", ml: "auto", mr: 1 }}
+          />
+        </FlexRow>
+      </AccordionSummary>
+      <AccordionDetails sx={{ pt: 0 }}>
+        {nodeChange.changes.map((change) =>
+          renderPropertyChange(change)
+        )}
+      </AccordionDetails>
+    </Accordion>
+  );
+});
 
 const EdgeDiffItem: React.FC<{
   edge: { source?: string; target?: string };
@@ -193,10 +205,12 @@ export const VersionDiff: React.FC<VersionDiffProps> = ({
   oldVersionNumber,
   newVersionNumber
 }) => {
+  const { t } = useTranslation("common");
+
   if (!diff.hasChanges) {
     return (
       <Surface sx={{ p: 2, textAlign: "center" }}>
-        <Text color="secondary">No changes detected</Text>
+        <Text color="secondary">{t("noChangesDetected")}</Text>
       </Surface>
     );
   }
@@ -204,7 +218,10 @@ export const VersionDiff: React.FC<VersionDiffProps> = ({
   return (
     <Box sx={{ p: 1 }}>
       <Text size="small" weight={600} sx={{ display: "block", mb: 1 }}>
-        Changes: v{oldVersionNumber} → v{newVersionNumber}
+        {t("changesBetweenVersions", {
+          oldVersion: oldVersionNumber,
+          newVersion: newVersionNumber
+        })}
       </Text>
 
       {/* Added Nodes */}
@@ -214,7 +231,7 @@ export const VersionDiff: React.FC<VersionDiffProps> = ({
             color="success"
             sx={{ display: "block", mb: 1, fontWeight: 500 }}
           >
-            Added Nodes ({diff.addedNodes.length})
+            {t("addedNodes", { count: diff.addedNodes.length })}
           </Caption>
           <List dense disablePadding>
             {diff.addedNodes.map((node) => (
@@ -231,7 +248,7 @@ export const VersionDiff: React.FC<VersionDiffProps> = ({
             color="error"
             sx={{ display: "block", mb: 1, fontWeight: 500 }}
           >
-            Removed Nodes ({diff.removedNodes.length})
+            {t("removedNodes", { count: diff.removedNodes.length })}
           </Caption>
           <List dense disablePadding>
             {diff.removedNodes.map((node) => (
@@ -248,7 +265,7 @@ export const VersionDiff: React.FC<VersionDiffProps> = ({
             color="warning"
             sx={{ display: "block", mb: 1, fontWeight: 500 }}
           >
-            Modified Nodes ({diff.modifiedNodes.length})
+            {t("modifiedNodes", { count: diff.modifiedNodes.length })}
           </Caption>
           {diff.modifiedNodes.map((nodeChange) => (
             <ModifiedNodeItem key={nodeChange.nodeId} nodeChange={nodeChange} />
@@ -263,7 +280,7 @@ export const VersionDiff: React.FC<VersionDiffProps> = ({
           <Caption
             sx={{ display: "block", mb: 1, fontWeight: 500 }}
           >
-            Connection Changes
+            {t("connectionChanges")}
           </Caption>
           <List dense disablePadding>
             {diff.addedEdges.map((edge) => (

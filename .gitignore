@@ -92,3 +92,6 @@ __plans__
 
 # Chrome for Testing downloaded by @puppeteer/browsers for extension integration tests
 /chrome/
+
+# Temporary files
+tmp/

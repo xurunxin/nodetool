@@ -1,6 +1,7 @@
 import { Text, FlexColumn } from "../ui_primitives";
 import { InferenceProvider, InferenceProviderModelValue } from "../../stores/ApiTypes";
 import { memo, useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import isEqual from "fast-deep-equal";
 import Select from "../inputs/Select";
@@ -34,6 +35,7 @@ const InferenceProviderModelSelect = ({
   onChange,
   value: rawValue
 }: PropertyProps) => {
+    const { t } = useTranslation("models");
     const value = rawValue as { provider: InferenceProvider; model_id: string };
     const [provider, setProvider] = useState<InferenceProvider>(value.provider);
     const providerOptions = [
@@ -173,13 +175,13 @@ const InferenceProviderModelSelect = ({
         <FlexColumn gap={2}>
             <div>
                 <Text size="small" sx={{ mb: 1 }}>
-                    Provider
+                    {t("provider")}
                 </Text>
                 <Select
                     options={providerOptions}
                     value={value.provider}
                     onChange={handleChangeProvider}
-                    placeholder="Select an inference provider"
+                    placeholder={t("selectInferenceProvider")}
                     fuseOptions={{
                         keys: ["label"]
                     }}
@@ -189,7 +191,7 @@ const InferenceProviderModelSelect = ({
             {value.provider && (
                 <div>
                     <Text size="small" sx={{ mb: 1 }}>
-                        Model
+                        {t("model")}
                     </Text>
                     <Select
                         options={modelOptions}
@@ -197,10 +199,10 @@ const InferenceProviderModelSelect = ({
                         onChange={handleChangeModel}
                         placeholder={
                             isLoadingModels
-                                ? "Loading models..."
+                                ? t("loadingModels")
                                 : modelsError
-                                    ? "Error loading models"
-                                    : "Select a model"
+                                    ? t("errorLoadingModels")
+                                    : t("selectModel")
                         }
                         fuseOptions={{
                             keys: ["label"]

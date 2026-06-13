@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import React, { useCallback, useRef, memo } from "react";
+import { useTranslation } from "react-i18next";
 import { IDockviewPanelProps } from "dockview";
 import SearchErrorBoundary from "../../SearchErrorBoundary";
 import GlobalSearchResults from "../GlobalSearchResults";
@@ -17,6 +18,7 @@ const AssetFilesPanel: React.FC<IDockviewPanelProps<AssetFilesPanelParams>> = (
   props
 ) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation("assets");
 
   const setOpenAssetLocal = useAssetGridStore((state) => state.setOpenAsset);
   const isGlobalSearchActiveLocal = useAssetGridStore(
@@ -83,7 +85,7 @@ const AssetFilesPanel: React.FC<IDockviewPanelProps<AssetFilesPanelParams>> = (
       >
         <BreadcrumbNav />
         {isGlobalSearchModeLocal && isGlobalSearchActiveLocal ? (
-          <SearchErrorBoundary fallbackTitle="Search Results Error">
+          <SearchErrorBoundary fallbackTitle={t("searchResultsError")}>
             <GlobalSearchResults
               results={globalSearchResultsLocal}
               onAssetDoubleClick={handleGlobalSearchAssetDoubleClick}
