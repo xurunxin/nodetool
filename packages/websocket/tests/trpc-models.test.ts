@@ -338,6 +338,29 @@ describe("models router", () => {
         ...LOCAL_PROVIDER_IDS
       ]);
     });
+
+    it("includes enabled custom endpoint providers and skips disabled endpoints", async () => {
+      (listRegisteredProviderIds as ReturnType<typeof vi.fn>).mockReturnValue([]);
+      (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
+        customEndpoint(),
+        customEndpoint({
+          id: "disabled_gateway",
+          name: "Disabled Gateway",
+          enabled: false
+        })
+      ]);
+
+      const caller = createCaller(makeCtx());
+      const result = await caller.models.providers();
+
+      expect(result).toEqual([
+        {
+          provider: customEndpointProviderId("custom_gateway"),
+          capabilities: ["generate_message", "generate_messages"]
+        }
+      ]);
+      expect(getProvider).not.toHaveBeenCalled();
+    });
   });
 
   // ── recommended ──────────────────────────────────────────────────────────
@@ -546,6 +569,18 @@ describe("models router", () => {
         expect.any(Function)
       );
     });
+
+    it("keeps listing models when custom endpoint metadata cannot be read", async () => {
+      (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error("bad custom endpoint metadata")
+      );
+
+      const caller = createCaller(makeCtx());
+      const result = await caller.models.all();
+
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
+    });
   });
 
   // ── availableForKind ─────────────────────────────────────────────────────
@@ -607,6 +642,20 @@ describe("models router", () => {
         customEndpointProviderId("custom_gateway"),
         expect.any(Function)
       );
+    });
+
+    it("keeps text generation listing available when custom endpoint metadata cannot be read", async () => {
+      (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error("bad custom endpoint metadata")
+      );
+
+      const caller = createCaller(makeCtx());
+      const result = await caller.models.availableForKind({
+        kind: "text_generation"
+      });
+
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
     });
   });
 
@@ -1026,6 +1075,60 @@ describe("models router", () => {
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe("gpt-4o");
       expect(result[0].type).toBe("language_model");
+    });
+
+    it("returns metadata models for enabled custom endpoint providers without instantiating a runtime provider", async () => {
+      (isProviderConfigured as ReturnType<typeof vi.fn>).mockResolvedValue(false);
+      (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
+        customEndpoint(),
+        customEndpoint({
+          id: "disabled_gateway",
+          name: "Disabled Gateway",
+          enabled: false,
+          models: [{ id: "disabled-chat", name: "Disabled Chat" }]
+        })
+      ]);
+
+      const caller = createCaller(makeCtx());
+      const result = await caller.models.llmByProvider({
+        provider: customEndpointProviderId("custom_gateway")
+      });
+
+      expect(result).toEqual([
+        expect.objectContaining({
+          id: "custom-chat",
+          name: "Custom Chat",
+          type: "language_model",
+          provider: customEndpointProviderId("custom_gateway"),
+          supports_tools: null
+        })
+      ]);
+      expect(getProvider).not.toHaveBeenCalledWith(
+        customEndpointProviderId("custom_gateway"),
+        expect.any(Function)
+      );
+    });
+
+    it("returns no metadata models for disabled custom endpoint providers", async () => {
+      (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
+        customEndpoint({
+          id: "disabled_gateway",
+          name: "Disabled Gateway",
+          enabled: false,
+          models: [{ id: "disabled-chat", name: "Disabled Chat" }]
+        })
+      ]);
+
+      const caller = createCaller(makeCtx());
+      const result = await caller.models.llmByProvider({
+        provider: customEndpointProviderId("disabled_gateway")
+      });
+
+      expect(result).toEqual([]);
+      expect(getProvider).not.toHaveBeenCalledWith(
+        customEndpointProviderId("disabled_gateway"),
+        expect.any(Function)
+      );
     });
 
     it("stamps supports_tools per model from provider.hasToolSupport", async () => {

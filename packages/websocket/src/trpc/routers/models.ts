@@ -643,6 +643,11 @@ type CustomModelEndpoint = Awaited<
   ReturnType<typeof listCustomModelEndpoints>
 >[number];
 
+const CUSTOM_LANGUAGE_CAPABILITIES = [
+  "generate_message",
+  "generate_messages"
+] as const;
+
 function customEndpointModelsToUnified(
   endpoint: CustomModelEndpoint
 ): UnifiedModel[] {
@@ -660,13 +665,54 @@ function customEndpointModelsToUnified(
   }));
 }
 
+async function getCustomModelEndpointsForModels(
+  userId: string
+): Promise<CustomModelEndpoint[]> {
+  try {
+    return await listCustomModelEndpoints(userId);
+  } catch (error) {
+    log.warn("Custom model endpoint metadata unavailable", {
+      userId,
+      error: summarizeError(error)
+    });
+    return [];
+  }
+}
+
 async function getCustomEndpointLanguageModels(
   userId: string
 ): Promise<UnifiedModel[]> {
-  const endpoints = await listCustomModelEndpoints(userId);
+  const endpoints = await getCustomModelEndpointsForModels(userId);
   return endpoints
     .filter((endpoint) => endpoint.enabled)
     .flatMap(customEndpointModelsToUnified);
+}
+
+async function getCustomEndpointLanguageModelsByProvider(
+  userId: string,
+  provider: string
+): Promise<UnifiedModel[]> {
+  if (!provider.startsWith("custom:")) {
+    return [];
+  }
+  const endpointId = provider.slice("custom:".length);
+  const endpoints = await getCustomModelEndpointsForModels(userId);
+  const endpoint = endpoints.find(
+    (candidate) => candidate.id === endpointId && candidate.enabled
+  );
+  return endpoint ? customEndpointModelsToUnified(endpoint) : [];
+}
+
+async function getCustomEndpointProviderInfos(
+  userId: string
+): Promise<Array<{ provider: string; capabilities: string[] }>> {
+  const endpoints = await getCustomModelEndpointsForModels(userId);
+  return endpoints
+    .filter((endpoint) => endpoint.enabled)
+    .map((endpoint) => ({
+      provider: customEndpointProviderId(endpoint.id),
+      capabilities: [...CUSTOM_LANGUAGE_CAPABILITIES]
+    }));
 }
 
 function toUnifiedModel(
@@ -930,6 +976,7 @@ export const modelsRouter = router({
           capabilities: providerCapabilities(instance)
         });
       }
+      infos.push(...(await getCustomEndpointProviderInfos(userId)));
       return infos;
     }),
 
@@ -1260,6 +1307,12 @@ export const modelsRouter = router({
     .output(modelsListOutput)
     .query(async ({ ctx, input }) => {
       if (!isProviderVisibleForSurface(input.provider)) return [];
+      if (input.provider.startsWith("custom:")) {
+        return getCustomEndpointLanguageModelsByProvider(
+          ctx.userId,
+          input.provider
+        );
+      }
       return safeProviderCall(
         "llmByProvider",
         { provider: input.provider, userId: ctx.userId },
