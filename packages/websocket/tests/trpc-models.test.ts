@@ -444,6 +444,17 @@ describe("models router", () => {
           size_bytes: 42
         }
       ]);
+      (readCachedHfModels as ReturnType<typeof vi.fn>).mockResolvedValue([
+        {
+          id: "cached-hf",
+          name: "Cached HF",
+          type: "language_model",
+          repo_id: "user/cached-hf",
+          path: null,
+          downloaded: true,
+          tags: []
+        }
+      ]);
 
       const caller = createCaller(makeCtx());
       const result = await caller.models.all();
@@ -452,6 +463,7 @@ describe("models router", () => {
 
       expect(ids).toContain("openai-model");
       expect(ids).not.toContain("ollama-model");
+      expect(ids).not.toContain("cached-hf");
       expect(ids).not.toContain("user/cached-tjs");
       for (const providerId of LOCAL_PROVIDER_IDS) {
         expect(providers.has(providerId)).toBe(false);
@@ -929,6 +941,33 @@ describe("models router", () => {
       expect(result.find((m) => m.id === "tool-yes")?.supports_tools).toBe(true);
       expect(result.find((m) => m.id === "tool-no")?.supports_tools).toBe(false);
     });
+
+    it("returns empty arrays for local provider direct model routes in API-first mode", async () => {
+      (isProviderConfigured as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+      (getProvider as ReturnType<typeof vi.fn>).mockResolvedValue(makeProvider());
+
+      const caller = createCaller(makeCtx());
+
+      await expect(
+        caller.models.llmByProvider({ provider: "ollama" })
+      ).resolves.toEqual([]);
+      await expect(
+        caller.models.imageByProvider({ provider: "lmstudio" })
+      ).resolves.toEqual([]);
+      await expect(
+        caller.models.ttsByProvider({ provider: "llama_cpp" })
+      ).resolves.toEqual([]);
+      await expect(
+        caller.models.asrByProvider({ provider: "vllm" })
+      ).resolves.toEqual([]);
+      await expect(
+        caller.models.videoByProvider({ provider: "transformers_js" })
+      ).resolves.toEqual([]);
+      await expect(
+        caller.models.embeddingByProvider({ provider: "ollama" })
+      ).resolves.toEqual([]);
+      expect(getProvider).not.toHaveBeenCalled();
+    });
   });
 
   // ── tts ──────────────────────────────────────────────────────────────────
@@ -961,6 +1000,56 @@ describe("models router", () => {
       for (const model of result) {
         expect(model.type).toBe("tts_model");
       }
+    });
+
+    it("filters local providers from aggregate TTS models in API-first mode", async () => {
+      (listRegisteredProviderIds as ReturnType<typeof vi.fn>).mockReturnValue([
+        "openai",
+        "ollama"
+      ]);
+      (isProviderConfigured as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+      (getProvider as ReturnType<typeof vi.fn>).mockImplementation(
+        async (id: string) =>
+          makeProvider({
+            getAvailableTTSModels: vi.fn().mockResolvedValue([
+              { id: `${id}-tts`, name: `${id} TTS`, provider: id }
+            ])
+          })
+      );
+
+      const caller = createCaller(makeCtx());
+      const result = await caller.models.tts();
+      const ids = result.map((model) => model.id);
+
+      expect(ids).toEqual(["openai-tts"]);
+    });
+
+    it("filters local providers from aggregate ASR and video models in API-first mode", async () => {
+      (listRegisteredProviderIds as ReturnType<typeof vi.fn>).mockReturnValue([
+        "openai",
+        "ollama"
+      ]);
+      (isProviderConfigured as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+      (getProvider as ReturnType<typeof vi.fn>).mockImplementation(
+        async (id: string) =>
+          makeProvider({
+            getAvailableASRModels: vi.fn().mockResolvedValue([
+              { id: `${id}-asr`, name: `${id} ASR`, provider: id }
+            ]),
+            getAvailableVideoModels: vi.fn().mockResolvedValue([
+              { id: `${id}-video`, name: `${id} Video`, provider: id }
+            ])
+          })
+      );
+
+      const caller = createCaller(makeCtx());
+
+      await expect(caller.models.asr()).resolves.toEqual([
+        expect.objectContaining({ id: "openai-asr" })
+      ]);
+      await expect(caller.models.video()).resolves.toEqual([
+        expect.objectContaining({ id: "openai-video" })
+      ]);
     });
   });
 

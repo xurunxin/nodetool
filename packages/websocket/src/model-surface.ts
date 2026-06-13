@@ -33,10 +33,10 @@ export function isProviderVisibleForSurface(
   return !LOCAL_ONLY_PROVIDER_IDS.has(providerId.toLowerCase());
 }
 
-export function filterProviderIdsForSurface(
-  providerIds: string[],
+export function filterProviderIdsForSurface<T extends string>(
+  providerIds: T[],
   mode: ModelSurfaceMode = getModelSurfaceMode()
-): string[] {
+): T[] {
   return providerIds.filter((providerId) =>
     isProviderVisibleForSurface(providerId, mode)
   );

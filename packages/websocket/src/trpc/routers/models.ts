@@ -47,7 +47,8 @@ import { getSecret } from "@nodetool-ai/models";
 import {
   filterModelsForSurface,
   filterProviderIdsForSurface,
-  isLocalModelManagementEnabled
+  isLocalModelManagementEnabled,
+  isProviderVisibleForSurface
 } from "../../model-surface.js";
 
 function assertLocalModelManagementEnabled(): void {
@@ -683,7 +684,7 @@ async function getAllModels(userId: string): Promise<UnifiedModel[]> {
 
   const availableIds = filterProviderIdsForSurface(
     await getAvailableProviderIds(userId)
-  ) as ProviderId[];
+  );
   const providerModelsPromises = availableIds.map(async (providerId) => {
     try {
       const instance = await instantiateProvider(providerId, userId);
@@ -708,7 +709,7 @@ async function getAllModels(userId: string): Promise<UnifiedModel[]> {
     all.push(...models);
   }
 
-  if (!isProduction()) {
+  if (!isProduction() && isLocalModelManagementEnabled()) {
     try {
       const hfModels = await readCachedHfModels();
       all.push(...hfModels);
@@ -794,7 +795,7 @@ async function collectProviderModelsForKind(
   const out: UnifiedModel[] = [];
   const providerIds = filterProviderIdsForSurface(
     await getAvailableProviderIds(userId)
-  ) as ProviderId[];
+  );
   for (const providerId of providerIds) {
     await safeProviderCall(
       "availableForKind",
@@ -881,7 +882,7 @@ export const modelsRouter = router({
       const infos: Array<{ provider: string; capabilities: string[] }> = [];
       const providerIds = filterProviderIdsForSurface(
         await getAvailableProviderIds(userId)
-      ) as ProviderId[];
+      );
       for (const providerId of providerIds) {
         const instance = await instantiateProvider(providerId, userId);
         if (!instance) continue;
@@ -1218,8 +1219,9 @@ export const modelsRouter = router({
   llmByProvider: protectedProcedure
     .input(providerInput)
     .output(modelsListOutput)
-    .query(async ({ ctx, input }) =>
-      safeProviderCall(
+    .query(async ({ ctx, input }) => {
+      if (!isProviderVisibleForSurface(input.provider)) return [];
+      return safeProviderCall(
         "llmByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
@@ -1241,8 +1243,8 @@ export const modelsRouter = router({
           );
         },
         []
-      )
-    ),
+      );
+    }),
 
   /**
    * Image models by provider.
@@ -1250,8 +1252,9 @@ export const modelsRouter = router({
   imageByProvider: protectedProcedure
     .input(providerInput)
     .output(modelsListOutput)
-    .query(async ({ ctx, input }) =>
-      safeProviderCall(
+    .query(async ({ ctx, input }) => {
+      if (!isProviderVisibleForSurface(input.provider)) return [];
+      return safeProviderCall(
         "imageByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
@@ -1264,14 +1267,16 @@ export const modelsRouter = router({
           return models.map((m) => toUnifiedModel(m, "image_model"));
         },
         []
-      )
-    ),
+      );
+    }),
 
   /**
    * All TTS models across all providers.
    */
   tts: protectedProcedure.query(async ({ ctx }) => {
-    const availableIds = await getAvailableProviderIds(ctx.userId);
+    const availableIds = filterProviderIdsForSurface(
+      await getAvailableProviderIds(ctx.userId)
+    );
     const results = await Promise.all(
       availableIds.map((providerId) =>
         safeProviderCall(
@@ -1296,8 +1301,9 @@ export const modelsRouter = router({
   ttsByProvider: protectedProcedure
     .input(providerInput)
     .output(modelsListOutput)
-    .query(async ({ ctx, input }) =>
-      safeProviderCall(
+    .query(async ({ ctx, input }) => {
+      if (!isProviderVisibleForSurface(input.provider)) return [];
+      return safeProviderCall(
         "ttsByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
@@ -1310,14 +1316,16 @@ export const modelsRouter = router({
           return models.map((m) => toUnifiedModel(m, "tts_model"));
         },
         []
-      )
-    ),
+      );
+    }),
 
   /**
    * All ASR models across all providers.
    */
   asr: protectedProcedure.query(async ({ ctx }) => {
-    const availableIds = await getAvailableProviderIds(ctx.userId);
+    const availableIds = filterProviderIdsForSurface(
+      await getAvailableProviderIds(ctx.userId)
+    );
     const results = await Promise.all(
       availableIds.map((providerId) =>
         safeProviderCall(
@@ -1342,8 +1350,9 @@ export const modelsRouter = router({
   asrByProvider: protectedProcedure
     .input(providerInput)
     .output(modelsListOutput)
-    .query(async ({ ctx, input }) =>
-      safeProviderCall(
+    .query(async ({ ctx, input }) => {
+      if (!isProviderVisibleForSurface(input.provider)) return [];
+      return safeProviderCall(
         "asrByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
@@ -1356,14 +1365,16 @@ export const modelsRouter = router({
           return models.map((m) => toUnifiedModel(m, "asr_model"));
         },
         []
-      )
-    ),
+      );
+    }),
 
   /**
    * All video models across all providers.
    */
   video: protectedProcedure.query(async ({ ctx }) => {
-    const availableIds = await getAvailableProviderIds(ctx.userId);
+    const availableIds = filterProviderIdsForSurface(
+      await getAvailableProviderIds(ctx.userId)
+    );
     const results = await Promise.all(
       availableIds.map((providerId) =>
         safeProviderCall(
@@ -1388,8 +1399,9 @@ export const modelsRouter = router({
   videoByProvider: protectedProcedure
     .input(providerInput)
     .output(modelsListOutput)
-    .query(async ({ ctx, input }) =>
-      safeProviderCall(
+    .query(async ({ ctx, input }) => {
+      if (!isProviderVisibleForSurface(input.provider)) return [];
+      return safeProviderCall(
         "videoByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
@@ -1402,8 +1414,8 @@ export const modelsRouter = router({
           return models.map((m) => toUnifiedModel(m, "video_model"));
         },
         []
-      )
-    ),
+      );
+    }),
 
   /**
    * Embedding models by provider.
@@ -1411,8 +1423,9 @@ export const modelsRouter = router({
   embeddingByProvider: protectedProcedure
     .input(providerInput)
     .output(modelsListOutput)
-    .query(async ({ ctx, input }) =>
-      safeProviderCall(
+    .query(async ({ ctx, input }) => {
+      if (!isProviderVisibleForSurface(input.provider)) return [];
+      return safeProviderCall(
         "embeddingByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
@@ -1425,8 +1438,8 @@ export const modelsRouter = router({
           return models.map((m) => toUnifiedModel(m, "embedding_model"));
         },
         []
-      )
-    ),
+      );
+    }),
 
   /**
    * Ollama model info (stub).
