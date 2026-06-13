@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   MorpheusClient,
+  type MorpheusStreamEvent,
   parseMorpheusSseFrame,
 } from "../src/agent/morpheus-client.js";
 
@@ -32,6 +33,36 @@ const streamResponse = (chunks: string[], init?: ResponseInit) => {
   );
 };
 
+const trackedStreamResponse = (chunks: string[], close: boolean) => {
+  const encoder = new TextEncoder();
+  let cancelCount = 0;
+
+  const response = new Response(
+    new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const chunk of chunks) {
+          controller.enqueue(encoder.encode(chunk));
+        }
+        if (close) {
+          controller.close();
+        }
+      },
+      cancel() {
+        cancelCount += 1;
+      },
+    }),
+    {
+      status: 200,
+      headers: { "content-type": "text/event-stream" },
+    },
+  );
+
+  return {
+    response,
+    getCancelCount: () => cancelCount,
+  };
+};
+
 const makeFetchMock = (responses: Response[]) => {
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
   const fetchFn: typeof fetch = async (input, init) => {
@@ -46,10 +77,8 @@ const makeFetchMock = (responses: Response[]) => {
   return { fetchFn, calls };
 };
 
-const collectStream = async (
-  stream: AsyncIterable<ReturnType<typeof parseMorpheusSseFrame>>,
-) => {
-  const events: Array<ReturnType<typeof parseMorpheusSseFrame>> = [];
+const collectStream = async (stream: AsyncIterable<MorpheusStreamEvent>) => {
+  const events: MorpheusStreamEvent[] = [];
   for await (const event of stream) {
     events.push(event);
   }
@@ -243,6 +272,44 @@ describe("MorpheusClient.streamPrompt", () => {
       prompt: "hello",
       tools: [{ name: "search" }],
     });
+  });
+
+  it("cancels the response body when the consumer exits early", async () => {
+    const tracked = trackedStreamResponse(
+      ['data: {"type":"text_delta","delta":"hello"}\n\n'],
+      false,
+    );
+    const { fetchFn } = makeFetchMock([tracked.response]);
+    const client = new MorpheusClient({
+      baseUrl: "https://morpheus.example",
+      fetchFn,
+    });
+
+    const events: MorpheusStreamEvent[] = [];
+    for await (const event of client.streamPrompt({
+      sessionId: "s-1",
+      prompt: "hello",
+    })) {
+      events.push(event);
+      break;
+    }
+
+    expect(events).toEqual([{ type: "text_delta", text: "hello" }]);
+    expect(tracked.getCancelCount()).toBe(1);
+  });
+
+  it("does not cancel the response body after natural EOF", async () => {
+    const tracked = trackedStreamResponse(['data: {"type":"done"}\n\n'], true);
+    const { fetchFn } = makeFetchMock([tracked.response]);
+    const client = new MorpheusClient({
+      baseUrl: "https://morpheus.example",
+      fetchFn,
+    });
+
+    await expect(
+      collectStream(client.streamPrompt({ sessionId: "s-1", prompt: "hi" })),
+    ).resolves.toEqual([{ type: "done" }]);
+    expect(tracked.getCancelCount()).toBe(0);
   });
 
   it("throws on failed status or missing body", async () => {

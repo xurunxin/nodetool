@@ -187,11 +187,13 @@ export class MorpheusClient {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
+    let reachedEof = false;
 
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
+          reachedEof = true;
           break;
         }
 
@@ -221,6 +223,9 @@ export class MorpheusClient {
         }
       }
     } finally {
+      if (!reachedEof) {
+        await reader.cancel().catch(() => undefined);
+      }
       reader.releaseLock();
     }
   }
