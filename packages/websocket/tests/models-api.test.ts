@@ -8,7 +8,12 @@ import {
   type LanguageModel,
   type ProviderId
 } from "@nodetool-ai/runtime";
-import { readCachedHfModels } from "@nodetool-ai/huggingface";
+import {
+  deleteCachedHfModel,
+  getModelsByHfType,
+  readCachedHfModels,
+  searchCachedHfModels
+} from "@nodetool-ai/huggingface";
 import type { UnifiedModel } from "@nodetool-ai/protocol";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { handleModelsApiRequest } from "../src/models-api.js";
@@ -35,7 +40,10 @@ vi.mock("@nodetool-ai/huggingface", async (orig) => {
   const actual = await orig<typeof import("@nodetool-ai/huggingface")>();
   return {
     ...actual,
-    readCachedHfModels: vi.fn()
+    deleteCachedHfModel: vi.fn(),
+    getModelsByHfType: vi.fn(),
+    readCachedHfModels: vi.fn(),
+    searchCachedHfModels: vi.fn()
   };
 });
 
@@ -123,7 +131,10 @@ describe("REST models API surface", () => {
       async (provider) => new TestProvider(provider)
     );
     vi.mocked(getSecret).mockResolvedValue(null);
+    vi.mocked(deleteCachedHfModel).mockResolvedValue(false);
+    vi.mocked(getModelsByHfType).mockResolvedValue([]);
     vi.mocked(readCachedHfModels).mockResolvedValue([]);
+    vi.mocked(searchCachedHfModels).mockResolvedValue([]);
     vi.mocked(access).mockRejectedValue(
       Object.assign(new Error("ENOENT"), { code: "ENOENT" })
     );
@@ -217,6 +228,85 @@ describe("REST models API surface", () => {
     expect(readdir).not.toHaveBeenCalled();
   });
 
+  it("hides cached HuggingFace models in API-first mode", async () => {
+    vi.mocked(readCachedHfModels).mockResolvedValue([
+      {
+        id: "cached-local",
+        name: "Cached Local",
+        type: "language_model",
+        repo_id: "user/local",
+        path: null,
+        downloaded: true,
+        tags: []
+      }
+    ]);
+
+    const { body, status } = await requestJson("/api/models/huggingface");
+
+    expect(status).toBe(200);
+    expect(body).toEqual([]);
+    expect(readCachedHfModels).not.toHaveBeenCalled();
+  });
+
+  it("disables HuggingFace cache deletion in API-first mode without deleting local state", async () => {
+    vi.mocked(deleteCachedHfModel).mockResolvedValue(true);
+
+    const { body, status } = await requestJson(
+      "/api/models/huggingface?repo_id=user/local",
+      { method: "DELETE" }
+    );
+
+    expect(status).toBe(200);
+    expect(body).toBe(false);
+    expect(deleteCachedHfModel).not.toHaveBeenCalled();
+    expect(access).not.toHaveBeenCalled();
+    expect(readdir).not.toHaveBeenCalled();
+  });
+
+  it("hides HuggingFace cache search in API-first mode", async () => {
+    vi.mocked(searchCachedHfModels).mockResolvedValue([
+      {
+        id: "whisper-local",
+        name: "Whisper Local",
+        type: "language_model",
+        repo_id: "openai/whisper-small",
+        path: null,
+        downloaded: true,
+        tags: []
+      }
+    ]);
+
+    const { body, status } = await requestJson(
+      "/api/models/huggingface/search?query=whisper"
+    );
+
+    expect(status).toBe(200);
+    expect(body).toEqual([]);
+    expect(searchCachedHfModels).not.toHaveBeenCalled();
+  });
+
+  it("hides HuggingFace type lookups in API-first mode", async () => {
+    vi.mocked(getModelsByHfType).mockResolvedValue([
+      {
+        id: "text-generation-local",
+        name: "Text Generation Local",
+        type: "language_model",
+        repo_id: "user/text-generation",
+        path: null,
+        downloaded: true,
+        tags: []
+      }
+    ]);
+
+    const { body, status } = await requestJson(
+      "/api/models/huggingface/type/text-generation"
+    );
+
+    expect(status).toBe(200);
+    expect(body).toEqual([]);
+    expect(getModelsByHfType).not.toHaveBeenCalled();
+  });
+
   it("hides the direct Ollama REST model list in API-first mode", async () => {
     vi.mocked(isProviderConfigured).mockResolvedValue(true);
 
@@ -255,6 +345,27 @@ describe("REST models API surface", () => {
       expect.any(Function)
     );
   });
+
+  it.each([
+    ["/api/models/tts/ollama", "ollama"],
+    ["/api/models/asr/lmstudio", "lmstudio"],
+    ["/api/models/video/vllm", "vllm"],
+    ["/api/models/embedding/transformers_js", "transformers_js"]
+  ] as const)(
+    "hides direct local provider path %s in API-first mode",
+    async (path, provider) => {
+      vi.mocked(isProviderConfigured).mockResolvedValue(true);
+
+      const { body, status } = await requestJson(path);
+
+      expect(status).toBe(200);
+      expect(body).toEqual([]);
+      expect(getProvider).not.toHaveBeenCalledWith(
+        provider,
+        expect.any(Function)
+      );
+    }
+  );
 
   it("restores direct local provider paths in local-first mode", async () => {
     enableLocalModelSurface();
@@ -358,6 +469,13 @@ describe("REST models API surface", () => {
     expect(body).toEqual([]);
     expect(access).not.toHaveBeenCalled();
     expect(readdir).not.toHaveBeenCalled();
+  });
+
+  it("returns null for Ollama model info in API-first mode", async () => {
+    const { body, status } = await requestJson("/api/models/ollama_model_info");
+
+    expect(status).toBe(200);
+    expect(body).toBeNull();
   });
 
   it("returns an unavailable Ollama pull response in API-first mode", async () => {
