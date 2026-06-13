@@ -61,6 +61,21 @@ vi.mock("@nodetool-ai/models", async (orig) => {
 
 import { getSecret } from "@nodetool-ai/models";
 
+// ── Mock custom endpoint metadata ────────────────────────────────────────────
+
+vi.mock("../src/custom-model-endpoints.js", async (orig) => {
+  const actual = await orig<typeof import("../src/custom-model-endpoints.js")>();
+  return {
+    ...actual,
+    listCustomModelEndpoints: vi.fn()
+  };
+});
+
+import {
+  customEndpointProviderId,
+  listCustomModelEndpoints
+} from "../src/custom-model-endpoints.js";
+
 // ── Mock node:fs/promises & node:fs to avoid real disk I/O ────────────────
 
 vi.mock("node:fs/promises", async (orig) => {
@@ -159,6 +174,33 @@ function makeProvider(
   };
 }
 
+function customEndpoint(
+  overrides: Partial<{
+    id: string;
+    name: string;
+    kind: "openai" | "anthropic";
+    enabled: boolean;
+  }> = {}
+) {
+  return {
+    id: "custom_gateway",
+    name: "Custom Gateway",
+    kind: "openai" as const,
+    baseUrl: "https://custom.example.test/v1",
+    enabled: true,
+    models: [
+      {
+        id: "custom-chat",
+        name: "Custom Chat",
+        contextWindow: 128000
+      }
+    ],
+    createdAt: "2026-06-14T00:00:00.000Z",
+    updatedAt: "2026-06-14T00:00:00.000Z",
+    ...overrides
+  };
+}
+
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 describe("models router", () => {
@@ -174,6 +216,7 @@ describe("models router", () => {
     (getModelsByHfType as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     (deleteCachedHfModel as ReturnType<typeof vi.fn>).mockResolvedValue(true);
     (getHuggingfaceFileInfos as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     // Default: disk access returns ENOENT (nothing cached)
     (access as ReturnType<typeof vi.fn>).mockRejectedValue(
       Object.assign(new Error("ENOENT"), { code: "ENOENT" })
@@ -469,6 +512,40 @@ describe("models router", () => {
         expect(providers.has(providerId)).toBe(false);
       }
     });
+
+    it("includes enabled custom endpoint language models from metadata without instantiating the custom provider", async () => {
+      (listRegisteredProviderIds as ReturnType<typeof vi.fn>).mockReturnValue([]);
+      (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
+        customEndpoint(),
+        customEndpoint({
+          id: "disabled_gateway",
+          name: "Disabled Gateway",
+          enabled: false,
+          models: [{ id: "disabled-chat", name: "Disabled Chat" }]
+        })
+      ]);
+
+      const caller = createCaller(makeCtx());
+      const result = await caller.models.all();
+      const customModel = result.find((model) => model.id === "custom-chat");
+
+      expect(customModel).toMatchObject({
+        id: "custom-chat",
+        name: "Custom Chat",
+        type: "language_model",
+        provider: customEndpointProviderId("custom_gateway"),
+        repo_id: null,
+        path: null,
+        downloaded: false,
+        tags: [customEndpointProviderId("custom_gateway")],
+        supports_tools: null
+      });
+      expect(result.map((model) => model.id)).not.toContain("disabled-chat");
+      expect(getProvider).not.toHaveBeenCalledWith(
+        customEndpointProviderId("custom_gateway"),
+        expect.any(Function)
+      );
+    });
   });
 
   // ── availableForKind ─────────────────────────────────────────────────────
@@ -501,6 +578,35 @@ describe("models router", () => {
       for (const providerId of LOCAL_PROVIDER_IDS) {
         expect(providers.has(providerId)).toBe(false);
       }
+    });
+
+    it("includes enabled custom endpoint models for text generation and skips disabled endpoints", async () => {
+      (listRegisteredProviderIds as ReturnType<typeof vi.fn>).mockReturnValue([]);
+      (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
+        customEndpoint(),
+        customEndpoint({
+          id: "disabled_gateway",
+          name: "Disabled Gateway",
+          enabled: false,
+          models: [{ id: "disabled-chat", name: "Disabled Chat" }]
+        })
+      ]);
+
+      const caller = createCaller(makeCtx());
+      const result = await caller.models.availableForKind({
+        kind: "text_generation"
+      });
+      const ids = result.map((model) => model.id);
+
+      expect(ids).toContain("custom-chat");
+      expect(ids).not.toContain("disabled-chat");
+      expect(
+        result.find((model) => model.id === "custom-chat")?.provider
+      ).toBe(customEndpointProviderId("custom_gateway"));
+      expect(getProvider).not.toHaveBeenCalledWith(
+        customEndpointProviderId("custom_gateway"),
+        expect.any(Function)
+      );
     });
   });
 

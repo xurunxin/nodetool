@@ -50,6 +50,10 @@ import {
   isLocalModelManagementEnabled,
   isProviderVisibleForSurface
 } from "../../model-surface.js";
+import {
+  customEndpointProviderId,
+  listCustomModelEndpoints
+} from "../../custom-model-endpoints.js";
 
 function assertLocalModelManagementEnabled(): void {
   if (!isLocalModelManagementEnabled()) {
@@ -635,6 +639,36 @@ function toUnifiedLanguageModel(
   };
 }
 
+type CustomModelEndpoint = Awaited<
+  ReturnType<typeof listCustomModelEndpoints>
+>[number];
+
+function customEndpointModelsToUnified(
+  endpoint: CustomModelEndpoint
+): UnifiedModel[] {
+  const provider = customEndpointProviderId(endpoint.id);
+  return endpoint.models.map((model) => ({
+    id: model.id,
+    type: "language_model",
+    name: model.name,
+    provider,
+    repo_id: null,
+    path: null,
+    downloaded: false,
+    tags: [provider],
+    supports_tools: null
+  }));
+}
+
+async function getCustomEndpointLanguageModels(
+  userId: string
+): Promise<UnifiedModel[]> {
+  const endpoints = await listCustomModelEndpoints(userId);
+  return endpoints
+    .filter((endpoint) => endpoint.enabled)
+    .flatMap(customEndpointModelsToUnified);
+}
+
 function toUnifiedModel(
   model: {
     id: string;
@@ -708,6 +742,8 @@ async function getAllModels(userId: string): Promise<UnifiedModel[]> {
   for (const models of providerModelsArrays) {
     all.push(...models);
   }
+
+  all.push(...(await getCustomEndpointLanguageModels(userId)));
 
   if (!isProduction() && isLocalModelManagementEnabled()) {
     try {
@@ -793,6 +829,9 @@ async function collectProviderModelsForKind(
   kind: ModelSearchKind
 ): Promise<UnifiedModel[]> {
   const out: UnifiedModel[] = [];
+  if (kind === "text_generation") {
+    out.push(...(await getCustomEndpointLanguageModels(userId)));
+  }
   const providerIds = filterProviderIdsForSurface(
     await getAvailableProviderIds(userId)
   );

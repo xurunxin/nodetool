@@ -14,6 +14,7 @@ import type {
   MessageContent,
   MessageImageContent,
   MessageTextContent,
+  ProviderId,
   ProviderStreamItem,
   ProviderTool,
   ToolCall
@@ -23,6 +24,7 @@ interface AnthropicProviderOptions {
   client?: Anthropic;
   clientFactory?: (apiKey: string) => Anthropic;
   fetchFn?: typeof fetch;
+  providerId?: ProviderId;
 }
 
 
@@ -77,7 +79,7 @@ export class AnthropicProvider extends BaseProvider {
     secrets: { ANTHROPIC_API_KEY?: string },
     options: AnthropicProviderOptions = {}
   ) {
-    super("anthropic");
+    super(options.providerId ?? "anthropic");
 
     const apiKey = secrets.ANTHROPIC_API_KEY;
     if (!apiKey || !apiKey.trim()) {
