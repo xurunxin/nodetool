@@ -816,10 +816,10 @@ export async function handleModelsApiRequest(
       }
     }
     if (request.method === "DELETE") {
-      const repoId = url.searchParams.get("repo_id");
-      if (!repoId) return errorResponse(400, "Missing repo_id parameter");
       if (!isLocalModelManagementEnabled())
         return disabledLocalModelManagementResponse();
+      const repoId = url.searchParams.get("repo_id");
+      if (!repoId) return errorResponse(400, "Missing repo_id parameter");
       if (isProduction())
         return jsonResponse(false);
       try {
@@ -872,6 +872,8 @@ export async function handleModelsApiRequest(
 
   if (path === "/ollama") {
     if (request.method === "DELETE") {
+      if (!isLocalModelManagementEnabled())
+        return disabledLocalModelManagementResponse();
       if (isProduction()) return jsonResponse(false);
       return jsonResponse(false);
     }

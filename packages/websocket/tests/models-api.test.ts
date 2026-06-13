@@ -283,6 +283,20 @@ describe("REST models API surface", () => {
     expect(readdir).not.toHaveBeenCalled();
   });
 
+  it("rejects HuggingFace cache deletion before repo_id validation in API-first mode", async () => {
+    const { body, status } = await requestJson("/api/models/huggingface", {
+      method: "DELETE"
+    });
+
+    expect(status).toBe(403);
+    expect(body).toEqual({
+      detail: "Local model management is disabled"
+    });
+    expect(deleteCachedHfModel).not.toHaveBeenCalled();
+    expect(access).not.toHaveBeenCalled();
+    expect(readdir).not.toHaveBeenCalled();
+  });
+
   it("hides HuggingFace cache search in API-first mode", async () => {
     vi.mocked(searchCachedHfModels).mockResolvedValue([
       {
@@ -338,6 +352,17 @@ describe("REST models API surface", () => {
       "ollama",
       expect.any(Function)
     );
+  });
+
+  it("rejects Ollama delete requests in API-first mode", async () => {
+    const { body, status } = await requestJson("/api/models/ollama", {
+      method: "DELETE"
+    });
+
+    expect(status).toBe(403);
+    expect(body).toEqual({
+      detail: "Local model management is disabled"
+    });
   });
 
   it("hides direct local language provider paths in API-first mode", async () => {
