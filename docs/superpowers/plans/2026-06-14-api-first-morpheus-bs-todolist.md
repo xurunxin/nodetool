@@ -11,7 +11,8 @@ support, MorpheusCore agent replacement, and thin desktop shell direction.
 
 **Implementation Plan:** `docs/superpowers/plans/2026-06-14-api-first-morpheus-bs.md`
 
-**Current Active Stage:** Phase 1, Task 2: API-first model surface guard.
+**Current Active Stage:** Phase 1, Task 3: apply model surface to server model
+APIs.
 
 **Status Legend:** `[x] done`, `[~] in progress`, `[ ] pending`, `[!] blocked`
 
@@ -40,7 +41,7 @@ support, MorpheusCore agent replacement, and thin desktop shell direction.
     `http://localhost:3000`; `nodetool-canvas` now resolves by display name and
     exposes `forward_to_frontend`.
 - [~] **M1: API-first model surface**
-  - Next task: Task 2, API-first model surface guard.
+  - Next task: Task 3, apply model surface filtering to server model APIs.
   - Exit criteria: local-only model providers are hidden by default from server
     model APIs and agent-visible model search.
 - [ ] **M2: Custom OpenAI/Anthropic-compatible endpoints**
@@ -101,12 +102,21 @@ support, MorpheusCore agent replacement, and thin desktop shell direction.
       Windows before tests start because the web workspace script uses
       `TZ=UTC jest --forceExit`.
     - Root lint exits `0` with pre-existing React hook and curly warnings.
-- [ ] **Task 2: API-first model surface guard**
+- [x] **Task 2: API-first model surface guard**
   - Create: `packages/websocket/src/model-surface.ts`
   - Test: `packages/websocket/tests/model-surface.test.ts`
   - Verify:
     - `rtk npm run test --workspace=packages/websocket -- model-surface`
+    - `rtk npm run lint --workspace=packages/websocket`
+    - `rtk npm run typecheck`
+    - `rtk npm run lint`
   - Commit target: `feat(server): add api-first model surface guard`
+  - Commit: `49f932d6a`
+  - Notes:
+    - `rtk npm run test` was attempted after this task and is still blocked on
+      Windows before tests start because the web workspace script uses
+      `TZ=UTC jest --forceExit`.
+    - Root lint exits `0` with pre-existing React hook and curly warnings.
 - [ ] **Task 3: Apply model surface to server model APIs**
   - Modify: `packages/websocket/src/trpc/routers/models.ts`
   - Modify: `packages/websocket/src/models-api.ts`
@@ -223,4 +233,6 @@ support, MorpheusCore agent replacement, and thin desktop shell direction.
 - Added this progress tracker.
 - Marked design spec and implementation plan as complete.
 - Marked MorpheusCore local-profile route fix and live API smoke as complete.
-- Set next active task to Phase 1, Task 1.
+- Completed Task 1 and recorded commit `fc330214a`.
+- Completed Task 2 and recorded commit `49f932d6a`.
+- Set next active task to Phase 1, Task 3.
