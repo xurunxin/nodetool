@@ -52,6 +52,9 @@ interface MorpheusQuerySessionOptions {
   client: MorpheusAgentClient;
 }
 
+type MorpheusToolCallEvent = Extract<MorpheusStreamEvent, { type: "tool_call" }>;
+type EmitAgentMessage = (message: AgentMessage) => void;
+
 export function resolveMorpheusAgentConfig(
   env: MorpheusEnv = process.env,
 ): MorpheusAgentConfig {
@@ -84,6 +87,139 @@ function toThinkingLevel(
   return params?.reasoningEffort;
 }
 
+function resolveFrontendToolCall(
+  event: MorpheusToolCallEvent,
+): { name: string; args: unknown } | null {
+  if (event.name.startsWith("ui_")) {
+    return { name: event.name, args: event.arguments };
+  }
+
+  if (event.name !== "forward_to_frontend") {
+    return null;
+  }
+
+  const forwardType = getStringField(event.arguments, "forwardType");
+  const prefix = "nodetool:";
+  if (!forwardType?.startsWith(prefix)) {
+    return null;
+  }
+
+  const name = forwardType.slice(prefix.length).trim();
+  if (!name) {
+    return null;
+  }
+  return {
+    name,
+    args: parseForwardPayload(event.arguments.payload),
+  };
+}
+
+function getStringField(
+  record: Record<string, unknown>,
+  key: string,
+): string | null {
+  const value = record[key];
+  return typeof value === "string" ? value : null;
+}
+
+function parseForwardPayload(payload: unknown): unknown {
+  if (payload === undefined || payload === null) {
+    return {};
+  }
+  if (typeof payload !== "string") {
+    return payload;
+  }
+  try {
+    return JSON.parse(payload) as unknown;
+  } catch {
+    return { payload };
+  }
+}
+
+function isToolInManifest(
+  manifest: FrontendToolManifest[],
+  name: string,
+): boolean {
+  return manifest.length === 0 || manifest.some((tool) => tool.name === name);
+}
+
+async function executeFrontendToolCall(options: {
+  event: MorpheusToolCallEvent;
+  sessionId: string;
+  transport: AgentTransport | null;
+  manifest: FrontendToolManifest[];
+  emit: EmitAgentMessage;
+}): Promise<void> {
+  const { event, sessionId, transport, manifest, emit } = options;
+  if (!transport?.isAlive) {
+    return;
+  }
+
+  const frontendTool = resolveFrontendToolCall(event);
+  if (!frontendTool) {
+    return;
+  }
+
+  if (!isToolInManifest(manifest, frontendTool.name)) {
+    emitFrontendToolResult(sessionId, event.id, frontendTool.name, {
+      isError: true,
+      result: null,
+      error: `Frontend tool is not available: ${frontendTool.name}`,
+    }, emit);
+    return;
+  }
+
+  try {
+    const result = await transport.executeTool(
+      sessionId,
+      event.id,
+      frontendTool.name,
+      frontendTool.args,
+    );
+    emitFrontendToolResult(
+      sessionId,
+      event.id,
+      frontendTool.name,
+      { isError: false, result },
+      emit,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    log.warn(
+      `Morpheus frontend tool ${frontendTool.name} failed in session ${sessionId}: ${message}`,
+    );
+    emitFrontendToolResult(
+      sessionId,
+      event.id,
+      frontendTool.name,
+      { isError: true, result: null, error: message },
+      emit,
+    );
+  }
+}
+
+function emitFrontendToolResult(
+  sessionId: string,
+  toolCallId: string,
+  name: string,
+  result: { isError: boolean; result: unknown; error?: string },
+  emit: EmitAgentMessage,
+): void {
+  emit({
+    type: "stream_event",
+    uuid: randomUUID(),
+    session_id: sessionId,
+    event_type: "morpheus_frontend_tool_result",
+    event: {
+      toolCallId,
+      name,
+      result: result.result,
+      isError: result.isError,
+      ...(result.error ? { error: result.error } : {}),
+    },
+  });
+}
+
 export class MorpheusQuerySession implements AgentQuerySession {
   private readonly modelParams?: AgentModelParams;
   private readonly config: MorpheusAgentConfig;
@@ -102,9 +238,9 @@ export class MorpheusQuerySession implements AgentQuerySession {
 
   async send(
     message: string,
-    _transport: AgentTransport | null,
+    transport: AgentTransport | null,
     fallbackSessionId: string,
-    _manifest: FrontendToolManifest[],
+    manifest: FrontendToolManifest[],
     onMessage?: (message: AgentMessage) => void,
     _mcpServerUrl?: string | null,
   ): Promise<AgentMessage[]> {
@@ -188,6 +324,13 @@ export class MorpheusQuerySession implements AgentQuerySession {
               event: event.workDescription
                 ? { workDescription: event.workDescription }
                 : undefined,
+            });
+            await executeFrontendToolCall({
+              event,
+              sessionId: currentSessionId,
+              transport,
+              manifest,
+              emit,
             });
             break;
           case "tool_result":

@@ -129,11 +129,12 @@ describe("MorpheusAgentSdkProvider", () => {
       userId: "alice",
       modelParams: { reasoningEffort: "high" },
     });
+    const transport = makeTransport();
     const streamed: AgentMessage[] = [];
 
     const output = await session.send(
       "inspect the canvas",
-      makeTransport(),
+      transport,
       "tmp-session",
       [] satisfies FrontendToolManifest[],
       (message) => streamed.push(message),
@@ -190,6 +191,17 @@ describe("MorpheusAgentSdkProvider", () => {
       expect.objectContaining({
         type: "stream_event",
         session_id: "morph-session-1",
+        event_type: "morpheus_frontend_tool_result",
+        event: {
+          toolCallId: "call_1",
+          name: "ui_graph",
+          result: {},
+          isError: false,
+        },
+      }),
+      expect.objectContaining({
+        type: "stream_event",
+        session_id: "morph-session-1",
         event_type: "morpheus_tool_result",
         event: expect.objectContaining({
           id: "call_1",
@@ -203,6 +215,12 @@ describe("MorpheusAgentSdkProvider", () => {
         subtype: "success",
       }),
     ]);
+    expect(transport.executeTool).toHaveBeenCalledWith(
+      "morph-session-1",
+      "call_1",
+      "ui_graph",
+      { action: "inspect" },
+    );
   });
 
   it("uses resumeSessionId without creating a new remote session", async () => {
