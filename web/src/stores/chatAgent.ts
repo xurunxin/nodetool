@@ -35,6 +35,7 @@ export interface ChatAgentSlice {
   agentWorkspacePath: string | null;
   agentSessionByThread: Record<string, string>;
   agentThreadBySession: Record<string, string>;
+  agentSessionConfigByThread: Record<string, AgentSessionConfig>;
   agentStreamUnsub: (() => void) | null;
 
   loadAgentModels: () => Promise<void>;
@@ -78,6 +79,13 @@ export interface ChatAgentSlice {
   stopPi: (threadId: string) => void;
 }
 
+export interface AgentSessionConfig {
+  provider: AgentProvider;
+  model: string;
+  workspacePath: string | null;
+  chatProviderId: string | null;
+}
+
 const DEFAULT_AGENT_PROVIDER: AgentProvider = "morpheus";
 const FALLBACK_AGENT_PROVIDER: AgentProvider = "llm";
 
@@ -113,6 +121,7 @@ function mirrorAgentState(
       | "agentWorkspacePath"
       | "agentSessionByThread"
       | "agentThreadBySession"
+      | "agentSessionConfigByThread"
       | "agentStreamUnsub"
     >
   >
@@ -145,6 +154,10 @@ function mirrorAgentState(
   return mirrored;
 }
 
+function invalidateAgentModelLoads(): void {
+  loadAgentModelsToken += 1;
+}
+
 function pickDefaultModel(models: AgentModelDescriptor[]): string {
   return (models.find((m) => m.isDefault) ?? models[0] ?? null)?.id ?? "";
 }
@@ -153,6 +166,31 @@ function selectedAgentModelDescriptor(
   state: GlobalChatState
 ): AgentModelDescriptor | undefined {
   return state.agentModels.find((m) => m.id === state.agentModel);
+}
+
+function buildSessionConfig(state: GlobalChatState): AgentSessionConfig {
+  const descriptor = selectedAgentModelDescriptor(state);
+  return {
+    provider: state.agentProvider,
+    model: state.agentModel,
+    workspacePath:
+      state.agentProvider === "pi" ? state.agentWorkspacePath ?? null : null,
+    chatProviderId:
+      state.agentProvider === "llm" ? descriptor?.chatProviderId ?? null : null
+  };
+}
+
+function sessionConfigsMatch(
+  left: AgentSessionConfig | undefined,
+  right: AgentSessionConfig
+): boolean {
+  return (
+    !!left &&
+    left.provider === right.provider &&
+    left.model === right.model &&
+    left.workspacePath === right.workspacePath &&
+    left.chatProviderId === right.chatProviderId
+  );
 }
 
 function handleAgentStream(event: AgentStreamEvent, set: Set, get: Get): void {
@@ -251,8 +289,11 @@ async function ensureAgentSession(
   const state = get();
   const { agentSessionByThread, agentModel, agentProvider, agentWorkspacePath } =
     state;
+  const config = buildSessionConfig(state);
   const existing = agentSessionByThread[threadId];
-  if (existing && liveSessions.has(existing)) {
+  const existingConfig = state.agentSessionConfigByThread[threadId];
+  const canReuseExisting = sessionConfigsMatch(existingConfig, config);
+  if (existing && liveSessions.has(existing) && canReuseExisting) {
     return existing;
   }
 
@@ -262,7 +303,7 @@ async function ensureAgentSession(
     provider: agentProvider,
     model: agentModel
   };
-  if (existing) {
+  if (existing && canReuseExisting) {
     options.resumeSessionId = existing;
   }
   if (agentProvider === "pi" && agentWorkspacePath) {
@@ -286,15 +327,21 @@ async function ensureAgentSession(
       ...current.agentThreadBySession,
       [sessionId]: threadId
     };
+    const agentSessionConfigByThreadNext = {
+      ...current.agentSessionConfigByThread,
+      [threadId]: config
+    };
     return mirrorAgentState({
       agentSessionByThread: agentSessionByThreadNext,
-      agentThreadBySession: agentThreadBySessionNext
+      agentThreadBySession: agentThreadBySessionNext,
+      agentSessionConfigByThread: agentSessionConfigByThreadNext
     });
   });
   return sessionId;
 }
 
 function setProvider(set: Set, provider: AgentProvider): void {
+  invalidateAgentModelLoads();
   set({
     agentProvider: provider,
     ...mirrorAgentState({
@@ -315,6 +362,7 @@ export function createChatAgentSlice(set: Set, get: Get): ChatAgentSlice {
     agentWorkspacePath: null,
     agentSessionByThread: {},
     agentThreadBySession: {},
+    agentSessionConfigByThread: {},
     agentStreamUnsub: null,
 
     piModel: "",
@@ -328,6 +376,8 @@ export function createChatAgentSlice(set: Set, get: Get): ChatAgentSlice {
 
     loadAgentModels: async () => {
       const { agentProvider, agentWorkspacePath } = get();
+      const requestedProvider = agentProvider;
+      const requestedWorkspacePath = agentWorkspacePath;
       const token = ++loadAgentModelsToken;
       set(mirrorAgentState({ agentModelsLoading: true }));
       try {
@@ -342,6 +392,13 @@ export function createChatAgentSlice(set: Set, get: Get): ChatAgentSlice {
                 )
               };
         if (token !== loadAgentModelsToken) {
+          return;
+        }
+        const current = get();
+        if (
+          current.agentProvider !== requestedProvider ||
+          current.agentWorkspacePath !== requestedWorkspacePath
+        ) {
           return;
         }
         set((state) => {
@@ -365,18 +422,28 @@ export function createChatAgentSlice(set: Set, get: Get): ChatAgentSlice {
       }
     },
 
-    setAgentModel: (model: string) =>
-      set(mirrorAgentState({ agentModel: model })),
+    setAgentModel: (model: string) => {
+      invalidateAgentModelLoads();
+      set(
+        mirrorAgentState({
+          agentModel: model,
+          agentModelsLoading: false
+        })
+      );
+    },
 
     setAgentProvider: (provider: AgentProvider) => setProvider(set, provider),
 
-    setAgentWorkspace: (workspaceId, workspacePath) =>
+    setAgentWorkspace: (workspaceId, workspacePath) => {
+      invalidateAgentModelLoads();
       set(
         mirrorAgentState({
           agentWorkspaceId: workspaceId,
-          agentWorkspacePath: workspacePath
+          agentWorkspacePath: workspacePath,
+          agentModelsLoading: false
         })
-      ),
+      );
+    },
 
     sendAgentMessage: async (threadId: string, text: string) => {
       const trimmed = text.trim();
@@ -462,15 +529,10 @@ export function createChatAgentSlice(set: Set, get: Get): ChatAgentSlice {
       await get().loadAgentModels();
     },
 
-    setPiModel: (model: string) => set(mirrorAgentState({ agentModel: model })),
+    setPiModel: (model: string) => get().setAgentModel(model),
 
     setPiWorkspace: (workspaceId, workspacePath) =>
-      set(
-        mirrorAgentState({
-          agentWorkspaceId: workspaceId,
-          agentWorkspacePath: workspacePath
-        })
-      ),
+      get().setAgentWorkspace(workspaceId, workspacePath),
 
     sendPiMessage: async (threadId: string, text: string) => {
       if (get().agentProvider !== "pi") {
@@ -482,4 +544,3 @@ export function createChatAgentSlice(set: Set, get: Get): ChatAgentSlice {
     stopPi: (threadId: string) => get().stopAgent(threadId)
   };
 }
-

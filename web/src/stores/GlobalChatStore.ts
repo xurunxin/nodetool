@@ -1300,6 +1300,7 @@ const useGlobalChatStore = create<GlobalChatState>()(
         agentWorkspaceId: state.agentWorkspaceId,
         agentWorkspacePath: state.agentWorkspacePath,
         agentSessionByThread: state.agentSessionByThread,
+        agentSessionConfigByThread: state.agentSessionConfigByThread,
         // Deprecated mirrors kept so older builds/imports can still rehydrate.
         piModel: state.piModel,
         piWorkspaceId: state.piWorkspaceId,
@@ -1380,7 +1381,13 @@ const useGlobalChatStore = create<GlobalChatState>()(
                   typeof state.piSessionByThread === "object" &&
                   !Array.isArray(state.piSessionByThread)
                 ? (state.piSessionByThread as Record<string, string>)
-                : {}
+                : {},
+          agentSessionConfigByThread:
+            state.agentSessionConfigByThread &&
+            typeof state.agentSessionConfigByThread === "object" &&
+            !Array.isArray(state.agentSessionConfigByThread)
+              ? (state.agentSessionConfigByThread as GlobalChatState["agentSessionConfigByThread"])
+              : {}
         } as unknown as GlobalChatState;
       },
       onRehydrateStorage: () => (state) => {
@@ -1410,6 +1417,9 @@ const useGlobalChatStore = create<GlobalChatState>()(
               ? asRecord(state.agentSessionByThread)
               : legacyPiSessionByThread;
           state.agentThreadBySession = {};
+          state.agentSessionConfigByThread = asRecord(
+            state.agentSessionConfigByThread
+          ) as GlobalChatState["agentSessionConfigByThread"];
           if (
             state.agentProvider !== "pi" &&
             state.agentProvider !== "llm" &&

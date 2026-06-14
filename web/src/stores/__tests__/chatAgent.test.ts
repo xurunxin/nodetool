@@ -60,6 +60,17 @@ function createTestStore(): StoreApi<TestChatAgentStore> {
   }));
 }
 
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+} {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 describe("chatAgent store slice", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -129,6 +140,109 @@ describe("chatAgent store slice", () => {
       "session-a",
       "hello"
     );
+  });
+
+  it("creates a new session after switching provider for an existing thread", async () => {
+    mockAgentClient.createSession
+      .mockResolvedValueOnce("session-morpheus")
+      .mockResolvedValueOnce("session-llm");
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "morpheus",
+      agentModel: "morpheus/default",
+      agentModels: [morpheusModel]
+    });
+    await store.getState().sendAgentMessage("thread-a", "first");
+
+    store.getState().setAgentProvider("llm");
+    store.setState({
+      agentModel: "claude-sonnet",
+      agentModels: [llmModel]
+    });
+    await store.getState().sendAgentMessage("thread-a", "second");
+
+    expect(mockAgentClient.createSession).toHaveBeenCalledTimes(2);
+    expect(mockAgentClient.createSession).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        provider: "llm",
+        model: "claude-sonnet"
+      })
+    );
+    expect(mockAgentClient.sendMessage).toHaveBeenLastCalledWith(
+      "session-llm",
+      "second"
+    );
+  });
+
+  it("creates a new session after changing model for an existing thread", async () => {
+    mockAgentClient.createSession
+      .mockResolvedValueOnce("session-old-model")
+      .mockResolvedValueOnce("session-new-model");
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "llm",
+      agentModel: "claude-haiku",
+      agentModels: [
+        { ...llmModel, id: "claude-haiku", label: "Claude Haiku" },
+        llmModel
+      ]
+    });
+    await store.getState().sendAgentMessage("thread-a", "first");
+
+    store.getState().setAgentModel("claude-sonnet");
+    await store.getState().sendAgentMessage("thread-a", "second");
+
+    expect(mockAgentClient.createSession).toHaveBeenCalledTimes(2);
+    expect(mockAgentClient.createSession).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        provider: "llm",
+        model: "claude-sonnet"
+      })
+    );
+  });
+
+  it("creates a new session after changing Pi workspace for an existing thread", async () => {
+    mockAgentClient.createSession
+      .mockResolvedValueOnce("session-workspace-a")
+      .mockResolvedValueOnce("session-workspace-b");
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "pi",
+      agentModel: "pi/claude",
+      agentModels: [piModel],
+      agentWorkspaceId: "workspace-a",
+      agentWorkspacePath: "G:/Projects/a"
+    });
+    await store.getState().sendAgentMessage("thread-a", "first");
+
+    store
+      .getState()
+      .setAgentWorkspace("workspace-b", "G:/Projects/b");
+    await store.getState().sendAgentMessage("thread-a", "second");
+
+    expect(mockAgentClient.createSession).toHaveBeenCalledTimes(2);
+    expect(mockAgentClient.createSession).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        provider: "pi",
+        model: "pi/claude",
+        workspacePath: "G:/Projects/b"
+      })
+    );
+  });
+
+  it("drops stale model loads after the provider changes", async () => {
+    const morpheusLoad = deferred<AgentModelDescriptor[]>();
+    mockAgentClient.listModels.mockReturnValueOnce(morpheusLoad.promise);
+    const store = createTestStore();
+
+    const load = store.getState().loadAgentModels();
+    store.getState().setAgentProvider("llm");
+    morpheusLoad.resolve([morpheusModel]);
+    await load;
+
+    expect(store.getState().agentProvider).toBe("llm");
+    expect(store.getState().agentModel).toBe("");
+    expect(store.getState().agentModels).toEqual([]);
   });
 
   it("omits workspacePath when creating a Morpheus agent session", async () => {

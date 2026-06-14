@@ -13,6 +13,7 @@ import { getIsElectronDetails } from "../../../utils/browser";
 import type { WorkspaceResponse } from "../../../stores/ApiTypes";
 import MediaControlChip from "./MediaControlChip";
 import MediaOptionMenu, { type MediaOption } from "./MediaOptionMenu";
+import { getSelectableAgentProviders } from "./agentProviderOptions";
 
 export const agentModeAvailable = true;
 
@@ -81,6 +82,15 @@ const AgentComposerControls: React.FC<{ disabled?: boolean }> = ({
   }, [agentProvider, workspaces, agentWorkspaceId, setAgentWorkspace]);
 
   useEffect(() => {
+    if (agentProvider === "pi" && !piWorkspaceAvailable && !agentWorkspacePath) {
+      setAgentProvider("morpheus");
+    }
+  }, [agentProvider, agentWorkspacePath, setAgentProvider]);
+
+  useEffect(() => {
+    if (agentProvider === "pi" && !piWorkspaceAvailable && !agentWorkspacePath) {
+      return;
+    }
     void loadAgentModels();
   }, [agentProvider, agentWorkspacePath, loadAgentModels]);
 
@@ -95,12 +105,15 @@ const AgentComposerControls: React.FC<{ disabled?: boolean }> = ({
 
   const providerOptions = useMemo<MediaOption<AgentProvider>[]>(
     () =>
-      (["morpheus", "llm", "pi"] as AgentProvider[]).map((provider) => ({
+      getSelectableAgentProviders(
+        piWorkspaceAvailable,
+        !!agentWorkspacePath
+      ).map((provider) => ({
         id: provider,
         label: providerLabels[provider],
         icon: <SmartToyOutlinedIcon fontSize="small" />
       })),
-    [providerLabels]
+    [agentWorkspacePath, providerLabels]
   );
 
   const modelOptions = useMemo<MediaOption<string>[]>(
