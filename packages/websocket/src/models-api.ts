@@ -37,6 +37,11 @@ import {
   isLocalModelManagementEnabled,
   isProviderVisibleForSurface
 } from "./model-surface.js";
+import {
+  customEndpointProviderId,
+  listCustomModelEndpoints
+} from "./custom-model-endpoints.js";
+import type { CustomModelEndpoint } from "@nodetool-ai/protocol/api-schemas/custom-model-endpoints.js";
 
 export type { UnifiedModel };
 
@@ -251,11 +256,46 @@ function toUnifiedLanguageModel(model: LanguageModel): UnifiedModel {
     id: model.id,
     type: "language_model",
     name: model.name,
+    provider: model.provider,
     repo_id: null,
     path: null,
     downloaded: model.provider === "ollama" || model.provider === "llama_cpp",
     tags: [model.provider]
   };
+}
+
+function customEndpointLanguageModels(
+  endpoint: CustomModelEndpoint
+): UnifiedModel[] {
+  const provider = customEndpointProviderId(endpoint.id);
+  return endpoint.models.map((model) => ({
+    id: model.id,
+    type: "language_model",
+    name: model.name,
+    provider,
+    repo_id: null,
+    path: null,
+    downloaded: false,
+    tags: [provider, endpoint.kind],
+    supports_tools: true,
+    context_window: model.contextWindow ?? null
+  }));
+}
+
+async function listEnabledCustomEndpoints(
+  userId: string
+): Promise<CustomModelEndpoint[]> {
+  return (await listCustomModelEndpoints(userId)).filter(
+    (endpoint) => endpoint.enabled
+  );
+}
+
+async function getCustomEndpointLanguageModels(
+  userId: string
+): Promise<UnifiedModel[]> {
+  return (await listEnabledCustomEndpoints(userId)).flatMap((endpoint) =>
+    customEndpointLanguageModels(endpoint)
+  );
 }
 
 function toUnifiedModel(
@@ -361,6 +401,12 @@ async function getProvidersInfo(userId = "1"): Promise<ProviderInfo[]> {
     if (!instance) continue;
     infos.push({ provider, capabilities: providerCapabilities(instance) });
   }
+  for (const endpoint of await listEnabledCustomEndpoints(userId)) {
+    infos.push({
+      provider: customEndpointProviderId(endpoint.id),
+      capabilities: ["generate_message", "generate_messages"]
+    });
+  }
   return infos;
 }
 
@@ -380,6 +426,20 @@ async function getLanguageModelsByProvider(
   provider: ProviderId,
   userId = "1"
 ): Promise<LanguageModel[]> {
+  if (provider.toLowerCase().startsWith("custom:")) {
+    const endpointId = provider.slice("custom:".length);
+    const endpoint = (await listEnabledCustomEndpoints(userId)).find(
+      (candidate) => candidate.id === endpointId
+    );
+    return endpoint
+      ? customEndpointLanguageModels(endpoint).map((model) => ({
+          id: model.id,
+          name: model.name,
+          provider: model.provider ?? provider
+        }))
+      : [];
+  }
+
   try {
     return await withProvider(
       provider,
@@ -558,6 +618,7 @@ async function getAllModels(userId = "1"): Promise<UnifiedModel[]> {
 
   // Always include recommended models as a baseline
   all.push(...filterModelsForSurface([...RECOMMENDED_MODELS]));
+  all.push(...(await getCustomEndpointLanguageModels(userId)));
 
   // Include language models from all available providers
   const availableIds = await getAvailableProviderIds(userId);

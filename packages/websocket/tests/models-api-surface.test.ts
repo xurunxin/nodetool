@@ -23,10 +23,14 @@ vi.mock("@nodetool-ai/models", async (orig) => {
   const actual = await orig<typeof import("@nodetool-ai/models")>();
   return {
     ...actual,
+    Setting: {
+      find: vi.fn()
+    },
     getSecret: vi.fn()
   };
 });
 
+import { Setting } from "@nodetool-ai/models";
 import {
   getProvider,
   isProviderConfigured,
@@ -49,6 +53,12 @@ const LOCAL_ONLY_PROVIDER_IDS = [
 
 function makeRequest(path: string, init?: RequestInit): Request {
   return new Request(`http://localhost${path}`, init);
+}
+
+function makeSetting(value: unknown): { getValue: () => string } {
+  return {
+    getValue: vi.fn().mockReturnValue(JSON.stringify(value))
+  };
 }
 
 function makeProvider() {
@@ -75,6 +85,7 @@ describe("models REST API model surface", () => {
     (listRegisteredProviderIds as ReturnType<typeof vi.fn>).mockReturnValue([]);
     (isProviderConfigured as ReturnType<typeof vi.fn>).mockResolvedValue(false);
     (getProvider as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    (Setting.find as ReturnType<typeof vi.fn>).mockResolvedValue(null);
     (readCachedHfModels as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     (deleteCachedHfModel as ReturnType<typeof vi.fn>).mockResolvedValue(true);
   });
@@ -102,6 +113,63 @@ describe("models REST API model surface", () => {
     const body = (await readJson(response)) as Array<{ provider: string }>;
 
     expect(body.map((item) => item.provider)).toEqual(["openai"]);
+  });
+
+  it("includes enabled custom endpoint providers and language models", async () => {
+    (Setting.find as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSetting([
+        {
+          id: "gateway",
+          name: "Gateway",
+          kind: "openai",
+          baseUrl: "http://127.0.0.1:3000/v1",
+          enabled: true,
+          models: [
+            {
+              id: "custom-chat",
+              name: "Custom Chat",
+              contextWindow: 8192
+            }
+          ],
+          createdAt: "2026-06-14T08:00:00.000Z",
+          updatedAt: "2026-06-14T08:00:00.000Z"
+        }
+      ])
+    );
+
+    const providersResponse = await handleModelsApiRequest(
+      makeRequest("/api/models/providers")
+    );
+    const providers = (await readJson(providersResponse)) as Array<{
+      provider: string;
+      capabilities: string[];
+    }>;
+    expect(providers).toContainEqual({
+      provider: "custom:gateway",
+      capabilities: ["generate_message", "generate_messages"]
+    });
+
+    const allResponse = await handleModelsApiRequest(makeRequest("/api/models/all"));
+    const all = (await readJson(allResponse)) as Array<Record<string, unknown>>;
+    expect(all).toContainEqual(
+      expect.objectContaining({
+        id: "custom-chat",
+        name: "Custom Chat",
+        provider: "custom:gateway",
+        type: "language_model",
+        context_window: 8192
+      })
+    );
+
+    const llmResponse = await handleModelsApiRequest(
+      makeRequest("/api/models/llm/custom%3Agateway")
+    );
+    expect(await readJson(llmResponse)).toEqual([
+      expect.objectContaining({
+        id: "custom-chat",
+        provider: "custom:gateway"
+      })
+    ]);
   });
 
   it("returns disabled shapes for local cache APIs by default", async () => {

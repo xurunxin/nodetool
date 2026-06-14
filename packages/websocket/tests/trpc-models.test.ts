@@ -55,11 +55,14 @@ vi.mock("@nodetool-ai/models", async (orig) => {
   const actual = await orig<typeof import("@nodetool-ai/models")>();
   return {
     ...actual,
+    Setting: {
+      find: vi.fn()
+    },
     getSecret: vi.fn()
   };
 });
 
-import { getSecret } from "@nodetool-ai/models";
+import { Setting, getSecret } from "@nodetool-ai/models";
 
 // ── Mock node:fs/promises & node:fs to avoid real disk I/O ────────────────
 
@@ -115,6 +118,12 @@ function makeCtx(overrides: Partial<Context> = {}): Context {
   };
 }
 
+function makeSetting(value: unknown): { getValue: () => string } {
+  return {
+    getValue: vi.fn().mockReturnValue(JSON.stringify(value))
+  };
+}
+
 /** Minimal provider instance with all model-list methods returning empty arrays. */
 function makeProvider(
   overrides: Partial<{
@@ -162,6 +171,7 @@ describe("models router", () => {
     (listRegisteredProviderIds as ReturnType<typeof vi.fn>).mockReturnValue([]);
     (isProviderConfigured as ReturnType<typeof vi.fn>).mockResolvedValue(false);
     (getProvider as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    (Setting.find as ReturnType<typeof vi.fn>).mockResolvedValue(null);
     (readCachedHfModels as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     (searchCachedHfModels as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     (getModelsByHfType as ReturnType<typeof vi.fn>).mockResolvedValue([]);
@@ -229,6 +239,31 @@ describe("models router", () => {
       expect(result).toHaveLength(1);
       expect(result[0].provider).toBe("openai");
       expect(result[0].capabilities).toContain("generate_message");
+    });
+
+    it("includes enabled custom endpoint providers", async () => {
+      (Setting.find as ReturnType<typeof vi.fn>).mockResolvedValue(
+        makeSetting([
+          {
+            id: "gateway",
+            name: "Gateway",
+            kind: "openai",
+            baseUrl: "http://127.0.0.1:3000/v1",
+            enabled: true,
+            models: [{ id: "custom-chat", name: "Custom Chat" }],
+            createdAt: "2026-06-14T08:00:00.000Z",
+            updatedAt: "2026-06-14T08:00:00.000Z"
+          }
+        ])
+      );
+
+      const caller = createCaller(makeCtx());
+      const result = await caller.models.providers();
+
+      expect(result).toContainEqual({
+        provider: "custom:gateway",
+        capabilities: ["generate_message", "generate_messages"]
+      });
     });
   });
 
@@ -498,6 +533,58 @@ describe("models router", () => {
       const no = result.find((m) => m.id === "tool-no");
       expect(yes?.supports_tools).toBe(true);
       expect(no?.supports_tools).toBe(false);
+    });
+
+    it("includes enabled custom endpoint language models", async () => {
+      (Setting.find as ReturnType<typeof vi.fn>).mockResolvedValue(
+        makeSetting([
+          {
+            id: "gateway",
+            name: "Gateway",
+            kind: "openai",
+            baseUrl: "http://127.0.0.1:3000/v1",
+            enabled: true,
+            models: [
+              {
+                id: "custom-chat",
+                name: "Custom Chat",
+                contextWindow: 8192
+              }
+            ],
+            createdAt: "2026-06-14T08:00:00.000Z",
+            updatedAt: "2026-06-14T08:00:00.000Z"
+          },
+          {
+            id: "disabled_gateway",
+            name: "Disabled Gateway",
+            kind: "openai",
+            baseUrl: "https://disabled.example.test",
+            enabled: false,
+            models: [{ id: "disabled-chat", name: "Disabled Chat" }],
+            createdAt: "2026-06-14T08:00:00.000Z",
+            updatedAt: "2026-06-14T08:00:00.000Z"
+          }
+        ])
+      );
+
+      const caller = createCaller(makeCtx());
+      const all = await caller.models.all();
+      const available = await caller.models.availableForKind({
+        kind: "text_generation"
+      });
+
+      for (const models of [all, available]) {
+        expect(models).toContainEqual(
+          expect.objectContaining({
+            id: "custom-chat",
+            name: "Custom Chat",
+            provider: "custom:gateway",
+            type: "language_model",
+            context_window: 8192
+          })
+        );
+        expect(models.map((model) => model.id)).not.toContain("disabled-chat");
+      }
     });
   });
 

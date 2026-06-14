@@ -49,6 +49,11 @@ import {
   isLocalModelManagementEnabled,
   isProviderVisibleForSurface
 } from "../../model-surface.js";
+import {
+  customEndpointProviderId,
+  listCustomModelEndpoints
+} from "../../custom-model-endpoints.js";
+import type { CustomModelEndpoint } from "@nodetool-ai/protocol/api-schemas/custom-model-endpoints.js";
 
 // ── Local schemas (mirrored in packages/protocol/src/api-schemas/models.ts) ──
 
@@ -81,6 +86,7 @@ const unifiedModelSchema = z.object({
   supported_tasks: z.array(z.string()).nullish(),
   trending_score: z.number().nullish(),
   image: z.string().nullish(),
+  context_window: z.number().nullish(),
   supports_tools: z.boolean().nullish(),
   voices: z.array(z.string()).nullish(),
   durations: z.array(z.number()).nullish(),
@@ -639,6 +645,40 @@ function toUnifiedLanguageModel(
   };
 }
 
+function customEndpointLanguageModels(
+  endpoint: CustomModelEndpoint
+): UnifiedModel[] {
+  const provider = customEndpointProviderId(endpoint.id);
+  return endpoint.models.map((model) => ({
+    id: model.id,
+    type: "language_model",
+    name: model.name,
+    provider,
+    repo_id: null,
+    path: null,
+    downloaded: false,
+    tags: [provider, endpoint.kind],
+    supports_tools: true,
+    context_window: model.contextWindow ?? null
+  }));
+}
+
+async function listEnabledCustomEndpoints(
+  userId: string
+): Promise<CustomModelEndpoint[]> {
+  return (await listCustomModelEndpoints(userId)).filter(
+    (endpoint) => endpoint.enabled
+  );
+}
+
+async function getCustomEndpointLanguageModels(
+  userId: string
+): Promise<UnifiedModel[]> {
+  return (await listEnabledCustomEndpoints(userId)).flatMap((endpoint) =>
+    customEndpointLanguageModels(endpoint)
+  );
+}
+
 function toUnifiedModel(
   model: {
     id: string;
@@ -685,6 +725,7 @@ async function getAllModels(userId: string): Promise<UnifiedModel[]> {
   const all: UnifiedModel[] = [];
 
   all.push(...filterModelsForSurface([...RECOMMENDED_MODELS]));
+  all.push(...(await getCustomEndpointLanguageModels(userId)));
 
   const availableIds = await getAvailableProviderIds(userId);
   const providerModelsPromises = availableIds.map(async (providerId) => {
@@ -890,6 +931,12 @@ export const modelsRouter = router({
           capabilities: providerCapabilities(instance)
         });
       }
+      for (const endpoint of await listEnabledCustomEndpoints(userId)) {
+        infos.push({
+          provider: customEndpointProviderId(endpoint.id),
+          capabilities: ["generate_message", "generate_messages"]
+        });
+      }
       return infos;
     }),
 
@@ -975,6 +1022,9 @@ export const modelsRouter = router({
         ctx.userId,
         input.kind
       );
+      if (input.kind === "text_generation") {
+        fromProviders.push(...(await getCustomEndpointLanguageModels(ctx.userId)));
+      }
       const curated = curatedForKind(input.kind);
       const seen = new Set<string>();
       const deduped: UnifiedModel[] = [];

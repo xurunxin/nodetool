@@ -1040,6 +1040,8 @@ export interface UnifiedModel {
   image?: string | null;
   /** See {@link LanguageModel.supports_tools}. Only meaningful for LLMs. */
   supports_tools?: boolean | null;
+  /** Context window size in tokens when supplied by static endpoint metadata. */
+  context_window?: number | null;
   /** Voice IDs supported by this model. Only meaningful for TTS models. */
   voices?: string[] | null;
   /** Allowed clip durations (seconds). Only meaningful for video models. */
