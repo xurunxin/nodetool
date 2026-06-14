@@ -11,8 +11,8 @@ support, MorpheusCore agent replacement, and thin desktop shell direction.
 
 **Implementation Plan:** `docs/superpowers/plans/2026-06-14-api-first-morpheus-bs.md`
 
-**Current Active Stage:** Phase 2, Task 4: persist custom endpoint metadata and
-secrets.
+**Current Active Stage:** Phase 2, Task 5: resolve custom endpoints as runtime
+providers.
 
 **Status Legend:** `[x] done`, `[~] in progress`, `[ ] pending`, `[!] blocked`
 
@@ -46,7 +46,8 @@ secrets.
   - Exit criteria: local-only model providers are hidden by default from server
     model APIs and agent-visible model search.
 - [~] **M2: Custom OpenAI/Anthropic-compatible endpoints**
-  - Next task: Task 4, persist custom endpoint metadata and secrets.
+  - Completed through Task 4.
+  - Next task: Task 5, resolve custom endpoints as runtime providers.
   - Exit criteria: endpoint metadata is persisted, secrets stay server-side, and
     configured models appear in model selectors and workflow provider
     resolution.
@@ -172,14 +173,17 @@ secrets.
 
 ### Phase 2: Custom Compatible Endpoint Runtime
 
-- [ ] **Task 4: Persist custom endpoint metadata and secrets**
+- [x] **Task 4: Persist custom endpoint metadata and secrets**
   - Create: `packages/websocket/src/custom-model-endpoints.ts`
   - Create: `packages/websocket/src/trpc/routers/custom-model-endpoints.ts`
   - Modify: `packages/websocket/src/trpc/router.ts`
   - Test: `packages/websocket/tests/custom-model-endpoints.test.ts`
   - Verify:
     - `rtk npm run test --workspace=packages/websocket -- custom-model-endpoints`
+    - `rtk npm run test --workspace=packages/websocket -- custom-model-endpoints trpc-settings`
+    - `rtk npm run typecheck`
   - Commit target: `feat(server): persist custom model endpoints`
+  - Commit: `164b30790`
 - [ ] **Task 5: Resolve custom endpoints as runtime providers**
   - Create: `packages/websocket/src/custom-provider-resolver.ts`
   - Modify: `packages/websocket/src/plugins/websocket.ts`
@@ -282,4 +286,5 @@ secrets.
 - Completed Task 3 and recorded commit `7d7079f4c`.
 - Ran live API-first/local-first smoke, found missing REST route mount, fixed it
   in commit `a3527df33`, and recorded the smoke evidence.
-- Set next active task to Phase 2, Task 4.
+- Completed Task 4 and recorded commit `164b30790`.
+- Set next active task to Phase 2, Task 5.
