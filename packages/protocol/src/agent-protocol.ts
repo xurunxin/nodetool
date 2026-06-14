@@ -9,7 +9,7 @@
  * both import from here to stay in lockstep.
  */
 
-export type AgentProvider = "pi" | "llm";
+export type AgentProvider = "pi" | "llm" | "morpheus";
 
 export interface AgentModelDescriptor {
   id: string;
