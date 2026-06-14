@@ -207,15 +207,20 @@ function maybePromoteLlmSessionId(
   get: Get
 ): void {
   const realSessionId = message.session_id;
+  const state = get();
   if (
     !realSessionId ||
     realSessionId === socketSessionId ||
-    get().agentSessionConfigByThread[threadId]?.provider !== "llm"
+    state.agentSessionConfigByThread[threadId]?.provider !== "llm" ||
+    state.agentSessionByThread[threadId] !== socketSessionId
   ) {
     return;
   }
 
   set((state) => {
+    if (state.agentSessionByThread[threadId] !== socketSessionId) {
+      return state;
+    }
     if (
       state.agentResumeSessionByThread[threadId] === realSessionId &&
       state.agentThreadBySession[realSessionId] === threadId

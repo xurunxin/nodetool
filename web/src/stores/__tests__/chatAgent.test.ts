@@ -278,6 +278,87 @@ describe("chatAgent store slice", () => {
     );
   });
 
+  it("ignores delayed LLM stream events from replaced socket sessions", async () => {
+    mockAgentClient.createSession
+      .mockResolvedValueOnce("llm-session-old")
+      .mockResolvedValueOnce("llm-session-new");
+    let streamHandler: ((event: AgentStreamEvent) => void) | undefined;
+    mockAgentClient.on.mockImplementation(
+      (eventName: string, handler: (event: AgentStreamEvent) => void) => {
+        if (eventName === "stream") {
+          streamHandler = handler;
+        }
+      }
+    );
+    const store = createTestStore();
+    const resumeState = () =>
+      store.getState() as TestChatAgentStore & {
+        agentResumeSessionByThread?: Record<string, string>;
+      };
+    store.setState({
+      agentProvider: "llm",
+      agentModel: "claude-haiku",
+      agentModels: [
+        { ...llmModel, id: "claude-haiku", label: "Claude Haiku" },
+        llmModel
+      ]
+    });
+
+    await store.getState().sendAgentMessage("thread-llm", "first");
+    streamHandler?.({
+      sessionId: "llm-session-old",
+      done: false,
+      message: {
+        type: "assistant",
+        uuid: "assistant-old",
+        session_id: "db-thread-old",
+        text: "old",
+        content: [{ type: "text", text: "old" }]
+      }
+    });
+    expect(resumeState().agentResumeSessionByThread?.["thread-llm"]).toBe(
+      "db-thread-old"
+    );
+
+    store.getState().setAgentModel("claude-sonnet");
+    await store.getState().sendAgentMessage("thread-llm", "second");
+    expect(mockAgentClient.sendMessage).toHaveBeenLastCalledWith(
+      "llm-session-new",
+      "second"
+    );
+
+    streamHandler?.({
+      sessionId: "llm-session-new",
+      done: false,
+      message: {
+        type: "assistant",
+        uuid: "assistant-new",
+        session_id: "db-thread-new",
+        text: "new",
+        content: [{ type: "text", text: "new" }]
+      }
+    });
+    expect(resumeState().agentResumeSessionByThread?.["thread-llm"]).toBe(
+      "db-thread-new"
+    );
+
+    streamHandler?.({
+      sessionId: "llm-session-old",
+      done: false,
+      message: {
+        type: "assistant",
+        uuid: "assistant-old-delayed",
+        session_id: "db-thread-old-delayed",
+        text: "late",
+        content: [{ type: "text", text: "late" }]
+      }
+    });
+
+    expect(resumeState().agentResumeSessionByThread?.["thread-llm"]).toBe(
+      "db-thread-new"
+    );
+  });
+
   it("resumes LLM sessions with the real thread id after the live socket session is gone", async () => {
     mockAgentClient.createSession.mockResolvedValue("llm-session-resumed");
     const store = createTestStore();
