@@ -16,7 +16,11 @@
  * in isolation.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { initTestDb, Thread, Message } from "@nodetool-ai/models";
+import { initTestDb, Thread, Message, Setting } from "@nodetool-ai/models";
+import {
+  CUSTOM_MODEL_ENDPOINTS_SETTING,
+  customEndpointProviderId,
+} from "../src/custom-model-endpoints.js";
 
 // ── Mocks ─────────────────────────────────────────────────────────────
 
@@ -24,7 +28,7 @@ import { initTestDb, Thread, Message } from "@nodetool-ai/models";
 // declare the spy via vi.hoisted() and reference it from the factory.
 // Mimics the real processChat shape: append the user message first
 // (just like message-processor.ts line 110), then a fake assistant reply.
-const { processChatSpy } = vi.hoisted(() => ({
+const { processChatSpy, resolveNodeToolProviderSpy } = vi.hoisted(() => ({
   processChatSpy: vi.fn(
     async (opts: { messages: any[]; userInput: string }) => {
       opts.messages.push({ role: "user", content: opts.userInput });
@@ -32,6 +36,11 @@ const { processChatSpy } = vi.hoisted(() => ({
       return opts.messages;
     },
   ),
+  resolveNodeToolProviderSpy: vi.fn(async (providerId: string) => ({
+    provider: providerId,
+    hasToolSupport: async () => true,
+    getAvailableLanguageModels: async () => [],
+  })),
 }));
 
 vi.mock("@nodetool-ai/chat", () => ({
@@ -43,6 +52,10 @@ vi.mock("../src/agent/pi-agent.js", () => ({
   listPiModels: async () => [],
   listPiSessions: async () => [],
   getPiSessionMessages: async () => [],
+}));
+
+vi.mock("../src/custom-provider-resolver.js", () => ({
+  resolveNodeToolProvider: resolveNodeToolProviderSpy,
 }));
 
 vi.mock("@nodetool-ai/runtime", async (importOriginal) => {
@@ -71,12 +84,43 @@ const makeTransport = () => ({
   isAlive: true,
 });
 
+const customEndpoint = (overrides: Record<string, unknown> = {}) => ({
+  id: "custom_gateway",
+  name: "Custom Gateway",
+  kind: "openai",
+  baseUrl: "https://custom.example.test/v1",
+  enabled: true,
+  models: [
+    {
+      id: "custom-chat",
+      name: "Custom Chat",
+      contextWindow: 128000,
+    },
+  ],
+  createdAt: "2026-06-14T00:00:00.000Z",
+  updatedAt: "2026-06-14T00:00:00.000Z",
+  ...overrides,
+});
+
+async function saveCustomEndpoints(
+  userId: string,
+  endpoints: Array<Record<string, unknown>>,
+): Promise<void> {
+  await Setting.upsert({
+    userId,
+    key: CUSTOM_MODEL_ENDPOINTS_SETTING,
+    value: JSON.stringify(endpoints),
+    description: "Custom OpenAI/Anthropic-compatible model endpoints",
+  });
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────
 
 describe("LlmAgentSession persistence", () => {
   beforeEach(() => {
     initTestDb();
     processChatSpy.mockClear();
+    resolveNodeToolProviderSpy.mockClear();
   });
 
   it("creates a Thread on first send() and persists user + assistant messages", async () => {
@@ -207,6 +251,55 @@ describe("LlmAgentSession persistence", () => {
     const [rows] = await Message.paginate(aliceThreadId, { limit: 100 });
     const bobRows = rows.filter((r) => r.user_id === "bob");
     expect(bobRows).toHaveLength(0);
+  });
+
+  it("resolves custom chat providers through the websocket custom resolver", async () => {
+    const provider = new LlmAgentSdkProvider();
+    const customProviderId = customEndpointProviderId("custom_gateway");
+    const session = provider.createSession({
+      model: "custom-chat",
+      workspacePath: "",
+      userId: "alice",
+      chatProviderId: customProviderId,
+    });
+
+    await session.send("hello", makeTransport(), "tmp-id-1", []);
+
+    expect(resolveNodeToolProviderSpy).toHaveBeenCalledWith(
+      customProviderId,
+      "alice",
+    );
+  });
+});
+
+describe("LlmAgentSdkProvider listModels", () => {
+  beforeEach(() => {
+    initTestDb();
+  });
+
+  it("includes enabled custom endpoint models and skips disabled endpoints", async () => {
+    const customProviderId = customEndpointProviderId("custom_gateway");
+    await saveCustomEndpoints("alice", [
+      customEndpoint(),
+      customEndpoint({
+        id: "disabled_gateway",
+        name: "Disabled Gateway",
+        enabled: false,
+        models: [{ id: "disabled-chat", name: "Disabled Chat" }],
+      }),
+    ]);
+
+    const models = await new LlmAgentSdkProvider().listModels("alice");
+
+    expect(models).toContainEqual(
+      expect.objectContaining({
+        id: "custom-chat",
+        label: `Custom Chat (${customProviderId})`,
+        provider: "llm",
+        chatProviderId: customProviderId,
+      }),
+    );
+    expect(models.map((model) => model.id)).not.toContain("disabled-chat");
   });
 });
 

@@ -18,7 +18,7 @@
  *       ├── manifest := transport.requestToolManifest(sessionId)
  *       ├── tools    := manifest.map(UiBridgeTool)   (each delegates back to
  *       │                                              transport.executeTool)
- *       ├── provider := getProvider(chatProviderId)   (anthropic/openai/...)
+ *       ├── provider := resolveNodeToolProvider(chatProviderId)
  *       │
  *       └── processChat({ provider, model, tools, ... })
  *             ├── streams text chunks  ──► onMessage(AgentMessage{type:"assistant"})
@@ -70,6 +70,8 @@ import {
   type AgentSdkProvider,
 } from "./sdk-provider.js";
 import type { AgentTransport } from "./transport.js";
+import { resolveNodeToolProvider } from "../custom-provider-resolver.js";
+import { getCustomEndpointLanguageModels } from "../custom-model-endpoints.js";
 
 const log = createLogger("nodetool.websocket.agent.llm");
 
@@ -566,9 +568,9 @@ class LlmAgentSession implements AgentQuerySession {
 
     try {
       await this.hydrate();
-      const provider = await getRuntimeProvider(
+      const provider = await resolveNodeToolProvider(
         this.chatProviderId,
-        (key) => getStoredSecret(key, this.userId).then((v) => v ?? undefined),
+        this.userId,
       );
       const tools = [
         new GraphPlannerUiTool({
@@ -803,6 +805,19 @@ async function listAllToolCapableLanguageModels(
       });
       if (out.length >= MAX_AGGREGATED_MODELS) return out;
     }
+  }
+
+  const customModels = await getCustomEndpointLanguageModels(userId);
+  for (const m of customModels) {
+    const chatProviderId = m.provider;
+    if (!chatProviderId) continue;
+    out.push({
+      id: m.id,
+      label: `${m.name || m.id} (${chatProviderId})`,
+      provider: "llm",
+      chatProviderId,
+    });
+    if (out.length >= MAX_AGGREGATED_MODELS) return out;
   }
 
   if (out.length > 0) {

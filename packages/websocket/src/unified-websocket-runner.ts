@@ -95,6 +95,7 @@ import type { PythonBridge } from "@nodetool-ai/runtime";
 import { appRouter } from "./trpc/router.js";
 import { createCallerFactory } from "./trpc/index.js";
 import type { HttpApiOptions } from "./http-api.js";
+import { resolveNodeToolProvider } from "./custom-provider-resolver.js";
 
 const log = createLogger("nodetool.websocket.runner");
 const DATA_URI_PATTERN = /data:([^;,]+)?;base64,[A-Za-z0-9+/=\r\n]+/gi;
@@ -1082,6 +1083,16 @@ export class UnifiedWebSocketRunner {
     this.getSystemStats = options.getSystemStats ?? createSystemStatsSampler();
   }
 
+  private installProviderResolver(
+    context: ProcessingContext,
+    userId: string
+  ): void {
+    const resolveProvider = this.resolveProvider ?? resolveNodeToolProvider;
+    context.setProviderResolver((providerId) =>
+      resolveProvider(providerId, userId)
+    );
+  }
+
   async connect(
     websocket: WebSocketConnection,
     userId?: string,
@@ -1645,6 +1656,7 @@ export class UnifiedWebSocketRunner {
       workspaceDir,
       assetOutputMode: this.mode === "text" ? "data_uri" : "temp_url"
     });
+    this.installProviderResolver(context, userId);
 
     // Expose executor/node-type resolution on the context so that
     // sub-workflow nodes (WorkflowNode) can create child runners.
@@ -2323,6 +2335,7 @@ export class UnifiedWebSocketRunner {
       workspaceDir: tmpdir(),
       assetOutputMode: this.mode === "text" ? "data_uri" : "temp_url"
     });
+    this.installProviderResolver(context, userId);
     context.setResolveExecutor((node) => this.resolveExecutor(node));
     if (this.resolveNodeType) {
       const resolverObj =
@@ -2613,6 +2626,7 @@ export class UnifiedWebSocketRunner {
       userId,
       workspaceDir: chatWorkspaceDir
     });
+    this.installProviderResolver(ctx, userId);
 
     // Prepend system prompt if first message isn't system role — matches Python
     if (chatHistory.length === 0 || chatHistory[0].role !== "system") {
@@ -4155,6 +4169,7 @@ export class UnifiedWebSocketRunner {
         workspaceDir,
         assetOutputMode: this.mode === "text" ? "data_uri" : "temp_url"
       });
+      this.installProviderResolver(context, userId);
 
       // Expose executor/node-type resolution for sub-workflow nodes
       context.setResolveExecutor((node) => this.resolveExecutor(node));
