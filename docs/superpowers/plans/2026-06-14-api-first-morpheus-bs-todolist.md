@@ -42,6 +42,7 @@ secrets.
     exposes `forward_to_frontend`.
 - [x] **M1: API-first model surface**
   - Completed through Task 3.
+  - Live hardening commit: `a3527df33`.
   - Exit criteria: local-only model providers are hidden by default from server
     model APIs and agent-visible model search.
 - [~] **M2: Custom OpenAI/Anthropic-compatible endpoints**
@@ -134,6 +135,34 @@ secrets.
     - `rtk npm run typecheck`
     - `rtk npm run lint`
   - Notes:
+    - Live smoke initially found that `packages/websocket/src/models-api.ts`
+      had API-first behavior but was not mounted by the Fastify server, so
+      `/api/models/*` returned `404`.
+    - Fixed by mounting a thin REST route plugin in commit `a3527df33`.
+    - Live `api_first` smoke after the fix:
+      - `GET /health` on `127.0.0.1:7788` returned `200`.
+      - `GET /trpc/models.providers` returned `openai` and `deepseek`, with
+        no `ollama`, `lmstudio`, `llama_cpp`, `vllm`, or `transformers_js`.
+      - `GET /trpc/models.recommended?check_servers=false` returned only API
+        provider recommendations.
+      - `POST /trpc/models.pullOllamaModel` returned `403` with
+        `Local model management is disabled`.
+      - `GET /api/models/providers` returned `200` with remote providers.
+      - `GET /api/models/recommended?check_servers=false` returned `200` with
+        API provider recommendations.
+      - `DELETE /api/models/huggingface?repo_id=openai%2Fwhisper-tiny`
+        returned `403` with `Local model management is disabled`.
+    - Live `local_first` smoke on `127.0.0.1:7789`:
+      - `GET /health` returned `200`.
+      - `POST /trpc/models.pullOllamaModel` returned `200` with
+        `status: unavailable`, proving the API-first guard was not active.
+      - `POST /api/models/pull_ollama_model` returned `501`, proving REST
+        reached the local management path instead of the API-first `403`.
+      - `DELETE /api/models/huggingface?repo_id=openai%2Fwhisper-tiny`
+        returned `200` with `false`, proving the local deletion path was
+        reachable when explicitly enabled.
+    - Both temporary live-smoke servers were stopped; ports `7788` and `7789`
+      were confirmed closed.
     - `rtk npm run test --workspace=packages/websocket` was attempted. Task 3
       related tests pass, but the full package suite still has unrelated
       Windows path/fixture failures in `trpc-mcp-config`, `trpc-skills`, and
@@ -251,4 +280,6 @@ secrets.
 - Completed Task 1 and recorded commit `fc330214a`.
 - Completed Task 2 and recorded commit `49f932d6a`.
 - Completed Task 3 and recorded commit `7d7079f4c`.
+- Ran live API-first/local-first smoke, found missing REST route mount, fixed it
+  in commit `a3527df33`, and recorded the smoke evidence.
 - Set next active task to Phase 2, Task 4.
