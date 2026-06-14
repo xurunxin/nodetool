@@ -225,15 +225,25 @@ describe("tRPC HTTP smoke tests", () => {
 
   describe("models.pullOllamaModel (protected mutation)", () => {
     it("returns unavailable status with auth", async () => {
-      const res = await trpcMutation(
-        "models.pullOllamaModel",
-        { model: "llama3" },
-        AUTH_USER_ID
-      );
-      expect(res.status).toBe(200);
-      const body = await res.json() as { result: { data: { json: unknown } } };
-      const data = body.result.data.json as { status: string };
-      expect(data.status).toBe("unavailable");
+      const originalSurface = process.env.NODETOOL_MODEL_SURFACE;
+      process.env.NODETOOL_MODEL_SURFACE = "local_first";
+      try {
+        const res = await trpcMutation(
+          "models.pullOllamaModel",
+          { model: "llama3" },
+          AUTH_USER_ID
+        );
+        expect(res.status).toBe(200);
+        const body = await res.json() as { result: { data: { json: unknown } } };
+        const data = body.result.data.json as { status: string };
+        expect(data.status).toBe("unavailable");
+      } finally {
+        if (originalSurface === undefined) {
+          delete process.env.NODETOOL_MODEL_SURFACE;
+        } else {
+          process.env.NODETOOL_MODEL_SURFACE = originalSurface;
+        }
+      }
     });
   });
 });

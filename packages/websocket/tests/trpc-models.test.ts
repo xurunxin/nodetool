@@ -94,6 +94,15 @@ import {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 const createCaller = createCallerFactory(appRouter);
+const ORIGINAL_MODEL_SURFACE = process.env.NODETOOL_MODEL_SURFACE;
+const LOCAL_ONLY_PROVIDER_IDS = [
+  "ollama",
+  "lmstudio",
+  "llama_cpp",
+  "vllm",
+  "transformers_js"
+] as const;
+const HOSTED_PROVIDER_ID = "openai";
 
 function makeCtx(overrides: Partial<Context> = {}): Context {
   return {
@@ -130,10 +139,24 @@ function makeProvider(
   };
 }
 
+function enableLocalModelSurface(): void {
+  process.env.NODETOOL_MODEL_SURFACE = "local_first";
+}
+
+function expectNoLocalProviders(
+  models: Array<{ provider?: string | null }>
+): void {
+  const providers = models.map((model) => model.provider);
+  for (const providerId of LOCAL_ONLY_PROVIDER_IDS) {
+    expect(providers).not.toContain(providerId);
+  }
+}
+
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 describe("models router", () => {
   beforeEach(() => {
+    delete process.env.NODETOOL_MODEL_SURFACE;
     vi.clearAllMocks();
     // Default: no providers, no HF cache, no disk I/O errors
     (listRegisteredProviderIds as ReturnType<typeof vi.fn>).mockReturnValue([]);
@@ -154,6 +177,11 @@ describe("models router", () => {
   });
 
   afterEach(() => {
+    if (ORIGINAL_MODEL_SURFACE === undefined) {
+      delete process.env.NODETOOL_MODEL_SURFACE;
+    } else {
+      process.env.NODETOOL_MODEL_SURFACE = ORIGINAL_MODEL_SURFACE;
+    }
     vi.restoreAllMocks();
   });
 
@@ -201,6 +229,158 @@ describe("models router", () => {
       expect(result).toHaveLength(1);
       expect(result[0].provider).toBe("openai");
       expect(result[0].capabilities).toContain("generate_message");
+    });
+  });
+
+  // ── model surface ────────────────────────────────────────────────────────
+
+  describe("model surface", () => {
+    it("hides local-only providers by default while keeping hosted providers", async () => {
+      (listRegisteredProviderIds as ReturnType<typeof vi.fn>).mockReturnValue([
+        HOSTED_PROVIDER_ID,
+        ...LOCAL_ONLY_PROVIDER_IDS
+      ]);
+      (isProviderConfigured as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+      (getProvider as ReturnType<typeof vi.fn>).mockResolvedValue(
+        makeProvider()
+      );
+
+      const caller = createCaller(makeCtx());
+      const result = await caller.models.providers();
+
+      expect(result.map((entry) => entry.provider)).toEqual([
+        HOSTED_PROVIDER_ID
+      ]);
+      expect(getProvider).toHaveBeenCalledTimes(1);
+      expect(getProvider).toHaveBeenCalledWith(
+        HOSTED_PROVIDER_ID,
+        expect.any(Function)
+      );
+    });
+
+    it("filters local-only models from aggregate model lists by default", async () => {
+      (listRegisteredProviderIds as ReturnType<typeof vi.fn>).mockReturnValue([
+        HOSTED_PROVIDER_ID,
+        ...LOCAL_ONLY_PROVIDER_IDS
+      ]);
+      (isProviderConfigured as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+      (getProvider as ReturnType<typeof vi.fn>).mockImplementation(
+        async (providerId: string) =>
+          makeProvider({
+            getAvailableLanguageModels: vi.fn().mockResolvedValue([
+              {
+                id: `${providerId}-model`,
+                name: `${providerId} Model`,
+                provider: providerId
+              }
+            ])
+          })
+      );
+      (readCachedHfModels as ReturnType<typeof vi.fn>).mockResolvedValue([
+        {
+          id: "cached-hf",
+          name: "Cached HF",
+          type: "language_model",
+          provider: "huggingface",
+          repo_id: "user/cached-hf",
+          path: null,
+          downloaded: true,
+          tags: []
+        }
+      ]);
+      (scanTransformersJsCache as ReturnType<typeof vi.fn>).mockResolvedValue([
+        {
+          repo_id: "Xenova/local-model",
+          dir: "/tmp/tjs-cache/Xenova/local-model",
+          size_bytes: 123
+        }
+      ]);
+
+      const caller = createCaller(makeCtx());
+      const recommended = await caller.models.recommended({
+        check_servers: false
+      });
+      const availableForKind = await caller.models.availableForKind({
+        kind: "text_generation"
+      });
+      const all = await caller.models.all();
+
+      expectNoLocalProviders(recommended);
+      expectNoLocalProviders(availableForKind);
+      expectNoLocalProviders(all);
+      expect(all.map((model) => model.provider)).toContain(HOSTED_PROVIDER_ID);
+      expect(availableForKind.map((model) => model.provider)).toContain(
+        HOSTED_PROVIDER_ID
+      );
+    });
+
+    it("restores local provider visibility in local_first mode", async () => {
+      enableLocalModelSurface();
+      (listRegisteredProviderIds as ReturnType<typeof vi.fn>).mockReturnValue([
+        HOSTED_PROVIDER_ID,
+        ...LOCAL_ONLY_PROVIDER_IDS
+      ]);
+      (isProviderConfigured as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+      (getProvider as ReturnType<typeof vi.fn>).mockResolvedValue(
+        makeProvider()
+      );
+
+      const caller = createCaller(makeCtx());
+      const result = await caller.models.providers();
+      const providers = result.map((entry) => entry.provider);
+
+      expect(providers).toContain(HOSTED_PROVIDER_ID);
+      for (const providerId of LOCAL_ONLY_PROVIDER_IDS) {
+        expect(providers).toContain(providerId);
+      }
+    });
+
+    it("returns disabled shapes for local cache queries and probes by default", async () => {
+      (readCachedHfModels as ReturnType<typeof vi.fn>).mockResolvedValue([
+        {
+          id: "bert-base",
+          name: "BERT Base",
+          type: "language_model",
+          provider: "huggingface",
+          repo_id: "google/bert-base",
+          path: null,
+          downloaded: true,
+          tags: []
+        }
+      ]);
+      (scanTransformersJsCache as ReturnType<typeof vi.fn>).mockResolvedValue([
+        {
+          repo_id: "Xenova/whisper-tiny.en",
+          dir: "/tmp/tjs-cache/Xenova/whisper-tiny.en",
+          size_bytes: 1000
+        }
+      ]);
+      (isRepoCached as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+
+      const caller = createCaller(makeCtx());
+
+      await expect(caller.models.huggingfaceList()).resolves.toEqual([]);
+      await expect(caller.models.transformersJsList()).resolves.toEqual([]);
+      await expect(
+        caller.models.transformersJsIsCached({ repo_id: "Xenova/foo" })
+      ).resolves.toBe(false);
+    });
+
+    it("rejects local management mutations by default", async () => {
+      const caller = createCaller(makeCtx());
+
+      await expect(
+        caller.models.huggingfaceDelete({ repo_id: "openai/whisper-tiny" })
+      ).rejects.toMatchObject({
+        code: "FORBIDDEN",
+        message: "Local model management is disabled"
+      });
+      await expect(
+        caller.models.pullOllamaModel({ model: "llama3" })
+      ).rejects.toMatchObject({
+        code: "FORBIDDEN",
+        message: "Local model management is disabled"
+      });
     });
   });
 
@@ -324,6 +504,8 @@ describe("models router", () => {
   // ── huggingfaceList ──────────────────────────────────────────────────────
 
   describe("huggingfaceList", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns empty array when HF cache is empty", async () => {
       const caller = createCaller(makeCtx());
       const result = await caller.models.huggingfaceList();
@@ -361,6 +543,8 @@ describe("models router", () => {
   // ── huggingfaceSearch ────────────────────────────────────────────────────
 
   describe("huggingfaceSearch", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns matching models", async () => {
       (searchCachedHfModels as ReturnType<typeof vi.fn>).mockResolvedValue([
         {
@@ -392,6 +576,8 @@ describe("models router", () => {
   // ── huggingfaceByType ────────────────────────────────────────────────────
 
   describe("huggingfaceByType", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns models of the requested type", async () => {
       (getModelsByHfType as ReturnType<typeof vi.fn>).mockResolvedValue([
         {
@@ -427,6 +613,8 @@ describe("models router", () => {
   // ── transformersJsByType ─────────────────────────────────────────────────
 
   describe("transformersJsByType", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns the curated recommended list with downloaded=false when cache is empty", async () => {
       const caller = createCaller(makeCtx());
       const result = await caller.models.transformersJsByType({
@@ -516,6 +704,8 @@ describe("models router", () => {
   // ── transformersJsRecommended ────────────────────────────────────────────
 
   describe("transformersJsRecommended", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns the curated list with downloaded=false when cache is empty", async () => {
       const caller = createCaller(makeCtx());
       const result = await caller.models.transformersJsRecommended({
@@ -575,6 +765,8 @@ describe("models router", () => {
   // ── transformersJsList ───────────────────────────────────────────────────
 
   describe("transformersJsList", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns every cached repo with downloaded=true", async () => {
       (scanTransformersJsCache as ReturnType<typeof vi.fn>).mockResolvedValue([
         {
@@ -609,6 +801,8 @@ describe("models router", () => {
   // ── transformersJsIsCached ───────────────────────────────────────────────
 
   describe("transformersJsIsCached", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns true when isRepoCached resolves true", async () => {
       (isRepoCached as ReturnType<typeof vi.fn>).mockResolvedValue(true);
       const caller = createCaller(makeCtx());
@@ -629,6 +823,8 @@ describe("models router", () => {
   // ── huggingfaceDelete ────────────────────────────────────────────────────
 
   describe("huggingfaceDelete", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns true on successful delete", async () => {
       (deleteCachedHfModel as ReturnType<typeof vi.fn>).mockResolvedValue(true);
       const caller = createCaller(makeCtx());
@@ -653,6 +849,8 @@ describe("models router", () => {
   // ── ollama ───────────────────────────────────────────────────────────────
 
   describe("ollama", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns empty array when ollama is not configured", async () => {
       (isProviderConfigured as ReturnType<typeof vi.fn>).mockResolvedValue(false);
       const caller = createCaller(makeCtx());
@@ -760,6 +958,8 @@ describe("models router", () => {
   // ── huggingfaceTryCacheFiles ──────────────────────────────────────────────
 
   describe("huggingfaceTryCacheFiles", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns downloaded:false for non-existent file", async () => {
       // access() already throws ENOENT by default
       const caller = createCaller(makeCtx());
@@ -782,6 +982,8 @@ describe("models router", () => {
   // ── huggingfaceTryCacheRepos ──────────────────────────────────────────────
 
   describe("huggingfaceTryCacheRepos", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns downloaded:false when no snapshots exist", async () => {
       // readdir returns [] and access throws — nothing cached
       const caller = createCaller(makeCtx());
@@ -797,6 +999,8 @@ describe("models router", () => {
   // ── huggingfaceCheckCache ──────────────────────────────────────────────────
 
   describe("huggingfaceCheckCache", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns all_present:true when no allow_pattern and no cache", async () => {
       // No allow_pattern → missing is empty → all_present is true
       const caller = createCaller(makeCtx());
@@ -822,6 +1026,8 @@ describe("models router", () => {
   // ── huggingfaceCacheStatus ─────────────────────────────────────────────────
 
   describe("huggingfaceCacheStatus", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns downloaded:false for a non-cached repo", async () => {
       const caller = createCaller(makeCtx());
       const result = await caller.models.huggingfaceCacheStatus([
@@ -858,6 +1064,8 @@ describe("models router", () => {
   // ── pullOllamaModel ──────────────────────────────────────────────────────
 
   describe("pullOllamaModel", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns unavailable status (streaming not supported in TS server)", async () => {
       const caller = createCaller(makeCtx());
       const result = await caller.models.pullOllamaModel({ model: "llama3" });
@@ -869,6 +1077,8 @@ describe("models router", () => {
   // ── huggingfaceFileInfo ──────────────────────────────────────────────────
 
   describe("huggingfaceFileInfo", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns file info from HuggingFace", async () => {
       (getSecret as ReturnType<typeof vi.fn>).mockResolvedValue("hf-token");
       (getHuggingfaceFileInfos as ReturnType<typeof vi.fn>).mockResolvedValue([
@@ -898,6 +1108,8 @@ describe("models router", () => {
   // ── ollamaModelInfo (stub) ────────────────────────────────────────────────
 
   describe("ollamaModelInfo", () => {
+    beforeEach(enableLocalModelSurface);
+
     it("returns null (stub)", async () => {
       const caller = createCaller(makeCtx());
       const result = await caller.models.ollamaModelInfo();

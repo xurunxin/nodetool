@@ -1,4 +1,4 @@
-import { router } from "../index.js";
+import { router, TRPCError } from "../index.js";
 import { protectedProcedure } from "../middleware.js";
 import { createLogger } from "@nodetool-ai/config";
 import {
@@ -43,6 +43,12 @@ import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { z } from "zod";
 import { getSecret } from "@nodetool-ai/models";
+import {
+  filterModelsForSurface,
+  filterProviderIdsForSurface,
+  isLocalModelManagementEnabled,
+  isProviderVisibleForSurface
+} from "../../model-surface.js";
 
 // ── Local schemas (mirrored in packages/protocol/src/api-schemas/models.ts) ──
 
@@ -392,7 +398,9 @@ async function getAvailableProviderIds(userId: string): Promise<ProviderId[]> {
       available: await isProviderConfigured(id, getSecret)
     }))
   );
-  return checks.filter((c) => c.available).map((c) => c.id);
+  return filterProviderIdsForSurface(
+    checks.filter((c) => c.available).map((c) => c.id)
+  ) as ProviderId[];
 }
 
 async function instantiateProvider(
@@ -543,7 +551,7 @@ async function serverAllowsModel(
 async function getRecommendedModels(
   checkServers: boolean
 ): Promise<UnifiedModel[]> {
-  const models = [...RECOMMENDED_MODELS];
+  const models = filterModelsForSurface([...RECOMMENDED_MODELS]);
   if (!checkServers) return models;
   const servers = await getServerAvailability();
   const filtered: UnifiedModel[] = [];
@@ -559,9 +567,21 @@ function selectRecommended(
   modality: RecommendedUnifiedModel["modality"],
   task?: RecommendedUnifiedModel["task"]
 ): UnifiedModel[] {
-  return RECOMMENDED_MODELS.filter(
-    (model) => model.modality === modality && (!task || model.task === task)
+  return filterModelsForSurface(
+    RECOMMENDED_MODELS.filter(
+      (model) => model.modality === modality && (!task || model.task === task)
+    )
   );
+}
+
+function assertLocalModelManagementEnabled(): void {
+  if (isLocalModelManagementEnabled()) {
+    return;
+  }
+  throw new TRPCError({
+    code: "FORBIDDEN",
+    message: "Local model management is disabled"
+  });
 }
 
 // ── Transformers.js helpers ────────────────────────────────────────
@@ -664,7 +684,7 @@ function toOllamaModel(model: { id: string; name: string }) {
 async function getAllModels(userId: string): Promise<UnifiedModel[]> {
   const all: UnifiedModel[] = [];
 
-  all.push(...RECOMMENDED_MODELS);
+  all.push(...filterModelsForSurface([...RECOMMENDED_MODELS]));
 
   const availableIds = await getAvailableProviderIds(userId);
   const providerModelsPromises = availableIds.map(async (providerId) => {
@@ -691,7 +711,7 @@ async function getAllModels(userId: string): Promise<UnifiedModel[]> {
     all.push(...models);
   }
 
-  if (!isProduction()) {
+  if (isLocalModelManagementEnabled()) {
     try {
       const hfModels = await readCachedHfModels();
       all.push(...hfModels);
@@ -718,7 +738,7 @@ async function getAllModels(userId: string): Promise<UnifiedModel[]> {
     }
   }
 
-  return dedupeModels(all);
+  return filterModelsForSurface(dedupeModels(all));
 }
 
 async function checkHfCache(body: {
@@ -844,8 +864,10 @@ function curatedForKind(kind: ModelSearchKind): UnifiedModel[] {
   // modality alone is enough.
   const taskRequired =
     kind !== "text_to_speech" && kind !== "speech_to_text";
-  return RECOMMENDED_MODELS.filter(
-    (r) => r.modality === modality && (!taskRequired || r.task === kind)
+  return filterModelsForSurface(
+    RECOMMENDED_MODELS.filter(
+      (r) => r.modality === modality && (!taskRequired || r.task === kind)
+    )
   );
 }
 
@@ -962,7 +984,7 @@ export const modelsRouter = router({
         seen.add(key);
         deduped.push(m);
       }
-      return deduped;
+      return filterModelsForSurface(deduped);
     }),
 
   /**
@@ -977,7 +999,7 @@ export const modelsRouter = router({
   huggingfaceList: protectedProcedure
     .output(modelsListOutput)
     .query(async () => {
-      if (isProduction()) return [];
+      if (!isLocalModelManagementEnabled()) return [];
       try {
         return await readCachedHfModels();
       } catch {
@@ -992,7 +1014,7 @@ export const modelsRouter = router({
     .input(hfDeleteInput)
     .output(z.boolean())
     .mutation(async ({ input }) => {
-      if (isProduction()) return false;
+      assertLocalModelManagementEnabled();
       try {
         return await deleteCachedHfModel(input.repo_id);
       } catch {
@@ -1007,7 +1029,7 @@ export const modelsRouter = router({
     .input(hfSearchInput)
     .output(modelsListOutput)
     .query(async ({ input }) => {
-      if (isProduction()) return [];
+      if (!isLocalModelManagementEnabled()) return [];
       const rawQuery = input.query;
       const type = input.type;
       const query =
@@ -1029,6 +1051,7 @@ export const modelsRouter = router({
     .input(hfByTypeInput)
     .output(modelsListOutput)
     .query(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) return [];
       try {
         return await getModelsByHfType(input.model_type);
       } catch {
@@ -1042,7 +1065,7 @@ export const modelsRouter = router({
   transformersJsList: protectedProcedure
     .output(modelsListOutput)
     .query(async () => {
-      if (isProduction()) return [];
+      if (!isLocalModelManagementEnabled()) return [];
       try {
         const cached = await scanTransformersJsCache(getTransformersJsCacheDir());
         return cached.map((c) =>
@@ -1071,7 +1094,7 @@ export const modelsRouter = router({
     .input(tjsByTypeInput)
     .output(modelsListOutput)
     .query(async ({ input }) => {
-      if (isProduction()) return [];
+      if (!isLocalModelManagementEnabled()) return [];
       const modelType = input.model_type;
       const recs = recommendedFor(modelType);
       const cacheDir = getTransformersJsCacheDir();
@@ -1126,7 +1149,7 @@ export const modelsRouter = router({
     .input(tjsByTypeInput)
     .output(modelsListOutput)
     .query(async ({ input }) => {
-      if (isProduction()) return [];
+      if (!isLocalModelManagementEnabled()) return [];
       const modelType = input.model_type;
       const recs = recommendedFor(modelType);
       if (recs.length === 0) return [];
@@ -1152,7 +1175,7 @@ export const modelsRouter = router({
     .input(z.object({ repo_id: z.string().min(1) }))
     .output(z.boolean())
     .query(async ({ input }) => {
-      if (isProduction()) return false;
+      if (!isLocalModelManagementEnabled()) return false;
       try {
         return await isRepoCached(getTransformersJsCacheDir(), input.repo_id);
       } catch {
@@ -1170,6 +1193,7 @@ export const modelsRouter = router({
         "ollama models",
         { provider: "ollama", userId: ctx.userId },
         async () => {
+          if (!isProviderVisibleForSurface("ollama")) return [];
           const instance = await instantiateProvider("ollama", ctx.userId);
           if (!instance) return [];
           const models = await instance.getAvailableLanguageModels();
@@ -1190,6 +1214,7 @@ export const modelsRouter = router({
         "llmByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
+          if (!isProviderVisibleForSurface(input.provider)) return [];
           const instance = await instantiateProvider(
             input.provider as ProviderId,
             ctx.userId
@@ -1222,6 +1247,7 @@ export const modelsRouter = router({
         "imageByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
+          if (!isProviderVisibleForSurface(input.provider)) return [];
           const instance = await instantiateProvider(
             input.provider as ProviderId,
             ctx.userId
@@ -1268,6 +1294,7 @@ export const modelsRouter = router({
         "ttsByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
+          if (!isProviderVisibleForSurface(input.provider)) return [];
           const instance = await instantiateProvider(
             input.provider as ProviderId,
             ctx.userId
@@ -1314,6 +1341,7 @@ export const modelsRouter = router({
         "asrByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
+          if (!isProviderVisibleForSurface(input.provider)) return [];
           const instance = await instantiateProvider(
             input.provider as ProviderId,
             ctx.userId
@@ -1360,6 +1388,7 @@ export const modelsRouter = router({
         "videoByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
+          if (!isProviderVisibleForSurface(input.provider)) return [];
           const instance = await instantiateProvider(
             input.provider as ProviderId,
             ctx.userId
@@ -1383,6 +1412,7 @@ export const modelsRouter = router({
         "embeddingByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
+          if (!isProviderVisibleForSurface(input.provider)) return [];
           const instance = await instantiateProvider(
             input.provider as ProviderId,
             ctx.userId
@@ -1407,6 +1437,13 @@ export const modelsRouter = router({
     .input(tryCacheFilesInput)
     .output(tryCacheFilesOutput)
     .mutation(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) {
+        return input.map((entry) => ({
+          repo_id: entry.repo_id ?? "",
+          path: entry.path ?? "",
+          downloaded: false
+        }));
+      }
       return Promise.all(
         input.map(async (entry) => {
           const repoId = entry.repo_id ?? "";
@@ -1430,6 +1467,12 @@ export const modelsRouter = router({
     .input(tryCacheReposInput)
     .output(tryCacheReposOutput)
     .mutation(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) {
+        return input.map((repoId) => ({
+          repo_id: repoId,
+          downloaded: false
+        }));
+      }
       return Promise.all(
         input.map(async (repoId) => ({
           repo_id: repoId,
@@ -1444,7 +1487,17 @@ export const modelsRouter = router({
   huggingfaceCheckCache: protectedProcedure
     .input(hfCacheCheckInput)
     .output(hfCacheCheckOutput)
-    .mutation(async ({ input }) => checkHfCache(input)),
+    .mutation(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) {
+        return {
+          repo_id: input.repo_id,
+          all_present: false,
+          total_files: 0,
+          missing: []
+        };
+      }
+      return checkHfCache(input);
+    }),
 
   /**
    * Fast batch cache status check for multiple models.
@@ -1453,6 +1506,9 @@ export const modelsRouter = router({
     .input(hfFastCacheStatusInput)
     .output(hfFastCacheStatusOutput)
     .mutation(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) {
+        return input.map((item) => ({ key: item.key, downloaded: false }));
+      }
       return Promise.all(
         input.map(async (item) => {
           const allowPatterns = normalizePatterns(item.allow_patterns);
@@ -1497,11 +1553,19 @@ export const modelsRouter = router({
         message: z.string()
       })
     )
-    .mutation(() => ({
-      status: "unavailable",
-      message:
-        "Streaming Ollama model pulls are not available in the TS standalone server. Use the Ollama API directly or the Python backend."
-    })),
+    .mutation(() => {
+      if (!isLocalModelManagementEnabled()) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Local model management is disabled"
+        });
+      }
+      return {
+        status: "unavailable",
+        message:
+          "Streaming Ollama model pulls are not available in the TS standalone server. Use the Ollama API directly or the Python backend."
+      };
+    }),
 
   /**
    * Get HuggingFace file info (size, sha256, etc.).
@@ -1510,7 +1574,7 @@ export const modelsRouter = router({
     .input(hfFileInfoInput)
     .output(z.array(z.record(z.string(), z.unknown())))
     .mutation(async ({ input }) => {
-      if (isProduction()) return [];
+      if (!isLocalModelManagementEnabled()) return [];
       try {
         const token = (await getSecret("HF_TOKEN", "1")) ?? undefined;
         const infos = await getHuggingfaceFileInfos(
