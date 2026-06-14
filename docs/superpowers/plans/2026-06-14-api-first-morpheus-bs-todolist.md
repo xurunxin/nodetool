@@ -49,6 +49,10 @@ mapping.
   - Completed through Task 5.
   - Commit: `164b30790` for endpoint persistence.
   - Commit: `0496b896d` for runtime/provider/model-surface resolution.
+  - Scope decision: custom OpenAI/Anthropic-compatible endpoints stay
+    language-model only. ASR, TTS, vision, and other multimodal variants that
+    use provider-specific chat payloads should be implemented later as
+    dedicated vendor adapters.
   - Exit criteria: endpoint metadata is persisted, secrets stay server-side, and
     configured models appear in model selectors and workflow provider
     resolution.
@@ -316,3 +320,6 @@ mapping.
 - Ran Phase 2 live smoke for custom endpoint persistence, model selector
   exposure, REST parity, and cleanup.
 - Marked M2 complete and set next active task to Phase 3, Task 6.
+- Recorded the custom endpoint scope decision: keep the generic OpenAI/
+  Anthropic-compatible path language-only, and handle multimodal APIs through
+  future provider-specific adapters.
