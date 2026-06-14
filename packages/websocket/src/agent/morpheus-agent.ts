@@ -319,6 +319,10 @@ export class MorpheusQuerySession implements AgentQuerySession {
           ],
         });
 
+        if (event.name !== FORWARD_TO_FRONTEND_TOOL_NAME) {
+          return;
+        }
+
         try {
           const result = await this.executeToolWithAbort(
             transport,

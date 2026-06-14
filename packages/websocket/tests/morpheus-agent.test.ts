@@ -237,6 +237,56 @@ describe("MorpheusAgentSdkProvider", () => {
     );
   });
 
+  it("leaves Morpheus server-side tool calls remote-only", async () => {
+    const client = makeClient([
+      {
+        type: "tool_call",
+        id: "server-tool-1",
+        name: "execute_skill_script",
+        arguments: { skillName: "clinical-assistant" },
+      },
+      { type: "done" },
+    ]);
+    const provider = new MorpheusAgentSdkProvider({
+      baseUrl: "https://morpheus.example",
+      clientFactory: () => client,
+    });
+    const session = provider.createSession({
+      model: "nodetool-canvas",
+      workspacePath: "",
+      userId: "alice",
+    });
+    const transport = makeTransport();
+
+    const messages = await session.send("run skill", transport, "ui-session-1", []);
+
+    expect(transport.executeTool).not.toHaveBeenCalled();
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        type: "assistant",
+        uuid: "server-tool-1",
+        tool_calls: [
+          {
+            id: "server-tool-1",
+            type: "function",
+            function: {
+              name: "execute_skill_script",
+              arguments: JSON.stringify({ skillName: "clinical-assistant" }),
+            },
+          },
+        ],
+      }),
+    );
+    expect(
+      messages.some(
+        (message) =>
+          message.type === "result" &&
+          message.subtype === "tool_result" &&
+          message.uuid === "server-tool-1",
+      ),
+    ).toBe(false);
+  });
+
   it("skips unsupported forward_to_frontend calls with a local transcript result", async () => {
     const client = makeClient([
       {
