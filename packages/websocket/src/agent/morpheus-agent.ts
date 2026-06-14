@@ -60,7 +60,32 @@ const stringifyToolResult = (value: unknown): string => {
   try {
     return JSON.stringify(value ?? null);
   } catch {
-    return String(value);
+    return "[unserializable]";
+  }
+};
+
+const abortError = (): Error => new Error("Morpheus tool call aborted");
+
+const raceWithAbort = async <T>(
+  promise: Promise<T>,
+  signal: AbortSignal,
+): Promise<T> => {
+  if (signal.aborted) {
+    throw abortError();
+  }
+
+  let onAbort: (() => void) | null = null;
+  const abortPromise = new Promise<never>((_resolve, reject) => {
+    onAbort = () => reject(abortError());
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+
+  try {
+    return await Promise.race([promise, abortPromise]);
+  } finally {
+    if (onAbort) {
+      signal.removeEventListener("abort", onAbort);
+    }
   }
 };
 
@@ -80,6 +105,9 @@ export class MorpheusQuerySession implements AgentQuerySession {
   private closed = false;
   private inFlight = false;
   private abortController: AbortController | null = null;
+  private activeTransport: AgentTransport | null = null;
+  private activeUiSessionId: string | null = null;
+  private activeToolCall = false;
   private remoteSessionId: string | null;
 
   constructor(
@@ -125,6 +153,8 @@ export class MorpheusQuerySession implements AgentQuerySession {
 
     this.inFlight = true;
     this.abortController = new AbortController();
+    this.activeTransport = transport;
+    this.activeUiSessionId = sessionId;
     const out: AgentMessage[] = [];
     const emit = (msg: AgentMessage) => {
       out.push(msg);
@@ -171,7 +201,14 @@ export class MorpheusQuerySession implements AgentQuerySession {
           });
           break;
         }
-        await this.handleStreamEvent(event, transport, sessionId, emit, textState);
+        await this.handleStreamEvent(
+          event,
+          transport,
+          sessionId,
+          this.abortController.signal,
+          emit,
+          textState,
+        );
       }
     } catch (error) {
       if (this.abortController.signal.aborted) {
@@ -194,6 +231,9 @@ export class MorpheusQuerySession implements AgentQuerySession {
     } finally {
       this.inFlight = false;
       this.abortController = null;
+      this.activeTransport = null;
+      this.activeUiSessionId = null;
+      this.activeToolCall = false;
     }
 
     return out;
@@ -203,6 +243,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
     event: MorpheusStreamEvent,
     transport: AgentTransport,
     sessionId: string,
+    signal: AbortSignal,
     emit: (message: AgentMessage) => void,
     textState: {
       uuid: string | null;
@@ -255,11 +296,11 @@ export class MorpheusQuerySession implements AgentQuerySession {
         });
 
         try {
-          const result = await transport.executeTool(
+          const result = await this.executeToolWithAbort(
+            transport,
             sessionId,
-            event.id,
-            event.name,
-            event.arguments,
+            event,
+            signal,
           );
           emit({
             type: "result",
@@ -289,8 +330,52 @@ export class MorpheusQuerySession implements AgentQuerySession {
     }
   }
 
-  async interrupt(): Promise<void> {
+  private async executeToolWithAbort(
+    transport: AgentTransport,
+    sessionId: string,
+    event: Extract<MorpheusStreamEvent, { type: "tool_call" }>,
+    signal: AbortSignal,
+  ): Promise<unknown> {
+    this.activeToolCall = true;
+    try {
+      return await raceWithAbort(
+        Promise.resolve().then(() =>
+          transport.executeTool(
+            sessionId,
+            event.id,
+            event.name,
+            event.arguments,
+          ),
+        ),
+        signal,
+      );
+    } finally {
+      this.activeToolCall = false;
+    }
+  }
+
+  private abortActiveWork(): void {
     this.abortController?.abort();
+    if (
+      !this.activeToolCall ||
+      !this.activeTransport ||
+      !this.activeUiSessionId
+    ) {
+      return;
+    }
+    try {
+      this.activeTransport.abortTools(this.activeUiSessionId);
+    } catch (error) {
+      log.warn(
+        `Failed to abort Morpheus renderer tools: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
+  async interrupt(): Promise<void> {
+    this.abortActiveWork();
   }
 
   close(): void {
@@ -298,7 +383,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
       return;
     }
     this.closed = true;
-    this.abortController?.abort();
+    this.abortActiveWork();
   }
 }
 

@@ -93,6 +93,24 @@ const makeClient = (
   ),
 });
 
+const settleWithin = async <T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+): Promise<
+  | { status: "resolved"; value: T }
+  | { status: "rejected"; reason: unknown }
+  | { status: "timeout" }
+> =>
+  Promise.race([
+    promise.then(
+      (value) => ({ status: "resolved" as const, value }),
+      (reason: unknown) => ({ status: "rejected" as const, reason }),
+    ),
+    new Promise<{ status: "timeout" }>((resolve) => {
+      setTimeout(() => resolve({ status: "timeout" }), timeoutMs);
+    }),
+  ]);
+
 describe("MorpheusAgentSdkProvider", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -313,6 +331,44 @@ describe("MorpheusAgentSdkProvider", () => {
 
     expect(streamSignal?.aborted).toBe(true);
     await expect(sendPromise).resolves.toEqual([]);
+  });
+
+  it("aborts active renderer tool calls on interrupt and resolves promptly", async () => {
+    const client = makeClient([
+      {
+        type: "tool_call",
+        id: "tool-1",
+        name: "ui_add_node",
+        arguments: { type: "nodetool.text.Text" },
+      },
+      { type: "done" },
+    ]);
+    const provider = new MorpheusAgentSdkProvider({
+      baseUrl: "https://morpheus.example",
+      clientFactory: () => client,
+    });
+    const session = provider.createSession({
+      model: "nodetool-canvas",
+      workspacePath: "",
+      userId: "alice",
+    });
+    const transport = makeTransport();
+    let resolveToolStarted: (() => void) | undefined;
+    const toolStarted = new Promise<void>((resolve) => {
+      resolveToolStarted = resolve;
+    });
+    vi.mocked(transport.executeTool).mockImplementationOnce(() => {
+      resolveToolStarted?.();
+      return new Promise<unknown>(() => undefined);
+    });
+
+    const sendPromise = session.send("add node", transport, "ui-session-1", []);
+    await toolStarted;
+    await session.interrupt();
+
+    expect(transport.abortTools).toHaveBeenCalledWith("ui-session-1");
+    const settled = await settleWithin(sendPromise, 100);
+    expect(settled.status).toBe("resolved");
   });
 });
 
