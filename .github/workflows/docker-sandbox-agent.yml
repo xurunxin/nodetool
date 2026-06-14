@@ -1,22 +1,24 @@
 name: Docker — sandbox-agent
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*.*.*'
-      - 'v*.*.*-*'
-    paths:
-      - 'packages/sandbox-agent/**'
-      - 'packages/sandbox/**'
-      - 'packages/config/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'tsconfig.base.json'
-      - 'tsconfig.build.json'
-      - 'scripts/**'
-      - '.github/workflows/docker-sandbox-agent.yml'
+  # Disabled for this repository until GHCR package publishing is configured.
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - main
+  #   tags:
+  #     - 'v*.*.*'
+  #     - 'v*.*.*-*'
+  #   paths:
+  #     - 'packages/sandbox-agent/**'
+  #     - 'packages/sandbox/**'
+  #     - 'packages/config/**'
+  #     - 'package.json'
+  #     - 'package-lock.json'
+  #     - 'tsconfig.base.json'
+  #     - 'tsconfig.build.json'
+  #     - 'scripts/**'
+  #     - '.github/workflows/docker-sandbox-agent.yml'
 
 jobs:
   docker-publish:
