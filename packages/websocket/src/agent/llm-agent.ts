@@ -77,6 +77,16 @@ const log = createLogger("nodetool.websocket.agent.llm");
 
 const MAX_AGGREGATED_MODELS = 200;
 
+function withDefaultModel(
+  models: AgentModelDescriptor[],
+): AgentModelDescriptor[] {
+  const first = models[0];
+  if (first) {
+    first.isDefault = true;
+  }
+  return models;
+}
+
 let graphPlannerRegistry: NodeRegistry | null = null;
 
 export function setLlmAgentGraphPlannerRegistry(registry: NodeRegistry): void {
@@ -803,11 +813,23 @@ async function listAllToolCapableLanguageModels(
         provider: "llm",
         chatProviderId: providerId,
       });
-      if (out.length >= MAX_AGGREGATED_MODELS) return out;
+      if (out.length >= MAX_AGGREGATED_MODELS) {
+        return withDefaultModel(out);
+      }
     }
   }
 
-  const customModels = await getCustomEndpointLanguageModels(userId);
+  let customModels: Awaited<ReturnType<typeof getCustomEndpointLanguageModels>>;
+  try {
+    customModels = await getCustomEndpointLanguageModels(userId);
+  } catch (error) {
+    log.warn("Custom model endpoint metadata unavailable", {
+      error: error instanceof Error ? error.message : String(error),
+      userId,
+    });
+    customModels = [];
+  }
+
   for (const m of customModels) {
     const chatProviderId = m.provider;
     if (!chatProviderId) continue;
@@ -817,13 +839,11 @@ async function listAllToolCapableLanguageModels(
       provider: "llm",
       chatProviderId,
     });
-    if (out.length >= MAX_AGGREGATED_MODELS) return out;
+    if (out.length >= MAX_AGGREGATED_MODELS) {
+      return withDefaultModel(out);
+    }
   }
-
-  if (out.length > 0) {
-    out[0].isDefault = true;
-  }
-  return out;
+  return withDefaultModel(out);
 }
 
 export class LlmAgentSdkProvider implements AgentSdkProvider {

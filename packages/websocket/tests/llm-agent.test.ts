@@ -21,6 +21,7 @@ import {
   CUSTOM_MODEL_ENDPOINTS_SETTING,
   customEndpointProviderId,
 } from "../src/custom-model-endpoints.js";
+import { getProvider } from "@nodetool-ai/runtime";
 
 // ── Mocks ─────────────────────────────────────────────────────────────
 
@@ -110,6 +111,18 @@ async function saveCustomEndpoints(
     userId,
     key: CUSTOM_MODEL_ENDPOINTS_SETTING,
     value: JSON.stringify(endpoints),
+    description: "Custom OpenAI/Anthropic-compatible model endpoints",
+  });
+}
+
+async function saveRawCustomEndpointsSetting(
+  userId: string,
+  value: string,
+): Promise<void> {
+  await Setting.upsert({
+    userId,
+    key: CUSTOM_MODEL_ENDPOINTS_SETTING,
+    value,
     description: "Custom OpenAI/Anthropic-compatible model endpoints",
   });
 }
@@ -300,6 +313,33 @@ describe("LlmAgentSdkProvider listModels", () => {
       }),
     );
     expect(models.map((model) => model.id)).not.toContain("disabled-chat");
+  });
+
+  it("keeps standard provider models when custom endpoint metadata is invalid", async () => {
+    vi.mocked(getProvider).mockResolvedValueOnce({
+      provider: "anthropic",
+      hasToolSupport: async () => true,
+      getAvailableLanguageModels: async () => [
+        {
+          id: "claude-standard",
+          name: "Claude Standard",
+          provider: "anthropic",
+        },
+      ],
+    } as never);
+    await saveRawCustomEndpointsSetting("alice", "{invalid custom endpoints");
+
+    const models = await new LlmAgentSdkProvider().listModels("alice");
+
+    expect(models).toContainEqual(
+      expect.objectContaining({
+        id: "claude-standard",
+        label: "Claude Standard (anthropic)",
+        provider: "llm",
+        chatProviderId: "anthropic",
+        isDefault: true,
+      }),
+    );
   });
 });
 
