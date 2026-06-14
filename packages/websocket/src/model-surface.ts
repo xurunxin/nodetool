@@ -6,6 +6,7 @@ const LOCAL_ONLY_PROVIDER_IDS = new Set([
   "lmstudio",
   "llama_cpp",
   "vllm",
+  "mlx",
   "transformers_js"
 ]);
 

@@ -4,7 +4,12 @@ import {
   type CustomModelEndpointUpsertInput
 } from "@nodetool-ai/protocol/api-schemas/custom-model-endpoints.js";
 import type { UnifiedModel } from "@nodetool-ai/protocol";
-import { Setting, Secret, clearSecretCache } from "@nodetool-ai/models";
+import {
+  Setting,
+  Secret,
+  clearSecretCache,
+  getSecret as getStoredSecret
+} from "@nodetool-ai/models";
 import { Buffer } from "node:buffer";
 
 export const CUSTOM_MODEL_ENDPOINTS_SETTING = "custom_model_endpoints";
@@ -49,7 +54,23 @@ export function enabledCustomModelEndpoints(
 export async function listEnabledCustomModelEndpoints(
   userId: string
 ): Promise<CustomModelEndpoint[]> {
-  return enabledCustomModelEndpoints(await listCustomModelEndpoints(userId));
+  const endpoints = enabledCustomModelEndpoints(
+    await listCustomModelEndpoints(userId)
+  );
+  const endpointsWithSecrets = await Promise.all(
+    endpoints.map(async (endpoint) => {
+      const secret = await getStoredSecret(
+        customEndpointSecretKey(endpoint.id),
+        userId
+      );
+      return typeof secret === "string" && secret.trim().length > 0
+        ? endpoint
+        : null;
+    })
+  );
+  return endpointsWithSecrets.filter(
+    (endpoint): endpoint is CustomModelEndpoint => endpoint !== null
+  );
 }
 
 export function customEndpointModelsToUnified(

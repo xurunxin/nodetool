@@ -352,7 +352,14 @@ async function ensureAgentSession(
     (existing && !isTemporaryLlmSessionId(existing) ? existing : undefined);
   const existingConfig = state.agentSessionConfigByThread[threadId];
   const canReuseExisting = sessionConfigsMatch(existingConfig, config);
-  if (existing && liveSessions.has(existing) && canReuseExisting) {
+  const canResumeLegacyPiSession =
+    agentProvider === "pi" &&
+    existingConfig === undefined &&
+    typeof existing === "string" &&
+    existing.length > 0 &&
+    !!agentWorkspacePath;
+  const canResumeExisting = canReuseExisting || canResumeLegacyPiSession;
+  if (existing && liveSessions.has(existing) && canResumeExisting) {
     return existing;
   }
 
@@ -362,7 +369,7 @@ async function ensureAgentSession(
     provider: agentProvider,
     model: agentModel
   };
-  if (canReuseExisting && agentProvider !== "morpheus") {
+  if (canResumeExisting && agentProvider !== "morpheus") {
     if (agentProvider === "llm") {
       if (llmResumeSessionId) {
         options.resumeSessionId = llmResumeSessionId;
@@ -401,7 +408,7 @@ async function ensureAgentSession(
       ...resumeSessionsWithoutThread
     } = current.agentResumeSessionByThread;
     const agentResumeSessionByThreadNext =
-      agentProvider === "llm" && canReuseExisting && llmResumeSessionId
+      agentProvider === "llm" && canResumeExisting && llmResumeSessionId
         ? {
             ...current.agentResumeSessionByThread,
             [threadId]: llmResumeSessionId

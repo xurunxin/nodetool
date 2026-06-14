@@ -542,6 +542,37 @@ describe("chatAgent store slice", () => {
     );
   });
 
+  it("resumes legacy persisted Pi sessions when no session config was migrated", async () => {
+    mockAgentClient.createSession.mockResolvedValue("session-pi-resumed");
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "pi",
+      agentModel: "pi/claude",
+      agentModels: [piModel],
+      agentWorkspaceId: "workspace-1",
+      agentWorkspacePath: "G:/Projects/sample",
+      agentSessionByThread: {
+        "thread-pi": "legacy-pi-session"
+      },
+      agentSessionConfigByThread: {}
+    });
+
+    await store.getState().sendAgentMessage("thread-pi", "continue");
+
+    expect(mockAgentClient.createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: "pi",
+        model: "pi/claude",
+        workspacePath: "G:/Projects/sample",
+        resumeSessionId: "legacy-pi-session"
+      })
+    );
+    expect(mockAgentClient.sendMessage).toHaveBeenCalledWith(
+      "session-pi-resumed",
+      "continue"
+    );
+  });
+
   it("keeps Pi workspace-only by erroring before session creation without a workspace", async () => {
     const store = createTestStore();
     store.setState({

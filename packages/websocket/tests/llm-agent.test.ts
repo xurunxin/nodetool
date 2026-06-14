@@ -16,10 +16,18 @@
  * in isolation.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { initTestDb, Thread, Message, Setting } from "@nodetool-ai/models";
+import {
+  initTestDb,
+  Thread,
+  Message,
+  Setting,
+  Secret,
+  clearSecretCache,
+} from "@nodetool-ai/models";
 import {
   CUSTOM_MODEL_ENDPOINTS_SETTING,
   customEndpointProviderId,
+  customEndpointSecretKey,
 } from "../src/custom-model-endpoints.js";
 import {
   getProvider,
@@ -139,6 +147,20 @@ async function saveRawCustomEndpointsSetting(
     value,
     description: "Custom OpenAI/Anthropic-compatible model endpoints",
   });
+}
+
+async function saveCustomEndpointSecret(
+  userId: string,
+  endpointId: string,
+): Promise<void> {
+  const key = customEndpointSecretKey(endpointId);
+  await Secret.upsert({
+    userId,
+    key,
+    value: "sk-test",
+    description: "Test custom model endpoint API key",
+  });
+  clearSecretCache(userId, key);
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────
@@ -366,10 +388,15 @@ describe("LlmAgentSdkProvider listModels", () => {
     resetModelSurface();
   });
 
-  it("includes enabled custom endpoint models and skips disabled endpoints", async () => {
+  it("includes keyed custom endpoint models and skips disabled or keyless endpoints", async () => {
     const customProviderId = customEndpointProviderId("custom_gateway");
     await saveCustomEndpoints("alice", [
       customEndpoint(),
+      customEndpoint({
+        id: "keyless_gateway",
+        name: "Keyless Gateway",
+        models: [{ id: "keyless-chat", name: "Keyless Chat" }],
+      }),
       customEndpoint({
         id: "disabled_gateway",
         name: "Disabled Gateway",
@@ -377,6 +404,7 @@ describe("LlmAgentSdkProvider listModels", () => {
         models: [{ id: "disabled-chat", name: "Disabled Chat" }],
       }),
     ]);
+    await saveCustomEndpointSecret("alice", "custom_gateway");
 
     const models = await new LlmAgentSdkProvider().listModels("alice");
 
@@ -388,6 +416,7 @@ describe("LlmAgentSdkProvider listModels", () => {
         chatProviderId: customProviderId,
       }),
     );
+    expect(models.map((model) => model.id)).not.toContain("keyless-chat");
     expect(models.map((model) => model.id)).not.toContain("disabled-chat");
   });
 

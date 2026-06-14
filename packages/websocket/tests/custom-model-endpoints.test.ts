@@ -7,6 +7,8 @@ import {
   customEndpointProviderId,
   customEndpointSecretKey,
   deleteCustomModelEndpoint,
+  getCustomEndpointProviderInfos,
+  listEnabledCustomModelEndpoints,
   listCustomModelEndpoints,
   upsertCustomModelEndpoint
 } from "../src/custom-model-endpoints.js";
@@ -23,11 +25,12 @@ vi.mock("@nodetool-ai/models", async (orig) => {
       upsert: vi.fn(),
       deleteSecret: vi.fn()
     },
+    getSecret: vi.fn(),
     clearSecretCache: vi.fn()
   };
 });
 
-import { Setting, Secret, clearSecretCache } from "@nodetool-ai/models";
+import { Setting, Secret, clearSecretCache, getSecret } from "@nodetool-ai/models";
 
 const createCaller = createCallerFactory(appRouter);
 
@@ -65,6 +68,7 @@ function endpoint(overrides: Record<string, unknown> = {}) {
 describe("custom model endpoints", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (getSecret as ReturnType<typeof vi.fn>).mockResolvedValue("stored-key");
   });
 
   afterEach(() => {
@@ -110,6 +114,30 @@ describe("custom model endpoints", () => {
     expect(customEndpointSecretKey("local-gateway_1")).toBe(
       "CUSTOM_MODEL_ENDPOINT_HEX_6C6F63616C2D676174657761795F31_API_KEY"
     );
+  });
+
+  it("only exposes enabled endpoints that have a stored api key", async () => {
+    (Setting.find as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeStoredSetting([
+        endpoint({ id: "keyless", name: "Keyless Gateway" }),
+        endpoint({ id: "ready", name: "Ready Gateway" }),
+        endpoint({ id: "disabled", name: "Disabled Gateway", enabled: false })
+      ])
+    );
+    (getSecret as ReturnType<typeof vi.fn>).mockImplementation(
+      async (key: string) =>
+        key === customEndpointSecretKey("ready") ? "sk-ready" : null
+    );
+
+    await expect(listEnabledCustomModelEndpoints("user-1")).resolves.toEqual([
+      endpoint({ id: "ready", name: "Ready Gateway" })
+    ]);
+    await expect(getCustomEndpointProviderInfos("user-1")).resolves.toEqual([
+      {
+        provider: "custom:ready",
+        capabilities: ["generate_message", "generate_messages"]
+      }
+    ]);
   });
 
   it("creates distinct deterministic secret keys for distinct valid endpoint ids", () => {

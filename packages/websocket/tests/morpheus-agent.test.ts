@@ -230,9 +230,51 @@ describe("MorpheusAgentSdkProvider", () => {
       expect.objectContaining({
         type: "result",
         uuid: "tool-1",
-        subtype: "tool_result",
+        subtype: "success",
         text: JSON.stringify({ nodeId: "n1" }),
         is_error: false,
+      }),
+    );
+  });
+
+  it("keeps streamed Morpheus transcripts available after the live turn", async () => {
+    const client = makeClient([
+      { type: "text_delta", text: "built" },
+      { type: "text_delta", text: " graph" },
+      { type: "done" },
+    ]);
+    const provider = new MorpheusAgentSdkProvider({
+      baseUrl: "https://morpheus.example",
+      clientFactory: () => client,
+    });
+    const session = provider.createSession({
+      model: "nodetool-canvas",
+      workspacePath: "",
+      userId: "alice",
+    });
+
+    await session.send("build a graph", makeTransport(), "ui-session-history", []);
+
+    await expect(
+      provider.getSessionMessages({ sessionId: "ui-session-history" }, "alice"),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        type: "user",
+        session_id: "ui-session-history",
+        text: "build a graph",
+      }),
+      expect.objectContaining({
+        type: "assistant",
+        session_id: "ui-session-history",
+        text: "built graph",
+      }),
+    ]);
+    await expect(provider.listSessions({}, "alice")).resolves.toContainEqual(
+      expect.objectContaining({
+        sessionId: "ui-session-history",
+        provider: "morpheus",
+        firstPrompt: "build a graph",
+        summary: "built graph",
       }),
     );
   });

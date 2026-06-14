@@ -14,7 +14,10 @@ describe("model surface", () => {
 
   it("hides local-only provider ids in api_first mode", () => {
     expect(
-      filterProviderIdsForSurface(["openai", "ollama", "anthropic"], "api_first")
+      filterProviderIdsForSurface(
+        ["openai", "ollama", "mlx", "anthropic"],
+        "api_first"
+      )
     ).toEqual(["openai", "anthropic"]);
   });
 
