@@ -51,7 +51,10 @@ import {
   isProviderVisibleForSurface
 } from "../../model-surface.js";
 import {
+  CUSTOM_MODEL_ENDPOINT_LANGUAGE_CAPABILITIES,
+  customEndpointModelsToUnified,
   customEndpointProviderId,
+  enabledCustomModelEndpoints,
   listCustomModelEndpoints
 } from "../../custom-model-endpoints.js";
 
@@ -643,28 +646,6 @@ type CustomModelEndpoint = Awaited<
   ReturnType<typeof listCustomModelEndpoints>
 >[number];
 
-const CUSTOM_LANGUAGE_CAPABILITIES = [
-  "generate_message",
-  "generate_messages"
-] as const;
-
-function customEndpointModelsToUnified(
-  endpoint: CustomModelEndpoint
-): UnifiedModel[] {
-  const provider = customEndpointProviderId(endpoint.id);
-  return endpoint.models.map((model) => ({
-    id: model.id,
-    type: "language_model",
-    name: model.name,
-    provider,
-    repo_id: null,
-    path: null,
-    downloaded: false,
-    tags: [provider],
-    supports_tools: null
-  }));
-}
-
 async function getCustomModelEndpointsForModels(
   userId: string
 ): Promise<CustomModelEndpoint[]> {
@@ -682,10 +663,10 @@ async function getCustomModelEndpointsForModels(
 async function getCustomEndpointLanguageModels(
   userId: string
 ): Promise<UnifiedModel[]> {
-  const endpoints = await getCustomModelEndpointsForModels(userId);
-  return endpoints
-    .filter((endpoint) => endpoint.enabled)
-    .flatMap(customEndpointModelsToUnified);
+  const endpoints = enabledCustomModelEndpoints(
+    await getCustomModelEndpointsForModels(userId)
+  );
+  return endpoints.flatMap(customEndpointModelsToUnified);
 }
 
 async function getCustomEndpointLanguageModelsByProvider(
@@ -696,23 +677,23 @@ async function getCustomEndpointLanguageModelsByProvider(
     return [];
   }
   const endpointId = provider.slice("custom:".length);
-  const endpoints = await getCustomModelEndpointsForModels(userId);
-  const endpoint = endpoints.find(
-    (candidate) => candidate.id === endpointId && candidate.enabled
+  const endpoints = enabledCustomModelEndpoints(
+    await getCustomModelEndpointsForModels(userId)
   );
+  const endpoint = endpoints.find((candidate) => candidate.id === endpointId);
   return endpoint ? customEndpointModelsToUnified(endpoint) : [];
 }
 
 async function getCustomEndpointProviderInfos(
   userId: string
 ): Promise<Array<{ provider: string; capabilities: string[] }>> {
-  const endpoints = await getCustomModelEndpointsForModels(userId);
-  return endpoints
-    .filter((endpoint) => endpoint.enabled)
-    .map((endpoint) => ({
-      provider: customEndpointProviderId(endpoint.id),
-      capabilities: [...CUSTOM_LANGUAGE_CAPABILITIES]
-    }));
+  const endpoints = enabledCustomModelEndpoints(
+    await getCustomModelEndpointsForModels(userId)
+  );
+  return endpoints.map((endpoint) => ({
+    provider: customEndpointProviderId(endpoint.id),
+    capabilities: [...CUSTOM_MODEL_ENDPOINT_LANGUAGE_CAPABILITIES]
+  }));
 }
 
 function toUnifiedModel(

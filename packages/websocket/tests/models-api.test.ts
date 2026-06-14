@@ -18,6 +18,19 @@ import type { UnifiedModel } from "@nodetool-ai/protocol";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { handleModelsApiRequest } from "../src/models-api.js";
 
+vi.mock("../src/custom-model-endpoints.js", async (orig) => {
+  const actual = await orig<typeof import("../src/custom-model-endpoints.js")>();
+  return {
+    ...actual,
+    listCustomModelEndpoints: vi.fn()
+  };
+});
+
+import {
+  customEndpointProviderId,
+  listCustomModelEndpoints
+} from "../src/custom-model-endpoints.js";
+
 vi.mock("@nodetool-ai/runtime", async (orig) => {
   const actual = await orig<typeof import("@nodetool-ai/runtime")>();
   return {
@@ -97,6 +110,38 @@ function enableLocalModelSurface(): void {
   process.env.NODETOOL_MODEL_SURFACE = "local_first";
 }
 
+function customEndpoint(
+  overrides: Partial<{
+    id: string;
+    name: string;
+    kind: "openai" | "anthropic";
+    enabled: boolean;
+    models: Array<{
+      id: string;
+      name: string;
+      contextWindow?: number;
+    }>;
+  }> = {}
+) {
+  return {
+    id: "custom_gateway",
+    name: "Custom Gateway",
+    kind: "openai" as const,
+    baseUrl: "https://custom.example.test/v1",
+    enabled: true,
+    models: [
+      {
+        id: "custom-chat",
+        name: "Custom Chat",
+        contextWindow: 128000
+      }
+    ],
+    createdAt: "2026-06-14T00:00:00.000Z",
+    updatedAt: "2026-06-14T00:00:00.000Z",
+    ...overrides
+  };
+}
+
 async function requestJson(
   path: string,
   init: RequestInit = {}
@@ -135,6 +180,7 @@ describe("REST models API surface", () => {
     vi.mocked(getModelsByHfType).mockResolvedValue([]);
     vi.mocked(readCachedHfModels).mockResolvedValue([]);
     vi.mocked(searchCachedHfModels).mockResolvedValue([]);
+    vi.mocked(listCustomModelEndpoints).mockResolvedValue([]);
     vi.mocked(access).mockRejectedValue(
       Object.assign(new Error("ENOENT"), { code: "ENOENT" })
     );
@@ -202,6 +248,27 @@ describe("REST models API surface", () => {
     expect(
       (body as Array<{ provider: string }>).map((entry) => entry.provider)
     ).toEqual(["openai", ...LOCAL_PROVIDER_IDS]);
+  });
+
+  it("includes enabled custom endpoints in REST provider lists", async () => {
+    vi.mocked(listCustomModelEndpoints).mockResolvedValue([
+      customEndpoint(),
+      customEndpoint({
+        id: "disabled_gateway",
+        name: "Disabled Gateway",
+        enabled: false
+      })
+    ]);
+
+    const { body, status } = await requestJson("/api/models/providers");
+
+    expect(status).toBe(200);
+    expect(body).toEqual([
+      {
+        provider: customEndpointProviderId("custom_gateway"),
+        capabilities: ["generate_message", "generate_messages"]
+      }
+    ]);
   });
 
   it("does not probe local servers for recommended models in API-first mode", async () => {
@@ -555,6 +622,73 @@ describe("REST models API surface", () => {
     expect(status).toBe(200);
     expect(models.map((model) => model.id)).not.toContain("cached-hf-all");
     expect(readCachedHfModels).not.toHaveBeenCalled();
+  });
+
+  it("includes enabled custom endpoint metadata models in all-model responses", async () => {
+    vi.mocked(listCustomModelEndpoints).mockResolvedValue([
+      customEndpoint(),
+      customEndpoint({
+        id: "disabled_gateway",
+        name: "Disabled Gateway",
+        enabled: false,
+        models: [{ id: "disabled-chat", name: "Disabled Chat" }]
+      })
+    ]);
+
+    const { body, status } = await requestJson("/api/models/all");
+    const models = body as UnifiedModel[];
+
+    expect(status).toBe(200);
+    expect(models).toContainEqual(
+      expect.objectContaining({
+        id: "custom-chat",
+        name: "Custom Chat",
+        type: "language_model",
+        provider: customEndpointProviderId("custom_gateway"),
+        supports_tools: null
+      })
+    );
+    expect(models.map((model) => model.id)).not.toContain("disabled-chat");
+  });
+
+  it("returns enabled custom endpoint metadata models from encoded direct LLM routes", async () => {
+    vi.mocked(listCustomModelEndpoints).mockResolvedValue([
+      customEndpoint(),
+      customEndpoint({
+        id: "disabled_gateway",
+        name: "Disabled Gateway",
+        enabled: false,
+        models: [{ id: "disabled-chat", name: "Disabled Chat" }]
+      })
+    ]);
+
+    const { body, status } = await requestJson(
+      `/api/models/llm/${encodeURIComponent(customEndpointProviderId("custom_gateway"))}`
+    );
+
+    expect(status).toBe(200);
+    expect(body).toEqual([
+      expect.objectContaining({
+        id: "custom-chat",
+        name: "Custom Chat",
+        type: "language_model",
+        provider: customEndpointProviderId("custom_gateway"),
+        supports_tools: null
+      })
+    ]);
+    expect(getProvider).not.toHaveBeenCalledWith(
+      customEndpointProviderId("custom_gateway"),
+      expect.any(Function)
+    );
+
+    await expect(
+      requestJson(
+        `/api/models/llm/${encodeURIComponent(customEndpointProviderId("disabled_gateway"))}`
+      )
+    ).resolves.toMatchObject({
+      body: [],
+      status: 200
+    });
   });
 
   it("omits local provider models from all-model responses in API-first mode", async () => {

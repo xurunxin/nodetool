@@ -234,17 +234,18 @@ Expected: the server responds to `create-1` with a session id that starts with
 ### 3. Morpheus Tool Call Bridge
 
 Using the session from step 2, send a prompt that asks MorpheusCore to call a
-renderer tool exposed in the manifest:
+frontend bridge tool for a renderer tool exposed in the manifest:
 
 This bridge assertion depends on the live Morpheus agent honoring the prompt
-and emitting a tool call.
+and emitting a `forward_to_frontend` tool call whose `forwardType` starts with
+`nodetool:`.
 
 ```js
 ws.send(JSON.stringify({
   command: "send_message",
   request_id: "send-1",
   session_id: "<morpheus-session-id>",
-  message: "Call the ui_smoke_tool with {\"value\":\"ok\"}, then summarize the result."
+  message: "Call forward_to_frontend with forwardType nodetool:ui_smoke_tool and payload {\"value\":\"ok\"}."
 }));
 ```
 
@@ -287,10 +288,13 @@ Expected:
 
 - A `tool_call_request` arrives for `ui_smoke_tool`.
 - The response is accepted.
-- The final agent stream includes a non-error tool result or assistant summary.
+- The NodeTool chat transcript includes a local non-error tool result.
 
-That proves the Morpheus tool call reached `AgentSocketTransport.executeTool`
-and returned over the existing renderer bridge.
+That proves MorpheusCore emitted a `forward_to_frontend` /
+`nodetool:ui_smoke_tool` tool call, NodeTool observed it, and
+`AgentSocketTransport.executeTool` routed it over the existing renderer bridge.
+It does not prove MorpheusCore consumed the renderer result for summarization;
+that requires a future MorpheusCore callback protocol.
 
 ### 4. Custom Endpoint Text Generation
 

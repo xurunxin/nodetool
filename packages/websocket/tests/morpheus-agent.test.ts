@@ -76,10 +76,10 @@ const makeTransport = (): AgentTransport => ({
 const makeClient = (
   events: MorpheusStreamEvent[],
   onStream?: (options: {
+    agentId: string;
     sessionId: string;
     prompt: string;
     signal?: AbortSignal;
-    tools?: unknown;
   }) => void | Promise<void>,
 ): FakeMorpheusClient => ({
   createSession: vi.fn(async () => ({ id: "remote-session-1" })),
@@ -136,7 +136,7 @@ describe("MorpheusAgentSdkProvider", () => {
     ]);
   });
 
-  it("forwards frontend tool manifests to Morpheus streamPrompt", async () => {
+  it("passes agent id to Morpheus streamPrompt without forwarding renderer tool manifests", async () => {
     const client = makeClient([{ type: "done" }]);
     const provider = new MorpheusAgentSdkProvider({
       baseUrl: "https://morpheus.example",
@@ -163,30 +163,26 @@ describe("MorpheusAgentSdkProvider", () => {
 
     expect(client.createSession).toHaveBeenCalledWith("canvas-agent", "alice");
     expect(client.streamPrompt).toHaveBeenCalledWith(
-      expect.objectContaining({
+      {
+        agentId: "canvas-agent",
         sessionId: "remote-session-1",
         prompt: "build",
-        tools: [
-          {
-            name: "ui_add_node",
-            description: "Add a node",
-            parameters: {
-              type: "object",
-              properties: { type: { type: "string" } },
-            },
-          },
-        ],
-      }),
+        signal: expect.any(AbortSignal),
+      },
     );
   });
 
-  it("executes Morpheus tool calls through the agent transport and emits tool results", async () => {
+  it("routes forward_to_frontend nodetool calls to renderer tools and records local-only tool results", async () => {
     const client = makeClient([
       {
         type: "tool_call",
         id: "tool-1",
-        name: "ui_add_node",
-        arguments: { type: "nodetool.text.Text" },
+        name: "forward_to_frontend",
+        arguments: {
+          forwardType: "nodetool:ui_add_node",
+          title: "Add node",
+          payload: JSON.stringify({ type: "nodetool.text.Text" }),
+        },
       },
       { type: "done" },
     ]);
@@ -219,8 +215,12 @@ describe("MorpheusAgentSdkProvider", () => {
             id: "tool-1",
             type: "function",
             function: {
-              name: "ui_add_node",
-              arguments: JSON.stringify({ type: "nodetool.text.Text" }),
+              name: "forward_to_frontend",
+              arguments: JSON.stringify({
+                forwardType: "nodetool:ui_add_node",
+                title: "Add node",
+                payload: JSON.stringify({ type: "nodetool.text.Text" }),
+              }),
             },
           },
         ],
@@ -233,6 +233,44 @@ describe("MorpheusAgentSdkProvider", () => {
         subtype: "tool_result",
         text: JSON.stringify({ nodeId: "n1" }),
         is_error: false,
+      }),
+    );
+  });
+
+  it("skips unsupported forward_to_frontend calls with a local transcript result", async () => {
+    const client = makeClient([
+      {
+        type: "tool_call",
+        id: "tool-unsupported",
+        name: "forward_to_frontend",
+        arguments: {
+          forwardType: "external:open_panel",
+          payload: JSON.stringify({ panel: "models" }),
+        },
+      },
+      { type: "done" },
+    ]);
+    const provider = new MorpheusAgentSdkProvider({
+      baseUrl: "https://morpheus.example",
+      clientFactory: () => client,
+    });
+    const session = provider.createSession({
+      model: "nodetool-canvas",
+      workspacePath: "",
+      userId: "alice",
+    });
+    const transport = makeTransport();
+
+    const messages = await session.send("open panel", transport, "ui-session-1", []);
+
+    expect(transport.executeTool).not.toHaveBeenCalled();
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        type: "result",
+        uuid: "tool-unsupported",
+        subtype: "tool_result",
+        is_error: true,
+        text: expect.stringContaining("Unsupported forward_to_frontend"),
       }),
     );
   });
@@ -338,8 +376,11 @@ describe("MorpheusAgentSdkProvider", () => {
       {
         type: "tool_call",
         id: "tool-1",
-        name: "ui_add_node",
-        arguments: { type: "nodetool.text.Text" },
+        name: "forward_to_frontend",
+        arguments: {
+          forwardType: "nodetool:ui_add_node",
+          payload: JSON.stringify({ type: "nodetool.text.Text" }),
+        },
       },
       { type: "done" },
     ]);

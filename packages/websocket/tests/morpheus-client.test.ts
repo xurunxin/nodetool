@@ -88,11 +88,13 @@ const collectStream = async (stream: AsyncIterable<MorpheusStreamEvent>) => {
 describe("parseMorpheusSseFrame", () => {
   it("maps text and thinking deltas", () => {
     expect(
-      parseMorpheusSseFrame('data: {"type":"text_delta","delta":"hello"}'),
+      parseMorpheusSseFrame(
+        'data: {"event":"text_delta","data":{"delta":"hello"}}',
+      ),
     ).toEqual({ type: "text_delta", text: "hello" });
     expect(
       parseMorpheusSseFrame(
-        'data: {"type":"thinking_delta","text":"working"}',
+        'data: {"event":"thinking_delta","data":{"delta":"working"}}',
       ),
     ).toEqual({ type: "thinking_delta", text: "working" });
   });
@@ -100,25 +102,15 @@ describe("parseMorpheusSseFrame", () => {
   it("joins multiple data lines before parsing", () => {
     expect(
       parseMorpheusSseFrame(
-        'event: message\r\ndata: {"type":"text_delta",\r\ndata: "delta":"hello"}',
+        'event: message\r\ndata: {"event":"text_delta",\r\ndata: "data":{"delta":"hello"}}',
       ),
     ).toEqual({ type: "text_delta", text: "hello" });
   });
 
-  it("maps tool_call and toolcall_end payloads", () => {
+  it("maps MorpheusCore toolcall_end payloads", () => {
     expect(
       parseMorpheusSseFrame(
-        'data: {"type":"tool_call","id":"tool-1","name":"search","arguments":{"query":"x"}}',
-      ),
-    ).toEqual({
-      type: "tool_call",
-      id: "tool-1",
-      name: "search",
-      arguments: { query: "x" },
-    });
-    expect(
-      parseMorpheusSseFrame(
-        'data: {"type":"toolcall_end","id":"tool-2","name":"calc","args":{"n":2}}',
+        'data: {"event":"toolcall_end","data":{"toolCall":{"id":"tool-2","name":"calc","arguments":{"n":2}}}}',
       ),
     ).toEqual({
       type: "tool_call",
@@ -129,21 +121,30 @@ describe("parseMorpheusSseFrame", () => {
   });
 
   it("maps done and error payloads", () => {
-    expect(parseMorpheusSseFrame('data: {"type":"done"}')).toEqual({
+    expect(parseMorpheusSseFrame('data: {"event":"done","data":{}}')).toEqual({
       type: "done",
     });
     expect(
-      parseMorpheusSseFrame('data: {"type":"error","error":"boom"}'),
+      parseMorpheusSseFrame(
+        'data: {"event":"error","data":{"message":"boom","code":"E_FAIL"}}',
+      ),
     ).toEqual({ type: "error", message: "boom" });
-    expect(parseMorpheusSseFrame('data: {"type":"error"}')).toEqual({
+    expect(parseMorpheusSseFrame('data: {"event":"error","data":{}}')).toEqual({
       type: "error",
       message: "Morpheus stream error",
     });
   });
 
-  it("returns null for unknown payloads and frames without data", () => {
+  it("returns null for session, unknown payloads, and frames without data", () => {
     expect(parseMorpheusSseFrame("event: ping")).toBeNull();
-    expect(parseMorpheusSseFrame('data: {"type":"something_else"}')).toBeNull();
+    expect(
+      parseMorpheusSseFrame(
+        'data: {"event":"session","data":{"sessionId":"remote-session-1"}}',
+      ),
+    ).toBeNull();
+    expect(
+      parseMorpheusSseFrame('data: {"event":"something_else","data":{}}'),
+    ).toBeNull();
   });
 });
 
@@ -215,10 +216,10 @@ describe("MorpheusClient.streamPrompt", () => {
   it("streams split chunks and multiple frames per chunk", async () => {
     const { fetchFn } = makeFetchMock([
       streamResponse([
-        'data: {"type":"text_delta","delta":"hel',
-        'lo"}\n\n' +
-          'data: {"type":"thinking_delta","delta":"hmm"}\n\n' +
-          'data: {"type":"done"}',
+        'data: {"event":"text_delta","data":{"delta":"hel',
+        'lo"}}\n\n' +
+          'data: {"event":"thinking_delta","data":{"delta":"hmm"}}\n\n' +
+          'data: {"event":"done","data":{}}',
       ]),
     ]);
     const client = new MorpheusClient({
@@ -228,7 +229,11 @@ describe("MorpheusClient.streamPrompt", () => {
 
     await expect(
       collectStream(
-        client.streamPrompt({ sessionId: "s-1", prompt: "hello" }),
+        client.streamPrompt({
+          agentId: "canvas/agent",
+          sessionId: "s-1",
+          prompt: "hello",
+        }),
       ),
     ).resolves.toEqual([
       { type: "text_delta", text: "hello" },
@@ -237,10 +242,10 @@ describe("MorpheusClient.streamPrompt", () => {
     ]);
   });
 
-  it("sends authorization, body, tools, and signal", async () => {
+  it("sends authorization, agent-scoped query body, and signal", async () => {
     const controller = new AbortController();
     const { fetchFn, calls } = makeFetchMock([
-      streamResponse(['data: {"type":"done"}\n\n']),
+      streamResponse(['data: {"event":"done","data":{}}\n\n']),
     ]);
     const client = new MorpheusClient({
       baseUrl: "https://morpheus.example/",
@@ -250,16 +255,16 @@ describe("MorpheusClient.streamPrompt", () => {
 
     await collectStream(
       client.streamPrompt({
+        agentId: "canvas/agent",
         sessionId: "s-1",
         prompt: "hello",
-        tools: [{ name: "search" }],
         signal: controller.signal,
       }),
     );
 
     expect(calls).toHaveLength(1);
     expect(calls[0].input).toBe(
-      "https://morpheus.example/api/v1/prompt/stream",
+      "https://morpheus.example/api/v1/agents/canvas%2Fagent/prompt/stream",
     );
     expect(calls[0].init?.method).toBe("POST");
     expect(calls[0].init?.headers).toEqual({
@@ -269,14 +274,13 @@ describe("MorpheusClient.streamPrompt", () => {
     expect(calls[0].init?.signal).toBe(controller.signal);
     expect(JSON.parse(String(calls[0].init?.body))).toEqual({
       sessionId: "s-1",
-      prompt: "hello",
-      tools: [{ name: "search" }],
+      query: "hello",
     });
   });
 
   it("cancels the response body when the consumer exits early", async () => {
     const tracked = trackedStreamResponse(
-      ['data: {"type":"text_delta","delta":"hello"}\n\n'],
+      ['data: {"event":"text_delta","data":{"delta":"hello"}}\n\n'],
       false,
     );
     const { fetchFn } = makeFetchMock([tracked.response]);
@@ -287,6 +291,7 @@ describe("MorpheusClient.streamPrompt", () => {
 
     const events: MorpheusStreamEvent[] = [];
     for await (const event of client.streamPrompt({
+      agentId: "canvas-agent",
       sessionId: "s-1",
       prompt: "hello",
     })) {
@@ -299,7 +304,10 @@ describe("MorpheusClient.streamPrompt", () => {
   });
 
   it("does not cancel the response body after natural EOF", async () => {
-    const tracked = trackedStreamResponse(['data: {"type":"done"}\n\n'], true);
+    const tracked = trackedStreamResponse(
+      ['data: {"event":"done","data":{}}\n\n'],
+      true,
+    );
     const { fetchFn } = makeFetchMock([tracked.response]);
     const client = new MorpheusClient({
       baseUrl: "https://morpheus.example",
@@ -307,7 +315,13 @@ describe("MorpheusClient.streamPrompt", () => {
     });
 
     await expect(
-      collectStream(client.streamPrompt({ sessionId: "s-1", prompt: "hi" })),
+      collectStream(
+        client.streamPrompt({
+          agentId: "canvas-agent",
+          sessionId: "s-1",
+          prompt: "hi",
+        }),
+      ),
     ).resolves.toEqual([{ type: "done" }]);
     expect(tracked.getCancelCount()).toBe(0);
   });
@@ -318,7 +332,13 @@ describe("MorpheusClient.streamPrompt", () => {
       fetchFn: makeFetchMock([streamResponse([], { status: 503 })]).fetchFn,
     });
     await expect(
-      collectStream(failed.streamPrompt({ sessionId: "s-1", prompt: "hi" })),
+      collectStream(
+        failed.streamPrompt({
+          agentId: "canvas-agent",
+          sessionId: "s-1",
+          prompt: "hi",
+        }),
+      ),
     ).rejects.toThrow(/stream Morpheus prompt failed/i);
 
     const missingBody = new MorpheusClient({
@@ -332,7 +352,11 @@ describe("MorpheusClient.streamPrompt", () => {
     });
     await expect(
       collectStream(
-        missingBody.streamPrompt({ sessionId: "s-1", prompt: "hi" }),
+        missingBody.streamPrompt({
+          agentId: "canvas-agent",
+          sessionId: "s-1",
+          prompt: "hi",
+        }),
       ),
     ).rejects.toThrow(/missing response body/i);
   });

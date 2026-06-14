@@ -3,6 +3,7 @@ import {
   type CustomModelEndpoint,
   type CustomModelEndpointUpsertInput
 } from "@nodetool-ai/protocol/api-schemas/custom-model-endpoints.js";
+import type { UnifiedModel } from "@nodetool-ai/protocol";
 import { Setting, Secret, clearSecretCache } from "@nodetool-ai/models";
 import { Buffer } from "node:buffer";
 
@@ -10,6 +11,11 @@ export const CUSTOM_MODEL_ENDPOINTS_SETTING = "custom_model_endpoints";
 
 const CUSTOM_MODEL_ENDPOINTS_DESCRIPTION =
   "Custom OpenAI/Anthropic-compatible model endpoints";
+
+export const CUSTOM_MODEL_ENDPOINT_LANGUAGE_CAPABILITIES = [
+  "generate_message",
+  "generate_messages"
+] as const;
 
 export function customEndpointProviderId(endpointId: string): string {
   return `custom:${endpointId}`;
@@ -32,6 +38,65 @@ export async function listCustomModelEndpoints(
 
   const raw = JSON.parse(setting.getValue()) as unknown;
   return customModelEndpointSchema.array().parse(raw);
+}
+
+export function enabledCustomModelEndpoints(
+  endpoints: CustomModelEndpoint[]
+): CustomModelEndpoint[] {
+  return endpoints.filter((endpoint) => endpoint.enabled);
+}
+
+export async function listEnabledCustomModelEndpoints(
+  userId: string
+): Promise<CustomModelEndpoint[]> {
+  return enabledCustomModelEndpoints(await listCustomModelEndpoints(userId));
+}
+
+export function customEndpointModelsToUnified(
+  endpoint: CustomModelEndpoint
+): UnifiedModel[] {
+  const provider = customEndpointProviderId(endpoint.id);
+  return endpoint.models.map((model) => ({
+    id: model.id,
+    type: "language_model",
+    name: model.name,
+    provider,
+    repo_id: null,
+    path: null,
+    downloaded: false,
+    tags: [provider],
+    supports_tools: null
+  }));
+}
+
+export async function getCustomEndpointLanguageModels(
+  userId: string
+): Promise<UnifiedModel[]> {
+  const endpoints = await listEnabledCustomModelEndpoints(userId);
+  return endpoints.flatMap(customEndpointModelsToUnified);
+}
+
+export async function getCustomEndpointLanguageModelsByProvider(
+  userId: string,
+  provider: string
+): Promise<UnifiedModel[]> {
+  if (!provider.startsWith("custom:")) {
+    return [];
+  }
+  const endpointId = provider.slice("custom:".length);
+  const endpoints = await listEnabledCustomModelEndpoints(userId);
+  const endpoint = endpoints.find((candidate) => candidate.id === endpointId);
+  return endpoint ? customEndpointModelsToUnified(endpoint) : [];
+}
+
+export async function getCustomEndpointProviderInfos(
+  userId: string
+): Promise<Array<{ provider: string; capabilities: string[] }>> {
+  const endpoints = await listEnabledCustomModelEndpoints(userId);
+  return endpoints.map((endpoint) => ({
+    provider: customEndpointProviderId(endpoint.id),
+    capabilities: [...CUSTOM_MODEL_ENDPOINT_LANGUAGE_CAPABILITIES]
+  }));
 }
 
 export async function upsertCustomModelEndpoint(

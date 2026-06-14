@@ -21,20 +21,16 @@ import type { AgentQuerySession, AgentSdkProvider } from "./sdk-provider.js";
 const log = createLogger("nodetool.websocket.agent.morpheus");
 
 const DEFAULT_MORPHEUS_AGENT_ID = "nodetool-canvas";
-
-export interface MorpheusToolDescriptor {
-  name: string;
-  description?: string;
-  parameters: unknown;
-}
+const FORWARD_TO_FRONTEND_TOOL_NAME = "forward_to_frontend";
+const NODETOOL_FORWARD_TYPE_PREFIX = "nodetool:";
 
 export interface MorpheusClientLike {
   createSession(agentId: string, userId: string): Promise<{ id: string }>;
   streamPrompt(options: {
+    agentId: string;
     sessionId: string;
     prompt: string;
     signal?: AbortSignal;
-    tools?: MorpheusToolDescriptor[];
   }): AsyncIterable<MorpheusStreamEvent>;
 }
 
@@ -89,17 +85,45 @@ const raceWithAbort = async <T>(
   }
 };
 
-const toMorpheusTools = (
-  manifest: FrontendToolManifest[],
-): MorpheusToolDescriptor[] =>
-  manifest.map((entry) => ({
-    name: entry.name,
-    description: entry.description,
-    parameters: entry.parameters ?? {
-      type: "object",
-      properties: {},
-    },
-  }));
+const parseForwardPayload = (payload: unknown): unknown => {
+  if (payload == null || payload === "") {
+    return {};
+  }
+  if (typeof payload !== "string") {
+    return payload;
+  }
+  try {
+    return JSON.parse(payload) as unknown;
+  } catch {
+    throw new Error("Invalid forward_to_frontend payload JSON");
+  }
+};
+
+const resolveRendererToolDispatch = (
+  event: Extract<MorpheusStreamEvent, { type: "tool_call" }>,
+): { name: string; args: unknown } => {
+  if (event.name !== FORWARD_TO_FRONTEND_TOOL_NAME) {
+    throw new Error(`Unsupported Morpheus tool call "${event.name}"`);
+  }
+
+  const forwardType = event.arguments.forwardType;
+  if (typeof forwardType !== "string") {
+    throw new Error("Unsupported forward_to_frontend call missing forwardType");
+  }
+  if (!forwardType.startsWith(NODETOOL_FORWARD_TYPE_PREFIX)) {
+    throw new Error(`Unsupported forward_to_frontend forwardType "${forwardType}"`);
+  }
+
+  const name = forwardType.slice(NODETOOL_FORWARD_TYPE_PREFIX.length);
+  if (name.length === 0) {
+    throw new Error("Unsupported forward_to_frontend call missing tool name");
+  }
+
+  return {
+    name,
+    args: parseForwardPayload(event.arguments.payload),
+  };
+};
 
 export class MorpheusQuerySession implements AgentQuerySession {
   private closed = false;
@@ -137,7 +161,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
     message: string,
     transport: AgentTransport | null,
     sessionId: string,
-    manifest: FrontendToolManifest[],
+    _manifest: FrontendToolManifest[],
     onMessage?: (message: AgentMessage) => void,
     _mcpServerUrl?: string | null,
   ): Promise<AgentMessage[]> {
@@ -170,10 +194,10 @@ export class MorpheusQuerySession implements AgentQuerySession {
       const remoteSessionId = await this.ensureRemoteSession();
       const signal = this.abortController.signal;
       const stream = this.options.client.streamPrompt({
+        agentId: this.options.agentId,
         sessionId: remoteSessionId,
         prompt: message,
         signal,
-        tools: toMorpheusTools(manifest),
       });
 
       for await (const event of stream) {
@@ -338,13 +362,14 @@ export class MorpheusQuerySession implements AgentQuerySession {
   ): Promise<unknown> {
     this.activeToolCall = true;
     try {
+      const dispatch = resolveRendererToolDispatch(event);
       return await raceWithAbort(
         Promise.resolve().then(() =>
           transport.executeTool(
             sessionId,
             event.id,
-            event.name,
-            event.arguments,
+            dispatch.name,
+            dispatch.args,
           ),
         ),
         signal,

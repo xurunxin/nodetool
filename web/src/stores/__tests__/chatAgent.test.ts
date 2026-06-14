@@ -265,6 +265,34 @@ describe("chatAgent store slice", () => {
     expect(payload).not.toHaveProperty("workspacePath");
   });
 
+  it("does not pass stale persisted session ids when creating Morpheus sessions", async () => {
+    mockAgentClient.createSession.mockResolvedValue("session-morpheus-new");
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "morpheus",
+      agentModel: "morpheus/default",
+      agentModels: [morpheusModel],
+      agentSessionByThread: {
+        "thread-m": "persisted-local-session"
+      },
+      agentSessionConfigByThread: {
+        "thread-m": {
+          provider: "morpheus",
+          model: "morpheus/default",
+          workspacePath: null,
+          chatProviderId: null
+        }
+      }
+    });
+
+    await store.getState().sendAgentMessage("thread-m", "paint the graph");
+
+    expect(mockAgentClient.createSession).toHaveBeenCalledWith({
+      provider: "morpheus",
+      model: "morpheus/default"
+    });
+  });
+
   it("includes workspacePath when creating a Pi agent session", async () => {
     mockAgentClient.createSession.mockResolvedValue("session-pi");
     const store = createTestStore();

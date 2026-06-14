@@ -303,7 +303,7 @@ async function ensureAgentSession(
     provider: agentProvider,
     model: agentModel
   };
-  if (existing && canReuseExisting) {
+  if (existing && canReuseExisting && agentProvider !== "morpheus") {
     options.resumeSessionId = existing;
   }
   if (agentProvider === "pi" && agentWorkspacePath) {

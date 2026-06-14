@@ -36,6 +36,13 @@ import {
   filterProviderIdsForSurface,
   isLocalModelManagementEnabled
 } from "./model-surface.js";
+import {
+  CUSTOM_MODEL_ENDPOINT_LANGUAGE_CAPABILITIES,
+  customEndpointModelsToUnified,
+  customEndpointProviderId,
+  enabledCustomModelEndpoints,
+  listCustomModelEndpoints
+} from "./custom-model-endpoints.js";
 
 export type { UnifiedModel };
 
@@ -51,7 +58,7 @@ interface CachedRepo {
 }
 
 interface ProviderInfo {
-  provider: ProviderId;
+  provider: string;
   capabilities: string[];
 }
 
@@ -357,6 +364,56 @@ async function instantiateProvider(
   }
 }
 
+type CustomModelEndpoint = Awaited<
+  ReturnType<typeof listCustomModelEndpoints>
+>[number];
+
+async function getCustomModelEndpointsForRest(
+  userId: string
+): Promise<CustomModelEndpoint[]> {
+  try {
+    return await listCustomModelEndpoints(userId);
+  } catch {
+    return [];
+  }
+}
+
+async function getCustomEndpointLanguageModelsForRest(
+  userId: string
+): Promise<UnifiedModel[]> {
+  const endpoints = enabledCustomModelEndpoints(
+    await getCustomModelEndpointsForRest(userId)
+  );
+  return endpoints.flatMap(customEndpointModelsToUnified);
+}
+
+async function getCustomEndpointLanguageModelsByProviderForRest(
+  userId: string,
+  provider: string
+): Promise<UnifiedModel[]> {
+  if (!provider.startsWith("custom:")) {
+    return [];
+  }
+  const endpointId = provider.slice("custom:".length);
+  const endpoints = enabledCustomModelEndpoints(
+    await getCustomModelEndpointsForRest(userId)
+  );
+  const endpoint = endpoints.find((candidate) => candidate.id === endpointId);
+  return endpoint ? customEndpointModelsToUnified(endpoint) : [];
+}
+
+async function getCustomEndpointProviderInfosForRest(
+  userId: string
+): Promise<ProviderInfo[]> {
+  const endpoints = enabledCustomModelEndpoints(
+    await getCustomModelEndpointsForRest(userId)
+  );
+  return endpoints.map((endpoint) => ({
+    provider: customEndpointProviderId(endpoint.id),
+    capabilities: [...CUSTOM_MODEL_ENDPOINT_LANGUAGE_CAPABILITIES]
+  }));
+}
+
 async function getProvidersInfo(userId = "1"): Promise<ProviderInfo[]> {
   const infos: ProviderInfo[] = [];
   const providerIds = filterProviderIdsForSurface(
@@ -367,6 +424,7 @@ async function getProvidersInfo(userId = "1"): Promise<ProviderInfo[]> {
     if (!instance) continue;
     infos.push({ provider, capabilities: providerCapabilities(instance) });
   }
+  infos.push(...(await getCustomEndpointProviderInfosForRest(userId)));
   return infos;
 }
 
@@ -583,6 +641,7 @@ async function getAllModels(userId = "1"): Promise<UnifiedModel[]> {
   for (const models of providerModelsArrays) {
     all.push(...models);
   }
+  all.push(...(await getCustomEndpointLanguageModelsForRest(userId)));
 
   // Include HuggingFace cached/recommended models only for local-first mode
   if (!isProduction() && isLocalModelManagementEnabled()) {
@@ -889,6 +948,14 @@ export async function handleModelsApiRequest(
   if (llmProvider) {
     if (request.method !== "GET")
       return errorResponse(405, "Method not allowed");
+    if (llmProvider.startsWith("custom:")) {
+      return jsonResponse(
+        await getCustomEndpointLanguageModelsByProviderForRest(
+          userId,
+          llmProvider
+        )
+      );
+    }
     if (!isProviderEnabledForSurface(llmProvider)) return jsonResponse([]);
     return jsonResponse(await getLanguageModelsByProvider(llmProvider, userId));
   }

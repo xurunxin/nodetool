@@ -21,22 +21,15 @@ export type MorpheusStreamEvent =
   | { type: "error"; message: string };
 
 export interface StreamPromptOptions {
+  agentId: string;
   sessionId: string;
   prompt: string;
   signal?: AbortSignal;
-  tools?: unknown;
 }
 
-interface MorpheusPayload {
-  type?: unknown;
-  delta?: unknown;
-  text?: unknown;
-  id?: unknown;
-  name?: unknown;
-  arguments?: unknown;
-  args?: unknown;
-  error?: unknown;
-  message?: unknown;
+interface MorpheusEnvelope {
+  event?: unknown;
+  data?: unknown;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -81,28 +74,29 @@ export const parseMorpheusSseFrame = (
     return null;
   }
 
-  const payload = JSON.parse(dataLines.join("\n")) as MorpheusPayload;
+  const payload = JSON.parse(dataLines.join("\n")) as MorpheusEnvelope;
+  const data = isRecord(payload.data) ? payload.data : {};
 
-  switch (payload.type) {
+  switch (payload.event) {
     case "text_delta":
       return {
         type: "text_delta",
-        text: stringValue(payload.delta ?? payload.text),
+        text: stringValue(data.delta),
       };
     case "thinking_delta":
       return {
         type: "thinking_delta",
-        text: stringValue(payload.delta ?? payload.text),
+        text: stringValue(data.delta),
       };
-    case "tool_call":
     case "toolcall_end": {
-      const args = payload.arguments ?? payload.args ?? {};
+      const toolCall = isRecord(data.toolCall) ? data.toolCall : {};
+      const args = toolCall.arguments ?? {};
       const id =
-        typeof payload.id === "string" ? payload.id : crypto.randomUUID();
+        typeof toolCall.id === "string" ? toolCall.id : crypto.randomUUID();
       return {
         type: "tool_call",
         id,
-        name: stringValue(payload.name),
+        name: stringValue(toolCall.name),
         arguments: isRecord(args) ? args : {},
       };
     }
@@ -111,10 +105,7 @@ export const parseMorpheusSseFrame = (
     case "error":
       return {
         type: "error",
-        message: stringValue(
-          payload.error ?? payload.message,
-          "Morpheus stream error",
-        ),
+        message: stringValue(data.message, "Morpheus stream error"),
       };
     default:
       return null;
@@ -162,16 +153,19 @@ export class MorpheusClient {
   async *streamPrompt(
     options: StreamPromptOptions,
   ): AsyncGenerator<MorpheusStreamEvent> {
-    const response = await this.fetchFn(`${this.baseUrl}/api/v1/prompt/stream`, {
-      method: "POST",
-      headers: jsonHeaders(this.apiKey),
-      body: JSON.stringify({
-        sessionId: options.sessionId,
-        prompt: options.prompt,
-        tools: options.tools,
-      }),
-      signal: options.signal,
-    });
+    const agentId = encodeURIComponent(options.agentId);
+    const response = await this.fetchFn(
+      `${this.baseUrl}/api/v1/agents/${agentId}/prompt/stream`,
+      {
+        method: "POST",
+        headers: jsonHeaders(this.apiKey),
+        body: JSON.stringify({
+          query: options.prompt,
+          sessionId: options.sessionId,
+        }),
+        signal: options.signal,
+      },
+    );
 
     if (!response.ok) {
       const body = await responseText(response);
