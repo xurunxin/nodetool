@@ -31,11 +31,11 @@ interface MediaModeMenuProps {
   onClose: () => void;
   value: MediaMode;
   onChange: (mode: MediaMode) => void;
-  /** Show the workspace-aware Pi agent as a selectable mode. */
+  /** Show the generic agent as a selectable mode. */
   showPi?: boolean;
-  /** Whether Pi is the active mode (so media `value` is not highlighted). */
+  /** Whether agent mode is active (so media `value` is not highlighted). */
   piSelected?: boolean;
-  /** Called when the user picks Pi. */
+  /** Called when the user picks agent mode. */
   onSelectPi?: () => void;
 }
 
@@ -153,8 +153,8 @@ const styles = (theme: Theme) =>
 /**
  * Popover menu shown when the user clicks the "Mode" chip in the media
  * composer. Lists the media-generation modes (chat, image, video, …).
- * Agent mode is no longer a media-menu option — the chat agent always runs
- * the unified LLM-with-tools loop and decomposes via `run_subtask` on its own.
+ * Agent mode shares the same menu while keeping the existing `pi` chat mode
+ * value for persisted-state compatibility.
  */
 const MediaModeMenu: React.FC<MediaModeMenuProps> = ({
   anchorEl,
@@ -275,9 +275,6 @@ const MediaModeMenu: React.FC<MediaModeMenuProps> = ({
                 <Text size="normal" weight={500} sx={{ color: "inherit" }}>
                   {t("chat:piAgent")}
                 </Text>
-                <Caption size="tiny" color="secondary">
-                  {t("navigation:workspace")}
-                </Caption>
               </FlexRow>
               {piSelected && (
                 <span className="mode-menu-check">

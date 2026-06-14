@@ -684,7 +684,7 @@ export const en = {
     placeholderImageEdit: "Describe the edits to apply to the dropped image...",
     placeholderImageToVideo: "Describe how the dropped image should animate...",
     placeholderMotionControl: "Describe the motion...",
-    placeholderPi: "Message the Pi agent - it works in your workspace...",
+    placeholderPi: "Message the agent...",
     placeholderRetake: "Refine the last generation...",
     placeholderVideo: "Describe your video, like a man drinking a cup of coffee...",
     permissionMode: "Permission mode",
@@ -703,8 +703,9 @@ export const en = {
         description: "Everything runs, no prompts."
       }
     },
-    piAgent: "Pi Agent",
-    piModel: "Pi Model",
+    agentModel: "Agent Model",
+    piAgent: "Agent",
+    piModel: "Agent Model",
     responding: "Responding...",
     send: "Send",
     sendMessage: "Send message",

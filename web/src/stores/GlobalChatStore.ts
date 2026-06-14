@@ -37,7 +37,7 @@ import { ConnectionState } from "../lib/websocket/WebSocketManager";
 import { globalWebSocketManager } from "../lib/websocket/GlobalWebSocketManager";
 import { FrontendToolRegistry } from "../lib/tools/frontendTools";
 import { uuidv4 } from "./uuidv4";
-import { createChatPiSlice, type ChatPiSlice } from "./chatPi";
+import { createChatAgentSlice, type ChatAgentSlice } from "./chatAgent";
 import {
   handleChatWebSocketMessage,
   MsgpackData,
@@ -58,7 +58,7 @@ type ChatStatus =
  * How the unified chat routes a message:
  * - "chat": the `/ws` LLM-with-tools loop (also covers media generation, which
  *   is carried per-message via `media_generation`).
- * - "pi": the workspace-aware Pi coding agent over `/ws/agent`.
+ * - "pi": compatibility value for the generic `/ws/agent` assistant mode.
  */
 export type ChatMode = "chat" | "pi";
 
@@ -104,7 +104,7 @@ export interface ToolApprovalRequest {
   args: Record<string, unknown>;
 }
 
-export interface GlobalChatState extends ChatPiSlice {
+export interface GlobalChatState extends ChatAgentSlice {
   // Connection state
   status: ChatStatus;
   statusMessage: string | null;
@@ -283,10 +283,10 @@ const useGlobalChatStore = create<GlobalChatState>()(
       currentRunningToolCallId: null,
       currentToolMessage: null,
 
-      // Mode + Pi transport slice
+      // Mode + agent transport slice
       mode: "chat",
       setMode: (mode: ChatMode) => set({ mode }),
-      ...createChatPiSlice(set, get),
+      ...createChatAgentSlice(set, get),
 
       // Per-workflow thread binding (editor side panel)
       workflowThreadId: {},
@@ -604,13 +604,13 @@ const useGlobalChatStore = create<GlobalChatState>()(
           sendMessageTimeoutId
         } = get();
 
-        // Pi mode routes through the agent socket instead of the /ws chat loop.
+        // Agent mode routes through the agent socket instead of the /ws chat loop.
         if (get().mode === "pi") {
           let threadId = currentThreadId;
           if (!threadId) {
             threadId = await get().createNewThread();
           }
-          await get().sendPiMessage(threadId, extractMessageText(message));
+          await get().sendAgentMessage(threadId, extractMessageText(message));
           return;
         }
         // Agent mode is no longer a UI toggle — every chat session runs the
@@ -1183,11 +1183,11 @@ const useGlobalChatStore = create<GlobalChatState>()(
       stopGeneration: () => {
         const { currentThreadId, sendMessageTimeoutId, loadMessagesTimeoutId } = get();
 
-        // Pi mode stops via the agent socket, not the /ws stop command.
+        // Agent mode stops via the agent socket, not the /ws stop command.
         if (get().mode === "pi") {
           FrontendToolRegistry.abortAll();
           if (currentThreadId) {
-            get().stopPi(currentThreadId);
+            get().stopAgent(currentThreadId);
           }
           return;
         }
@@ -1290,14 +1290,15 @@ const useGlobalChatStore = create<GlobalChatState>()(
         selectedModel: state.selectedModel,
         permissionMode: state.permissionMode,
         memoryEnabled: state.memoryEnabled,
-        // Per-workflow thread binding + Pi selections so the editor side panel
+        // Per-workflow thread binding + agent selections so the editor side panel
         // restores the right conversation and agent setup across reloads.
         workflowThreadId: state.workflowThreadId,
         threadWorkflowId: state.threadWorkflowId,
-        piModel: state.piModel,
-        piWorkspaceId: state.piWorkspaceId,
-        piWorkspacePath: state.piWorkspacePath,
-        piSessionByThread: state.piSessionByThread
+        agentProvider: state.agentProvider,
+        agentModel: state.agentModel,
+        agentWorkspaceId: state.agentWorkspaceId,
+        agentWorkspacePath: state.agentWorkspacePath,
+        agentSessionByThread: state.agentSessionByThread
       }) as GlobalChatState,
       migrate: (persistedState, _version) => {
         // Corrupt localStorage (string, null, etc.) must yield a usable
@@ -1351,18 +1352,46 @@ const useGlobalChatStore = create<GlobalChatState>()(
           state.isLoadingMessages = false;
           state.isLoadingThreads = false;
 
-          // Guard the per-workflow + pi maps against corrupt persisted values
+          // Guard the per-workflow + agent maps against corrupt persisted values
           // (they're read with spreads, so a non-object would crash).
           const asRecord = (value: unknown) =>
             value && typeof value === "object" && !Array.isArray(value)
               ? (value as Record<string, never>)
               : {};
+          const legacy = state as unknown as {
+            piModel?: unknown;
+            piWorkspaceId?: unknown;
+            piWorkspacePath?: unknown;
+            piSessionByThread?: unknown;
+          };
           state.workflowThreadId = asRecord(state.workflowThreadId);
           state.threadWorkflowId = asRecord(state.threadWorkflowId);
-          state.piSessionByThread = asRecord(state.piSessionByThread);
-          state.piThreadBySession = {};
-          if (typeof state.piModel !== "string") {
-            state.piModel = "";
+          state.agentSessionByThread = asRecord(
+            state.agentSessionByThread ?? legacy.piSessionByThread
+          );
+          state.agentThreadBySession = {};
+          if (
+            state.agentProvider !== "morpheus" &&
+            state.agentProvider !== "llm" &&
+            state.agentProvider !== "pi"
+          ) {
+            state.agentProvider = "morpheus";
+          }
+          if (typeof state.agentModel !== "string") {
+            state.agentModel =
+              typeof legacy.piModel === "string" ? legacy.piModel : "";
+          }
+          if (typeof state.agentWorkspaceId !== "string") {
+            state.agentWorkspaceId =
+              typeof legacy.piWorkspaceId === "string"
+                ? legacy.piWorkspaceId
+                : null;
+          }
+          if (typeof state.agentWorkspacePath !== "string") {
+            state.agentWorkspacePath =
+              typeof legacy.piWorkspacePath === "string"
+                ? legacy.piWorkspacePath
+                : null;
           }
           state.mode = state.mode === "pi" ? "pi" : "chat";
 

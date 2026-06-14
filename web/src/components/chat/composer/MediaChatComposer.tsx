@@ -56,7 +56,9 @@ import type {
 } from "../../../stores/MediaGenerationStore";
 import MediaControlChip from "./MediaControlChip";
 import MediaModeMenu from "./MediaModeMenu";
-import PiComposerControls, { piModeAvailable } from "./PiComposerControls";
+import AgentComposerControls, {
+  agentModeAvailable
+} from "./AgentComposerControls";
 import SmartToyOutlinedIcon from "@mui/icons-material/SmartToyOutlined";
 import MediaOptionMenu, { MediaOption } from "./MediaOptionMenu";
 import MediaAspectRatioMenu from "./MediaAspectRatioMenu";
@@ -563,7 +565,7 @@ const MediaChatComposer: React.FC<MediaChatComposerProps> = ({
   }, [mode, isPi]);
 
   const modeLabel = useMemo(() => {
-    if (isPi) return "Pi";
+    if (isPi) return t("chat:piAgent");
     if (mode === "image") return t("chat:modeImage");
     if (mode === "image_edit") return t("chat:modeImageEdit");
     if (mode === "video") return t("chat:modeVideo");
@@ -974,7 +976,7 @@ const MediaChatComposer: React.FC<MediaChatComposerProps> = ({
               setMode(m);
               setGlobalMode("chat");
             }}
-            showPi={piModeAvailable}
+            showPi={agentModeAvailable}
             piSelected={isPi}
             onSelectPi={() => {
               setMode("chat");
@@ -982,8 +984,8 @@ const MediaChatComposer: React.FC<MediaChatComposerProps> = ({
             }}
           />
 
-          {/* Pi mode: workspace + model pickers instead of the chat model. */}
-          {isPi && <PiComposerControls disabled={isBusy} />}
+          {/* Agent mode: provider-aware model picker and Pi workspace picker. */}
+          {isPi && <AgentComposerControls disabled={isBusy} />}
 
           {/* Model chip — changes based on mode */}
           {!isPi && mode === "chat" && (

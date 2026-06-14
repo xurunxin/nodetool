@@ -671,7 +671,7 @@ export const zhCN: LocaleResource = {
     placeholderImageEdit: "描述要应用到已拖入图像的编辑...",
     placeholderImageToVideo: "描述已拖入图像应如何动起来...",
     placeholderMotionControl: "描述动作...",
-    placeholderPi: "向 Pi 智能体发送消息，它会在你的工作区中执行...",
+    placeholderPi: "向智能体发送消息...",
     placeholderRetake: "优化上一次生成...",
     placeholderVideo: "描述你想生成的视频，例如一个人正在喝咖啡...",
     permissionMode: "权限模式",
@@ -690,8 +690,9 @@ export const zhCN: LocaleResource = {
         description: "所有操作都会执行，不再提示。"
       }
     },
-    piAgent: "Pi 智能体",
-    piModel: "Pi 模型",
+    agentModel: "智能体模型",
+    piAgent: "智能体",
+    piModel: "智能体模型",
     responding: "正在回复...",
     send: "发送",
     sendMessage: "发送消息",
