@@ -11,8 +11,8 @@ support, MorpheusCore agent replacement, and thin desktop shell direction.
 
 **Implementation Plan:** `docs/superpowers/plans/2026-06-14-api-first-morpheus-bs.md`
 
-**Current Active Stage:** Phase 2, Task 5: resolve custom endpoints as runtime
-providers.
+**Current Active Stage:** Phase 3, Task 6: MorpheusCore client and event
+mapping.
 
 **Status Legend:** `[x] done`, `[~] in progress`, `[ ] pending`, `[!] blocked`
 
@@ -45,13 +45,15 @@ providers.
   - Live hardening commit: `a3527df33`.
   - Exit criteria: local-only model providers are hidden by default from server
     model APIs and agent-visible model search.
-- [~] **M2: Custom OpenAI/Anthropic-compatible endpoints**
-  - Completed through Task 4.
-  - Next task: Task 5, resolve custom endpoints as runtime providers.
+- [x] **M2: Custom OpenAI/Anthropic-compatible endpoints**
+  - Completed through Task 5.
+  - Commit: `164b30790` for endpoint persistence.
+  - Commit: `0496b896d` for runtime/provider/model-surface resolution.
   - Exit criteria: endpoint metadata is persisted, secrets stay server-side, and
     configured models appear in model selectors and workflow provider
     resolution.
-- [ ] **M3: Morpheus agent provider behind `/ws/agent`**
+- [~] **M3: Morpheus agent provider behind `/ws/agent`**
+  - Next task: Task 6, MorpheusCore client and event mapping.
   - Exit criteria: NodeTool can create and stream a Morpheus session without Pi
     workspace assumptions.
 - [ ] **M4: Canvas tool bridge**
@@ -193,6 +195,29 @@ providers.
     - `rtk npm run test --workspace=packages/websocket -- custom-provider-resolver`
     - `rtk npm run typecheck --workspace=packages/websocket`
   - Commit target: `feat(server): resolve custom model providers`
+  - Commit: `0496b896d`
+  - Verify:
+    - `rtk npm run test --workspace=packages/websocket -- custom-provider-resolver`
+    - `rtk npm run test --workspace=packages/websocket -- custom-provider-resolver trpc-models models-api-surface custom-model-endpoints`
+    - `rtk npm run test --workspace=packages/protocol -- custom-model-endpoints models`
+    - `rtk npm run typecheck`
+    - `rtk npm run lint --workspace=packages/websocket`
+    - `rtk npm run lint --workspace=packages/protocol`
+  - Live smoke:
+    - Started temporary NodeTool server on `127.0.0.1:7790` with
+      `NODETOOL_MODEL_SURFACE=api_first`.
+    - `GET /health` returned `200`.
+    - `POST /trpc/customModelEndpoints.upsert` created `phase2_smoke`.
+    - `GET /trpc/customModelEndpoints.list` included `phase2_smoke`.
+    - `GET /trpc/models.providers` included `custom:phase2_smoke`.
+    - `GET /trpc/models.availableForKind` for `text_generation` included
+      `phase2-smoke-chat` with `context_window: 12345`.
+    - `GET /api/models/providers`, `GET /api/models/all`, and
+      `GET /api/models/llm/custom%3Aphase2_smoke` exposed the same custom
+      endpoint/model via REST.
+    - `POST /trpc/customModelEndpoints.delete` deleted the smoke endpoint,
+      and follow-up list confirmed it was gone.
+    - Temporary server was stopped and port `7790` was confirmed closed.
 
 ### Phase 3: Morpheus Agent Provider
 
@@ -287,4 +312,7 @@ providers.
 - Ran live API-first/local-first smoke, found missing REST route mount, fixed it
   in commit `a3527df33`, and recorded the smoke evidence.
 - Completed Task 4 and recorded commit `164b30790`.
-- Set next active task to Phase 2, Task 5.
+- Completed Task 5 and recorded commit `0496b896d`.
+- Ran Phase 2 live smoke for custom endpoint persistence, model selector
+  exposure, REST parity, and cleanup.
+- Marked M2 complete and set next active task to Phase 3, Task 6.
