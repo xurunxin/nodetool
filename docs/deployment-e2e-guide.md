@@ -11,6 +11,10 @@ It covers three production scenarios:
 2. Public server mode (Supabase auth required)
 3. Private server mode (token-based auth, with optional user file/multi-user auth)
 
+For the API-first browser/server deployment with remote MorpheusCore agent
+runtime and custom compatible model endpoints, see
+[API-First B/S Deployment](deployment/api-first-bs.md).
+
 ## What Runs in Production
 
 The server entrypoint is:
@@ -53,6 +57,10 @@ podman build -t nodetool:local .
 | Desktop app | `desktop` | `local` or `none` | Broad feature set, local-first workflows |
 | Public server | `public` | `supabase` | Required by server validation |
 | Private server | `private` | `static`, `multi_user`, or `supabase` | Recommended for internal/self-hosted APIs |
+
+API-first B/S deployments usually use `public` or `private` server mode with
+`NODETOOL_MODEL_SURFACE=api_first`, `MORPHEUS_BASE_URL`,
+`MORPHEUS_API_KEY`, and `MORPHEUS_AGENT_NAME=nodetool-canvas`.
 
 ## 1) Desktop App Deployment
 
