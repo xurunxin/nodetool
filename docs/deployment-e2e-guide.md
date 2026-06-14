@@ -5,6 +5,9 @@ title: "End-to-End Deployment Guide"
 
 This guide is a practical runbook for deploying NodeTool end-to-end with the unified server entrypoint (`nodetool serve`).
 
+For the Morpheus-backed browser/server deployment path, see the
+[API-First Browser/Server Deployment](deployment/api-first-bs.md) guide.
+
 It covers three production scenarios:
 
 1. Desktop app mode
