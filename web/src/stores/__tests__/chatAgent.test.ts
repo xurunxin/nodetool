@@ -204,7 +204,7 @@ describe("chatAgent store slice", () => {
     );
   });
 
-  it("persists the real LLM thread id from streamed messages while keeping the live socket alias", async () => {
+  it("records the real LLM thread id for resume while live sends keep using the socket session", async () => {
     mockAgentClient.createSession.mockResolvedValue("llm-session-1");
     let streamHandler: ((event: AgentStreamEvent) => void) | undefined;
     mockAgentClient.on.mockImplementation(
@@ -215,6 +215,10 @@ describe("chatAgent store slice", () => {
       }
     );
     const store = createTestStore();
+    const resumeState = () =>
+      store.getState() as TestChatAgentStore & {
+        agentResumeSessionByThread?: Record<string, string>;
+      };
     store.setState({
       agentProvider: "llm",
       agentModel: "claude-sonnet",
@@ -242,6 +246,9 @@ describe("chatAgent store slice", () => {
     });
 
     expect(store.getState().agentSessionByThread["chat-thread"]).toBe(
+      "llm-session-1"
+    );
+    expect(resumeState().agentResumeSessionByThread?.["chat-thread"]).toBe(
       "db-thread-1"
     );
     expect(store.getState().agentThreadBySession["llm-session-1"]).toBe(
@@ -266,8 +273,48 @@ describe("chatAgent store slice", () => {
 
     expect(mockAgentClient.createSession).toHaveBeenCalledTimes(1);
     expect(mockAgentClient.sendMessage).toHaveBeenLastCalledWith(
-      "db-thread-1",
+      "llm-session-1",
       "again"
+    );
+  });
+
+  it("resumes LLM sessions with the real thread id after the live socket session is gone", async () => {
+    mockAgentClient.createSession.mockResolvedValue("llm-session-resumed");
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "llm",
+      agentModel: "claude-sonnet",
+      agentModels: [llmModel],
+      agentSessionByThread: {
+        "thread-llm": "llm-session-after-reload"
+      },
+      agentThreadBySession: {},
+      agentSessionConfigByThread: {
+        "thread-llm": {
+          provider: "llm",
+          model: "claude-sonnet",
+          workspacePath: null,
+          chatProviderId: "anthropic"
+        }
+      },
+      agentResumeSessionByThread: {
+        "thread-llm": "db-thread-1"
+      }
+    } as Partial<TestChatAgentStore> & {
+      agentResumeSessionByThread: Record<string, string>;
+    });
+
+    await store.getState().sendAgentMessage("thread-llm", "after reload");
+
+    expect(mockAgentClient.createSession).toHaveBeenCalledWith({
+      provider: "llm",
+      model: "claude-sonnet",
+      chatProviderId: "anthropic",
+      resumeSessionId: "db-thread-1"
+    });
+    expect(mockAgentClient.sendMessage).toHaveBeenCalledWith(
+      "llm-session-resumed",
+      "after reload"
     );
   });
 

@@ -1300,6 +1300,7 @@ const useGlobalChatStore = create<GlobalChatState>()(
         agentWorkspaceId: state.agentWorkspaceId,
         agentWorkspacePath: state.agentWorkspacePath,
         agentSessionByThread: state.agentSessionByThread,
+        agentResumeSessionByThread: state.agentResumeSessionByThread,
         agentSessionConfigByThread: state.agentSessionConfigByThread,
         // Deprecated mirrors kept so older builds/imports can still rehydrate.
         piModel: state.piModel,
@@ -1382,6 +1383,12 @@ const useGlobalChatStore = create<GlobalChatState>()(
                   !Array.isArray(state.piSessionByThread)
                 ? (state.piSessionByThread as Record<string, string>)
                 : {},
+          agentResumeSessionByThread:
+            state.agentResumeSessionByThread &&
+            typeof state.agentResumeSessionByThread === "object" &&
+            !Array.isArray(state.agentResumeSessionByThread)
+              ? (state.agentResumeSessionByThread as Record<string, string>)
+              : {},
           agentSessionConfigByThread:
             state.agentSessionConfigByThread &&
             typeof state.agentSessionConfigByThread === "object" &&
@@ -1420,6 +1427,20 @@ const useGlobalChatStore = create<GlobalChatState>()(
           state.agentSessionConfigByThread = asRecord(
             state.agentSessionConfigByThread
           ) as GlobalChatState["agentSessionConfigByThread"];
+          state.agentResumeSessionByThread = asRecord(
+            state.agentResumeSessionByThread
+          ) as GlobalChatState["agentResumeSessionByThread"];
+          for (const [threadId, sessionId] of Object.entries(
+            state.agentSessionByThread
+          )) {
+            if (
+              state.agentSessionConfigByThread[threadId]?.provider === "llm" &&
+              typeof sessionId === "string" &&
+              !sessionId.startsWith("llm-session-")
+            ) {
+              state.agentResumeSessionByThread[threadId] ??= sessionId;
+            }
+          }
           if (
             state.agentProvider !== "pi" &&
             state.agentProvider !== "llm" &&

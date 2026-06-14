@@ -35,6 +35,7 @@ export interface ChatAgentSlice {
   agentWorkspacePath: string | null;
   agentSessionByThread: Record<string, string>;
   agentThreadBySession: Record<string, string>;
+  agentResumeSessionByThread: Record<string, string>;
   agentSessionConfigByThread: Record<string, AgentSessionConfig>;
   agentStreamUnsub: (() => void) | null;
 
@@ -121,6 +122,7 @@ function mirrorAgentState(
       | "agentWorkspacePath"
       | "agentSessionByThread"
       | "agentThreadBySession"
+      | "agentResumeSessionByThread"
       | "agentSessionConfigByThread"
       | "agentStreamUnsub"
     >
@@ -213,17 +215,16 @@ function maybePromoteLlmSessionId(
     return;
   }
 
-  liveSessions.add(realSessionId);
   set((state) => {
     if (
-      state.agentSessionByThread[threadId] === realSessionId &&
+      state.agentResumeSessionByThread[threadId] === realSessionId &&
       state.agentThreadBySession[realSessionId] === threadId
     ) {
       return state;
     }
     return mirrorAgentState({
-      agentSessionByThread: {
-        ...state.agentSessionByThread,
+      agentResumeSessionByThread: {
+        ...state.agentResumeSessionByThread,
         [threadId]: realSessionId
       },
       agentThreadBySession: {
@@ -341,6 +342,9 @@ async function ensureAgentSession(
     state;
   const config = buildSessionConfig(state);
   const existing = agentSessionByThread[threadId];
+  const llmResumeSessionId =
+    state.agentResumeSessionByThread[threadId] ??
+    (existing && !isTemporaryLlmSessionId(existing) ? existing : undefined);
   const existingConfig = state.agentSessionConfigByThread[threadId];
   const canReuseExisting = sessionConfigsMatch(existingConfig, config);
   if (existing && liveSessions.has(existing) && canReuseExisting) {
@@ -353,13 +357,14 @@ async function ensureAgentSession(
     provider: agentProvider,
     model: agentModel
   };
-  if (
-    existing &&
-    canReuseExisting &&
-    agentProvider !== "morpheus" &&
-    !(agentProvider === "llm" && isTemporaryLlmSessionId(existing))
-  ) {
-    options.resumeSessionId = existing;
+  if (canReuseExisting && agentProvider !== "morpheus") {
+    if (agentProvider === "llm") {
+      if (llmResumeSessionId) {
+        options.resumeSessionId = llmResumeSessionId;
+      }
+    } else if (existing) {
+      options.resumeSessionId = existing;
+    }
   }
   if (agentProvider === "pi" && agentWorkspacePath) {
     options.workspacePath = agentWorkspacePath;
@@ -386,9 +391,21 @@ async function ensureAgentSession(
       ...current.agentSessionConfigByThread,
       [threadId]: config
     };
+    const {
+      [threadId]: _previousResumeSessionId,
+      ...resumeSessionsWithoutThread
+    } = current.agentResumeSessionByThread;
+    const agentResumeSessionByThreadNext =
+      agentProvider === "llm" && canReuseExisting && llmResumeSessionId
+        ? {
+            ...current.agentResumeSessionByThread,
+            [threadId]: llmResumeSessionId
+          }
+        : resumeSessionsWithoutThread;
     return mirrorAgentState({
       agentSessionByThread: agentSessionByThreadNext,
       agentThreadBySession: agentThreadBySessionNext,
+      agentResumeSessionByThread: agentResumeSessionByThreadNext,
       agentSessionConfigByThread: agentSessionConfigByThreadNext
     });
   });
@@ -417,6 +434,7 @@ export function createChatAgentSlice(set: Set, get: Get): ChatAgentSlice {
     agentWorkspacePath: null,
     agentSessionByThread: {},
     agentThreadBySession: {},
+    agentResumeSessionByThread: {},
     agentSessionConfigByThread: {},
     agentStreamUnsub: null,
 
