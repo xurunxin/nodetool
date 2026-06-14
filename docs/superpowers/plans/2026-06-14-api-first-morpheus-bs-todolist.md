@@ -11,8 +11,8 @@ support, MorpheusCore agent replacement, and thin desktop shell direction.
 
 **Implementation Plan:** `docs/superpowers/plans/2026-06-14-api-first-morpheus-bs.md`
 
-**Current Active Stage:** Phase 1, Task 3: apply model surface to server model
-APIs.
+**Current Active Stage:** Phase 2, Task 4: persist custom endpoint metadata and
+secrets.
 
 **Status Legend:** `[x] done`, `[~] in progress`, `[ ] pending`, `[!] blocked`
 
@@ -40,11 +40,12 @@ APIs.
   - Verification: live MorpheusCore health/session/SSE smoke against
     `http://localhost:3000`; `nodetool-canvas` now resolves by display name and
     exposes `forward_to_frontend`.
-- [~] **M1: API-first model surface**
-  - Next task: Task 3, apply model surface filtering to server model APIs.
+- [x] **M1: API-first model surface**
+  - Completed through Task 3.
   - Exit criteria: local-only model providers are hidden by default from server
     model APIs and agent-visible model search.
-- [ ] **M2: Custom OpenAI/Anthropic-compatible endpoints**
+- [~] **M2: Custom OpenAI/Anthropic-compatible endpoints**
+  - Next task: Task 4, persist custom endpoint metadata and secrets.
   - Exit criteria: endpoint metadata is persisted, secrets stay server-side, and
     configured models appear in model selectors and workflow provider
     resolution.
@@ -117,7 +118,7 @@ APIs.
       Windows before tests start because the web workspace script uses
       `TZ=UTC jest --forceExit`.
     - Root lint exits `0` with pre-existing React hook and curly warnings.
-- [ ] **Task 3: Apply model surface to server model APIs**
+- [x] **Task 3: Apply model surface to server model APIs**
   - Modify: `packages/websocket/src/trpc/routers/models.ts`
   - Modify: `packages/websocket/src/models-api.ts`
   - Test: existing and new websocket model API tests.
@@ -125,6 +126,20 @@ APIs.
     - `rtk npm run test --workspace=packages/websocket -- models`
     - `rtk npm run typecheck --workspace=packages/websocket`
   - Commit target: `feat(server): hide local model surface by default`
+  - Commit: `7d7079f4c`
+  - Verify:
+    - `rtk npm run test --workspace=packages/websocket -- models`
+    - `rtk npm run test --workspace=packages/websocket -- model-surface trpc-models models-api-surface trpc-http`
+    - `rtk npm run lint --workspace=packages/websocket`
+    - `rtk npm run typecheck`
+    - `rtk npm run lint`
+  - Notes:
+    - `rtk npm run test --workspace=packages/websocket` was attempted. Task 3
+      related tests pass, but the full package suite still has unrelated
+      Windows path/fixture failures in `trpc-mcp-config`, `trpc-skills`, and
+      `trpc-workspace`.
+    - `rtk npm run test` remains blocked before tests start because the web
+      workspace script uses `TZ=UTC jest --forceExit` on Windows.
 
 ### Phase 2: Custom Compatible Endpoint Runtime
 
@@ -235,4 +250,5 @@ APIs.
 - Marked MorpheusCore local-profile route fix and live API smoke as complete.
 - Completed Task 1 and recorded commit `fc330214a`.
 - Completed Task 2 and recorded commit `49f932d6a`.
-- Set next active task to Phase 1, Task 3.
+- Completed Task 3 and recorded commit `7d7079f4c`.
+- Set next active task to Phase 2, Task 4.
