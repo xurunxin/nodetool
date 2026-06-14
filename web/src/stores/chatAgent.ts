@@ -1,0 +1,485 @@
+/**
+ * Generic agent mode for the unified chat.
+ *
+ * The `/ws/agent` route can be backed by MorpheusCore, the generic LLM agent,
+ * or the legacy workspace-aware Pi agent. This slice maps one agent session to
+ * each chat thread and streams renderer-facing agent messages into the normal
+ * chat message cache.
+ */
+
+import type { StoreApi } from "zustand";
+import type { Message } from "./ApiTypes";
+import type { GlobalChatState } from "./GlobalChatStore";
+import type {
+  AgentMessage as ProtocolAgentMessage,
+  AgentModelDescriptor,
+  AgentProvider,
+  AgentSessionOptions,
+  AgentStreamEvent
+} from "../lib/agent/agentTypes";
+import { agentMessageToNodeToolMessage } from "../utils/agentMessageAdapter";
+import { getAgentSocketClient } from "../lib/agent/AgentSocketClient";
+// Importing this module registers the manifest/tool-call handlers on the agent
+// socket so server-side agents can drive the live workflow graph.
+import "../lib/tools/frontendToolsIpc";
+
+type Set = StoreApi<GlobalChatState>["setState"];
+type Get = StoreApi<GlobalChatState>["getState"];
+
+export interface ChatAgentSlice {
+  agentModel: string;
+  agentModels: AgentModelDescriptor[];
+  agentModelsLoading: boolean;
+  agentProvider: AgentProvider;
+  agentWorkspaceId: string | null;
+  agentWorkspacePath: string | null;
+  agentSessionByThread: Record<string, string>;
+  agentThreadBySession: Record<string, string>;
+  agentStreamUnsub: (() => void) | null;
+
+  loadAgentModels: () => Promise<void>;
+  setAgentModel: (model: string) => void;
+  setAgentProvider: (provider: AgentProvider) => void;
+  setAgentWorkspace: (
+    workspaceId: string | null,
+    workspacePath: string | null
+  ) => void;
+  sendAgentMessage: (threadId: string, text: string) => Promise<void>;
+  stopAgent: (threadId: string) => void;
+
+  /** @deprecated Use `agentModel`. */
+  piModel: string;
+  /** @deprecated Use `agentModels`. */
+  piModels: AgentModelDescriptor[];
+  /** @deprecated Use `agentModelsLoading`. */
+  piModelsLoading: boolean;
+  /** @deprecated Use `agentWorkspaceId`. */
+  piWorkspaceId: string | null;
+  /** @deprecated Use `agentWorkspacePath`. */
+  piWorkspacePath: string | null;
+  /** @deprecated Use `agentSessionByThread`. */
+  piSessionByThread: Record<string, string>;
+  /** @deprecated Use `agentThreadBySession`. */
+  piThreadBySession: Record<string, string>;
+  /** @deprecated Use `agentStreamUnsub`. */
+  piStreamUnsub: (() => void) | null;
+  /** @deprecated Use `loadAgentModels`. */
+  loadPiModels: () => Promise<void>;
+  /** @deprecated Use `setAgentModel`. */
+  setPiModel: (model: string) => void;
+  /** @deprecated Use `setAgentWorkspace`. */
+  setPiWorkspace: (
+    workspaceId: string | null,
+    workspacePath: string | null
+  ) => void;
+  /** @deprecated Use `sendAgentMessage`; this forces provider `pi`. */
+  sendPiMessage: (threadId: string, text: string) => Promise<void>;
+  /** @deprecated Use `stopAgent`. */
+  stopPi: (threadId: string) => void;
+}
+
+const DEFAULT_AGENT_PROVIDER: AgentProvider = "morpheus";
+const FALLBACK_AGENT_PROVIDER: AgentProvider = "llm";
+
+// Bumped on each loadAgentModels call; stale responses are dropped so a slow
+// reply cannot clobber a newer provider/workspace catalog.
+let loadAgentModelsToken = 0;
+
+// Sessions created/loaded during this app run. A persisted session id that
+// is not here is resumed (reattached) on next use rather than reused blindly.
+const liveSessions = new Set<string>();
+// Per-thread guard so a "result" message does not duplicate assistant text
+// already streamed in the same turn.
+const turnHasAssistant = new Map<string, boolean>();
+
+function upsertMessage(list: Message[], converted: Message): Message[] {
+  const idx = list.findLastIndex((m) => m.id === converted.id);
+  if (idx === -1) {
+    return [...list, converted];
+  }
+  const next = [...list];
+  next[idx] = converted;
+  return next;
+}
+
+function mirrorAgentState(
+  patch: Partial<
+    Pick<
+      ChatAgentSlice,
+      | "agentModel"
+      | "agentModels"
+      | "agentModelsLoading"
+      | "agentWorkspaceId"
+      | "agentWorkspacePath"
+      | "agentSessionByThread"
+      | "agentThreadBySession"
+      | "agentStreamUnsub"
+    >
+  >
+): Partial<GlobalChatState> {
+  const mirrored: Partial<GlobalChatState> = { ...patch };
+  if (patch.agentModel !== undefined) {
+    mirrored.piModel = patch.agentModel;
+  }
+  if (patch.agentModels !== undefined) {
+    mirrored.piModels = patch.agentModels;
+  }
+  if (patch.agentModelsLoading !== undefined) {
+    mirrored.piModelsLoading = patch.agentModelsLoading;
+  }
+  if (patch.agentWorkspaceId !== undefined) {
+    mirrored.piWorkspaceId = patch.agentWorkspaceId;
+  }
+  if (patch.agentWorkspacePath !== undefined) {
+    mirrored.piWorkspacePath = patch.agentWorkspacePath;
+  }
+  if (patch.agentSessionByThread !== undefined) {
+    mirrored.piSessionByThread = patch.agentSessionByThread;
+  }
+  if (patch.agentThreadBySession !== undefined) {
+    mirrored.piThreadBySession = patch.agentThreadBySession;
+  }
+  if (patch.agentStreamUnsub !== undefined) {
+    mirrored.piStreamUnsub = patch.agentStreamUnsub;
+  }
+  return mirrored;
+}
+
+function pickDefaultModel(models: AgentModelDescriptor[]): string {
+  return (models.find((m) => m.isDefault) ?? models[0] ?? null)?.id ?? "";
+}
+
+function selectedAgentModelDescriptor(
+  state: GlobalChatState
+): AgentModelDescriptor | undefined {
+  return state.agentModels.find((m) => m.id === state.agentModel);
+}
+
+function handleAgentStream(event: AgentStreamEvent, set: Set, get: Get): void {
+  const { sessionId, message, done } = event;
+  const threadId = get().agentThreadBySession[sessionId];
+  if (!threadId) {
+    return;
+  }
+
+  if (done) {
+    turnHasAssistant.delete(threadId);
+    if (get().currentThreadId === threadId) {
+      set({ status: "connected" });
+    }
+    return;
+  }
+
+  if (message.type === "system") {
+    return;
+  }
+
+  const converted = agentMessageToNodeToolMessage(message as ProtocolAgentMessage);
+  if (!converted) {
+    return;
+  }
+
+  const isSuccessResult =
+    message.type === "result" && message.subtype === "success";
+  if (isSuccessResult && turnHasAssistant.get(threadId)) {
+    return;
+  }
+  if (message.type === "assistant") {
+    turnHasAssistant.set(threadId, true);
+  }
+
+  set((state) => ({
+    messageCache: {
+      ...state.messageCache,
+      [threadId]: upsertMessage(state.messageCache[threadId] ?? [], converted)
+    },
+    status: state.currentThreadId === threadId ? "streaming" : state.status
+  }));
+}
+
+function ensureAgentStream(set: Set, get: Get): void {
+  if (get().agentStreamUnsub) {
+    return;
+  }
+  const client = getAgentSocketClient();
+  const onStream = (event: AgentStreamEvent): void =>
+    handleAgentStream(event, set, get);
+  client.on("stream", onStream);
+  const unsubscribe = (): void => {
+    client.off("stream", onStream);
+  };
+  set(mirrorAgentState({ agentStreamUnsub: unsubscribe }));
+}
+
+async function listModelsForProvider(
+  provider: AgentProvider,
+  workspacePath: string | null
+): Promise<AgentModelDescriptor[]> {
+  const request =
+    provider === "pi" && workspacePath
+      ? { provider, workspacePath }
+      : { provider };
+  return getAgentSocketClient().listModels(request);
+}
+
+async function discoverDefaultProviderModels(
+  workspacePath: string | null
+): Promise<{ provider: AgentProvider; models: AgentModelDescriptor[] }> {
+  try {
+    const morpheusModels = await listModelsForProvider(
+      DEFAULT_AGENT_PROVIDER,
+      workspacePath
+    );
+    if (morpheusModels.length > 0) {
+      return { provider: DEFAULT_AGENT_PROVIDER, models: morpheusModels };
+    }
+  } catch (error) {
+    console.warn("Failed to load Morpheus agent models:", error);
+  }
+  const llmModels = await listModelsForProvider(
+    FALLBACK_AGENT_PROVIDER,
+    workspacePath
+  );
+  return { provider: FALLBACK_AGENT_PROVIDER, models: llmModels };
+}
+
+async function ensureAgentSession(
+  threadId: string,
+  set: Set,
+  get: Get
+): Promise<string> {
+  const state = get();
+  const { agentSessionByThread, agentModel, agentProvider, agentWorkspacePath } =
+    state;
+  const existing = agentSessionByThread[threadId];
+  if (existing && liveSessions.has(existing)) {
+    return existing;
+  }
+
+  ensureAgentStream(set, get);
+
+  const options: AgentSessionOptions = {
+    provider: agentProvider,
+    model: agentModel
+  };
+  if (existing) {
+    options.resumeSessionId = existing;
+  }
+  if (agentProvider === "pi" && agentWorkspacePath) {
+    options.workspacePath = agentWorkspacePath;
+  }
+  if (agentProvider === "llm") {
+    const descriptor = selectedAgentModelDescriptor(state);
+    if (descriptor?.chatProviderId) {
+      options.chatProviderId = descriptor.chatProviderId;
+    }
+  }
+
+  const sessionId = await getAgentSocketClient().createSession(options);
+  liveSessions.add(sessionId);
+  set((current) => {
+    const agentSessionByThreadNext = {
+      ...current.agentSessionByThread,
+      [threadId]: sessionId
+    };
+    const agentThreadBySessionNext = {
+      ...current.agentThreadBySession,
+      [sessionId]: threadId
+    };
+    return mirrorAgentState({
+      agentSessionByThread: agentSessionByThreadNext,
+      agentThreadBySession: agentThreadBySessionNext
+    });
+  });
+  return sessionId;
+}
+
+function setProvider(set: Set, provider: AgentProvider): void {
+  set({
+    agentProvider: provider,
+    ...mirrorAgentState({
+      agentModel: "",
+      agentModels: [],
+      agentModelsLoading: false
+    })
+  });
+}
+
+export function createChatAgentSlice(set: Set, get: Get): ChatAgentSlice {
+  return {
+    agentModel: "",
+    agentModels: [],
+    agentModelsLoading: false,
+    agentProvider: DEFAULT_AGENT_PROVIDER,
+    agentWorkspaceId: null,
+    agentWorkspacePath: null,
+    agentSessionByThread: {},
+    agentThreadBySession: {},
+    agentStreamUnsub: null,
+
+    piModel: "",
+    piModels: [],
+    piModelsLoading: false,
+    piWorkspaceId: null,
+    piWorkspacePath: null,
+    piSessionByThread: {},
+    piThreadBySession: {},
+    piStreamUnsub: null,
+
+    loadAgentModels: async () => {
+      const { agentProvider, agentWorkspacePath } = get();
+      const token = ++loadAgentModelsToken;
+      set(mirrorAgentState({ agentModelsLoading: true }));
+      try {
+        const result =
+          agentProvider === DEFAULT_AGENT_PROVIDER
+            ? await discoverDefaultProviderModels(agentWorkspacePath)
+            : {
+                provider: agentProvider,
+                models: await listModelsForProvider(
+                  agentProvider,
+                  agentWorkspacePath
+                )
+              };
+        if (token !== loadAgentModelsToken) {
+          return;
+        }
+        set((state) => {
+          const model = result.models.some((m) => m.id === state.agentModel)
+            ? state.agentModel
+            : pickDefaultModel(result.models);
+          return {
+            agentProvider: result.provider,
+            ...mirrorAgentState({
+              agentModels: result.models,
+              agentModel: model,
+              agentModelsLoading: false
+            })
+          };
+        });
+      } catch (error) {
+        console.error("Failed to load agent models:", error);
+        if (token === loadAgentModelsToken) {
+          set(mirrorAgentState({ agentModelsLoading: false }));
+        }
+      }
+    },
+
+    setAgentModel: (model: string) =>
+      set(mirrorAgentState({ agentModel: model })),
+
+    setAgentProvider: (provider: AgentProvider) => setProvider(set, provider),
+
+    setAgentWorkspace: (workspaceId, workspacePath) =>
+      set(
+        mirrorAgentState({
+          agentWorkspaceId: workspaceId,
+          agentWorkspacePath: workspacePath
+        })
+      ),
+
+    sendAgentMessage: async (threadId: string, text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) {
+        return;
+      }
+      const { agentProvider, agentWorkspacePath, agentModel } = get();
+      if (agentProvider === "pi" && !agentWorkspacePath) {
+        set({
+          status: "error",
+          error: "Select a workspace before chatting with the Pi agent."
+        });
+        return;
+      }
+      if (!agentModel) {
+        set({
+          status: "error",
+          error:
+            agentProvider === "pi"
+              ? "Select a Pi model first."
+              : "Select an agent model first."
+        });
+        return;
+      }
+
+      const userMessage: Message = {
+        type: "message",
+        id: crypto.randomUUID(),
+        role: "user",
+        content: [{ type: "text", text: trimmed }],
+        thread_id: threadId,
+        created_at: new Date().toISOString()
+      };
+      turnHasAssistant.set(threadId, false);
+      set((state) => ({
+        messageCache: {
+          ...state.messageCache,
+          [threadId]: [...(state.messageCache[threadId] ?? []), userMessage]
+        },
+        status: "loading",
+        error: null
+      }));
+
+      try {
+        const sessionId = await ensureAgentSession(threadId, set, get);
+        await getAgentSocketClient().sendMessage(sessionId, trimmed);
+      } catch (error) {
+        set({
+          status: "error",
+          error: `Failed to send message: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        });
+      }
+    },
+
+    stopAgent: (threadId: string) => {
+      const sessionId = get().agentSessionByThread[threadId];
+      if (!sessionId) {
+        set({ status: "connected" });
+        return;
+      }
+      set({ status: "stopping" });
+      getAgentSocketClient()
+        .stopExecution(sessionId)
+        .then(() => set({ status: "connected" }))
+        .catch((err: unknown) => {
+          console.error("Failed to stop agent execution:", err);
+          set({
+            status: "error",
+            error:
+              err instanceof Error
+                ? `Failed to stop: ${err.message}`
+                : "Failed to stop agent execution"
+          });
+        });
+    },
+
+    loadPiModels: async () => {
+      if (get().agentProvider !== "pi") {
+        setProvider(set, "pi");
+      }
+      await get().loadAgentModels();
+    },
+
+    setPiModel: (model: string) => set(mirrorAgentState({ agentModel: model })),
+
+    setPiWorkspace: (workspaceId, workspacePath) =>
+      set(
+        mirrorAgentState({
+          agentWorkspaceId: workspaceId,
+          agentWorkspacePath: workspacePath
+        })
+      ),
+
+    sendPiMessage: async (threadId: string, text: string) => {
+      if (get().agentProvider !== "pi") {
+        set({ agentProvider: "pi" });
+      }
+      await get().sendAgentMessage(threadId, text);
+    },
+
+    stopPi: (threadId: string) => get().stopAgent(threadId)
+  };
+}
+

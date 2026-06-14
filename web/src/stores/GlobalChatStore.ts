@@ -37,7 +37,7 @@ import { ConnectionState } from "../lib/websocket/WebSocketManager";
 import { globalWebSocketManager } from "../lib/websocket/GlobalWebSocketManager";
 import { FrontendToolRegistry } from "../lib/tools/frontendTools";
 import { uuidv4 } from "./uuidv4";
-import { createChatPiSlice, type ChatPiSlice } from "./chatPi";
+import { createChatAgentSlice, type ChatAgentSlice } from "./chatAgent";
 import {
   handleChatWebSocketMessage,
   MsgpackData,
@@ -58,7 +58,8 @@ type ChatStatus =
  * How the unified chat routes a message:
  * - "chat": the `/ws` LLM-with-tools loop (also covers media generation, which
  *   is carried per-message via `media_generation`).
- * - "pi": the workspace-aware Pi coding agent over `/ws/agent`.
+ * - "pi": legacy literal for the generic `/ws/agent` path. The selected
+ *   `agentProvider` decides whether Morpheus, LLM, or explicit Pi handles it.
  */
 export type ChatMode = "chat" | "pi";
 
@@ -104,7 +105,7 @@ export interface ToolApprovalRequest {
   args: Record<string, unknown>;
 }
 
-export interface GlobalChatState extends ChatPiSlice {
+export interface GlobalChatState extends ChatAgentSlice {
   // Connection state
   status: ChatStatus;
   statusMessage: string | null;
@@ -283,10 +284,10 @@ const useGlobalChatStore = create<GlobalChatState>()(
       currentRunningToolCallId: null,
       currentToolMessage: null,
 
-      // Mode + Pi transport slice
+      // Mode + generic agent transport slice
       mode: "chat",
       setMode: (mode: ChatMode) => set({ mode }),
-      ...createChatPiSlice(set, get),
+      ...createChatAgentSlice(set, get),
 
       // Per-workflow thread binding (editor side panel)
       workflowThreadId: {},
@@ -604,13 +605,13 @@ const useGlobalChatStore = create<GlobalChatState>()(
           sendMessageTimeoutId
         } = get();
 
-        // Pi mode routes through the agent socket instead of the /ws chat loop.
+        // Agent mode routes through `/ws/agent` instead of the `/ws` chat loop.
         if (get().mode === "pi") {
           let threadId = currentThreadId;
           if (!threadId) {
             threadId = await get().createNewThread();
           }
-          await get().sendPiMessage(threadId, extractMessageText(message));
+          await get().sendAgentMessage(threadId, extractMessageText(message));
           return;
         }
         // Agent mode is no longer a UI toggle — every chat session runs the
@@ -1183,11 +1184,11 @@ const useGlobalChatStore = create<GlobalChatState>()(
       stopGeneration: () => {
         const { currentThreadId, sendMessageTimeoutId, loadMessagesTimeoutId } = get();
 
-        // Pi mode stops via the agent socket, not the /ws stop command.
+        // Agent mode stops via the agent socket, not the /ws stop command.
         if (get().mode === "pi") {
           FrontendToolRegistry.abortAll();
           if (currentThreadId) {
-            get().stopPi(currentThreadId);
+            get().stopAgent(currentThreadId);
           }
           return;
         }
@@ -1290,10 +1291,16 @@ const useGlobalChatStore = create<GlobalChatState>()(
         selectedModel: state.selectedModel,
         permissionMode: state.permissionMode,
         memoryEnabled: state.memoryEnabled,
-        // Per-workflow thread binding + Pi selections so the editor side panel
-        // restores the right conversation and agent setup across reloads.
+        // Per-workflow thread binding + agent selections so the editor side
+        // panel restores the right conversation and setup across reloads.
         workflowThreadId: state.workflowThreadId,
         threadWorkflowId: state.threadWorkflowId,
+        agentProvider: state.agentProvider,
+        agentModel: state.agentModel,
+        agentWorkspaceId: state.agentWorkspaceId,
+        agentWorkspacePath: state.agentWorkspacePath,
+        agentSessionByThread: state.agentSessionByThread,
+        // Deprecated mirrors kept so older builds/imports can still rehydrate.
         piModel: state.piModel,
         piWorkspaceId: state.piWorkspaceId,
         piWorkspacePath: state.piWorkspacePath,
@@ -1335,7 +1342,45 @@ const useGlobalChatStore = create<GlobalChatState>()(
             typeof state.permissionMode === "object" &&
             !Array.isArray(state.permissionMode)
               ? (state.permissionMode as Record<string, PermissionMode>)
-              : fallback.permissionMode
+              : fallback.permissionMode,
+          agentProvider:
+            state.agentProvider === "pi" ||
+            state.agentProvider === "llm" ||
+            state.agentProvider === "morpheus"
+              ? state.agentProvider
+              : state.mode === "pi"
+                ? "pi"
+                : "morpheus",
+          agentModel:
+            typeof state.agentModel === "string"
+              ? state.agentModel
+              : typeof state.piModel === "string"
+                ? state.piModel
+                : "",
+          agentWorkspaceId:
+            typeof state.agentWorkspaceId === "string" ||
+            state.agentWorkspaceId === null
+              ? state.agentWorkspaceId
+              : typeof state.piWorkspaceId === "string"
+                ? state.piWorkspaceId
+                : null,
+          agentWorkspacePath:
+            typeof state.agentWorkspacePath === "string" ||
+            state.agentWorkspacePath === null
+              ? state.agentWorkspacePath
+              : typeof state.piWorkspacePath === "string"
+                ? state.piWorkspacePath
+                : null,
+          agentSessionByThread:
+            state.agentSessionByThread &&
+            typeof state.agentSessionByThread === "object" &&
+            !Array.isArray(state.agentSessionByThread)
+              ? (state.agentSessionByThread as Record<string, string>)
+              : state.piSessionByThread &&
+                  typeof state.piSessionByThread === "object" &&
+                  !Array.isArray(state.piSessionByThread)
+                ? (state.piSessionByThread as Record<string, string>)
+                : {}
         } as unknown as GlobalChatState;
       },
       onRehydrateStorage: () => (state) => {
@@ -1351,7 +1396,7 @@ const useGlobalChatStore = create<GlobalChatState>()(
           state.isLoadingMessages = false;
           state.isLoadingThreads = false;
 
-          // Guard the per-workflow + pi maps against corrupt persisted values
+          // Guard the per-workflow + agent maps against corrupt persisted values
           // (they're read with spreads, so a non-object would crash).
           const asRecord = (value: unknown) =>
             value && typeof value === "object" && !Array.isArray(value)
@@ -1359,11 +1404,54 @@ const useGlobalChatStore = create<GlobalChatState>()(
               : {};
           state.workflowThreadId = asRecord(state.workflowThreadId);
           state.threadWorkflowId = asRecord(state.threadWorkflowId);
-          state.piSessionByThread = asRecord(state.piSessionByThread);
-          state.piThreadBySession = {};
-          if (typeof state.piModel !== "string") {
-            state.piModel = "";
+          const legacyPiSessionByThread = asRecord(state.piSessionByThread);
+          state.agentSessionByThread =
+            Object.keys(asRecord(state.agentSessionByThread)).length > 0
+              ? asRecord(state.agentSessionByThread)
+              : legacyPiSessionByThread;
+          state.agentThreadBySession = {};
+          if (
+            state.agentProvider !== "pi" &&
+            state.agentProvider !== "llm" &&
+            state.agentProvider !== "morpheus"
+          ) {
+            state.agentProvider = state.mode === "pi" ? "pi" : "morpheus";
           }
+          if (typeof state.agentModel !== "string") {
+            state.agentModel =
+              typeof state.piModel === "string" ? state.piModel : "";
+          }
+          if (
+            typeof state.agentWorkspaceId !== "string" &&
+            state.agentWorkspaceId !== null
+          ) {
+            state.agentWorkspaceId =
+              typeof state.piWorkspaceId === "string"
+                ? state.piWorkspaceId
+                : null;
+          }
+          if (
+            typeof state.agentWorkspacePath !== "string" &&
+            state.agentWorkspacePath !== null
+          ) {
+            state.agentWorkspacePath =
+              typeof state.piWorkspacePath === "string"
+                ? state.piWorkspacePath
+                : null;
+          }
+          state.agentModels = Array.isArray(state.agentModels)
+            ? state.agentModels
+            : [];
+          state.agentModelsLoading = false;
+          state.agentStreamUnsub = null;
+          state.piModel = state.agentModel;
+          state.piModels = state.agentModels;
+          state.piModelsLoading = state.agentModelsLoading;
+          state.piWorkspaceId = state.agentWorkspaceId;
+          state.piWorkspacePath = state.agentWorkspacePath;
+          state.piSessionByThread = state.agentSessionByThread;
+          state.piThreadBySession = {};
+          state.piStreamUnsub = null;
           state.mode = state.mode === "pi" ? "pi" : "chat";
 
           // Load threads from API if not loaded yet
