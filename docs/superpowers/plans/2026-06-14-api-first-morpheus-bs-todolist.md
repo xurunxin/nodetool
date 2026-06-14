@@ -11,8 +11,7 @@ support, MorpheusCore agent replacement, and thin desktop shell direction.
 
 **Implementation Plan:** `docs/superpowers/plans/2026-06-14-api-first-morpheus-bs.md`
 
-**Current Active Stage:** Phase 3, Task 6: MorpheusCore client and event
-mapping.
+**Current Active Stage:** Phase 3, Task 7: Morpheus provider behind `/ws/agent`.
 
 **Status Legend:** `[x] done`, `[~] in progress`, `[ ] pending`, `[!] blocked`
 
@@ -57,7 +56,8 @@ mapping.
     configured models appear in model selectors and workflow provider
     resolution.
 - [~] **M3: Morpheus agent provider behind `/ws/agent`**
-  - Next task: Task 6, MorpheusCore client and event mapping.
+  - Completed through Task 6.
+  - Next task: Task 7, Morpheus provider behind `/ws/agent`.
   - Exit criteria: NodeTool can create and stream a Morpheus session without Pi
     workspace assumptions.
 - [ ] **M4: Canvas tool bridge**
@@ -190,7 +190,7 @@ mapping.
     - `rtk npm run typecheck`
   - Commit target: `feat(server): persist custom model endpoints`
   - Commit: `164b30790`
-- [ ] **Task 5: Resolve custom endpoints as runtime providers**
+- [x] **Task 5: Resolve custom endpoints as runtime providers**
   - Create: `packages/websocket/src/custom-provider-resolver.ts`
   - Modify: `packages/websocket/src/plugins/websocket.ts`
   - Modify if needed: `packages/websocket/src/openai-api.ts`
@@ -225,12 +225,19 @@ mapping.
 
 ### Phase 3: Morpheus Agent Provider
 
-- [ ] **Task 6: MorpheusCore client and event mapping**
+- [x] **Task 6: MorpheusCore client and event mapping**
   - Create: `packages/websocket/src/agent/morpheus-client.ts`
   - Test: `packages/websocket/tests/morpheus-client.test.ts`
   - Verify:
     - `rtk npm run test --workspace=packages/websocket -- morpheus-client`
+    - `rtk npm run lint --workspace=packages/websocket`
+    - `rtk npm run typecheck`
+    - `rtk npm run lint`
+    - `rtk npm run test` was attempted, but remains blocked on Windows before
+      tests start because the web workspace script uses
+      `TZ=UTC jest --forceExit`.
   - Commit target: `feat(agent): add morpheus stream client`
+  - Commit: `cf88afd39`
 - [ ] **Task 7: Morpheus provider behind `/ws/agent`**
   - Create: `packages/websocket/src/agent/morpheus-agent.ts`
   - Modify: `packages/websocket/src/agent/sdk-provider.ts`
@@ -323,3 +330,9 @@ mapping.
 - Recorded the custom endpoint scope decision: keep the generic OpenAI/
   Anthropic-compatible path language-only, and handle multimodal APIs through
   future provider-specific adapters.
+- Completed Task 6 and recorded commit `cf88afd39`.
+- Added the MorpheusCore public REST/SSE client with `X-API-Key` auth,
+  `agentName` session creation, prompt streaming, chunk-safe SSE parsing, and
+  mappings for session, text, thinking, tool call, tool result, agent end, done,
+  and error events.
+- Marked next active task as Phase 3, Task 7.
