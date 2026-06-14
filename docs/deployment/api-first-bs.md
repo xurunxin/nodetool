@@ -172,13 +172,13 @@ rtk npm test --workspace=packages/websocket -- trpc-models custom-model-endpoint
 
 ### 1. Model Surface
 
-Start the server with:
+Start or restart the server with these exported variables:
 
 ```bash
-NODETOOL_ENV=production
-NODETOOL_MODEL_SURFACE=api_first
-MORPHEUS_BASE_URL=https://<morpheus-host>
-SECRETS_MASTER_KEY=<secret>
+export NODETOOL_ENV=production
+export NODETOOL_MODEL_SURFACE=api_first
+export MORPHEUS_BASE_URL=https://<morpheus-host>
+export SECRETS_MASTER_KEY=<secret>
 ```
 
 Create at least one enabled custom endpoint through
@@ -235,6 +235,9 @@ Expected: the server responds to `create-1` with a session id that starts with
 
 Using the session from step 2, send a prompt that asks MorpheusCore to call a
 renderer tool exposed in the manifest:
+
+This bridge assertion depends on the live Morpheus agent honoring the prompt
+and emitting a tool call.
 
 ```js
 ws.send(JSON.stringify({
