@@ -19,6 +19,7 @@ import {
   stopMcpToolServer,
 } from "./mcp-tool-server.js";
 import { LlmAgentSdkProvider } from "./llm-agent.js";
+import { MorpheusAgentSdkProvider } from "./morpheus-agent.js";
 import {
   getLocalMcpServerUrl,
   setMcpFrontendTransport,
@@ -115,10 +116,18 @@ class PiSdkProvider implements AgentSdkProvider {
 const providers: Record<string, AgentSdkProvider> = {
   pi: new PiSdkProvider(),
   llm: new LlmAgentSdkProvider(),
+  morpheus: new MorpheusAgentSdkProvider(),
 };
 
+function getDefaultProviderName(): string {
+  if (process.env.MORPHEUS_BASE_URL && process.env.MORPHEUS_API_KEY) {
+    return "morpheus";
+  }
+  return "llm";
+}
+
 function getProvider(name?: string): AgentSdkProvider {
-  return providers[name ?? "llm"] ?? providers.llm;
+  return providers[name ?? getDefaultProviderName()] ?? providers.llm;
 }
 
 /**
@@ -165,10 +174,9 @@ class AgentRuntime {
         "createSession requires an authenticated userId — agent socket must be authenticated",
       );
     }
-    // The "llm" provider runs in-process with only ui_* tools — no file
-    // system access, so a workspace is irrelevant. The "pi" provider needs
-    // one for its file-system tools.
-    const requiresWorkspace = options.provider !== "llm";
+    // The "pi" provider needs a workspace for its SDK session storage and
+    // local tools. API-backed providers do not touch the server filesystem.
+    const requiresWorkspace = options.provider === "pi";
     if (requiresWorkspace) {
       if (!options.resumeSessionId && !options.workspacePath) {
         throw new Error(
