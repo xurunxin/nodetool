@@ -1,7 +1,10 @@
 import { createStore } from "zustand/vanilla";
 import type { StoreApi } from "zustand/vanilla";
 import { createChatAgentSlice, type ChatAgentSlice } from "../chatAgent";
-import type { AgentModelDescriptor } from "../../lib/agent/agentTypes";
+import type {
+  AgentModelDescriptor,
+  AgentStreamEvent
+} from "../../lib/agent/agentTypes";
 
 jest.mock("../../lib/tools/frontendToolsIpc", () => ({}));
 
@@ -199,6 +202,102 @@ describe("chatAgent store slice", () => {
         model: "claude-sonnet"
       })
     );
+  });
+
+  it("persists the real LLM thread id from streamed messages while keeping the live socket alias", async () => {
+    mockAgentClient.createSession.mockResolvedValue("llm-session-1");
+    let streamHandler: ((event: AgentStreamEvent) => void) | undefined;
+    mockAgentClient.on.mockImplementation(
+      (eventName: string, handler: (event: AgentStreamEvent) => void) => {
+        if (eventName === "stream") {
+          streamHandler = handler;
+        }
+      }
+    );
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "llm",
+      agentModel: "claude-sonnet",
+      agentModels: [llmModel],
+      currentThreadId: "chat-thread",
+      status: "loading"
+    });
+
+    await store.getState().sendAgentMessage("chat-thread", "hello");
+    expect(mockAgentClient.sendMessage).toHaveBeenCalledWith(
+      "llm-session-1",
+      "hello"
+    );
+
+    streamHandler?.({
+      sessionId: "llm-session-1",
+      done: false,
+      message: {
+        type: "assistant",
+        uuid: "assistant-1",
+        session_id: "db-thread-1",
+        text: "ok",
+        content: [{ type: "text", text: "ok" }]
+      }
+    });
+
+    expect(store.getState().agentSessionByThread["chat-thread"]).toBe(
+      "db-thread-1"
+    );
+    expect(store.getState().agentThreadBySession["llm-session-1"]).toBe(
+      "chat-thread"
+    );
+    expect(store.getState().agentThreadBySession["db-thread-1"]).toBe(
+      "chat-thread"
+    );
+
+    streamHandler?.({
+      sessionId: "llm-session-1",
+      done: true,
+      message: {
+        type: "system",
+        uuid: "done-1",
+        session_id: "llm-session-1"
+      }
+    });
+    expect(store.getState().status).toBe("connected");
+
+    await store.getState().sendAgentMessage("chat-thread", "again");
+
+    expect(mockAgentClient.createSession).toHaveBeenCalledTimes(1);
+    expect(mockAgentClient.sendMessage).toHaveBeenLastCalledWith(
+      "db-thread-1",
+      "again"
+    );
+  });
+
+  it("does not resume persisted temporary LLM socket session ids", async () => {
+    mockAgentClient.createSession.mockResolvedValue("llm-session-new");
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "llm",
+      agentModel: "claude-sonnet",
+      agentModels: [llmModel],
+      agentSessionByThread: {
+        "thread-llm": "llm-session-stale-test"
+      },
+      agentSessionConfigByThread: {
+        "thread-llm": {
+          provider: "llm",
+          model: "claude-sonnet",
+          workspacePath: null,
+          chatProviderId: "anthropic"
+        }
+      }
+    });
+
+    await store.getState().sendAgentMessage("thread-llm", "resume me");
+
+    expect(mockAgentClient.createSession).toHaveBeenCalledWith({
+      provider: "llm",
+      model: "claude-sonnet",
+      chatProviderId: "anthropic"
+    });
   });
 
   it("creates a new session after changing Pi workspace for an existing thread", async () => {

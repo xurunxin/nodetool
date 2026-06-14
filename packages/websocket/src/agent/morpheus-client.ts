@@ -44,7 +44,7 @@ const jsonHeaders = (apiKey?: string): Record<string, string> => {
   };
 
   if (apiKey !== undefined && apiKey.length > 0) {
-    headers.authorization = `Bearer ${apiKey}`;
+    headers["X-API-Key"] = apiKey;
   }
 
   return headers;

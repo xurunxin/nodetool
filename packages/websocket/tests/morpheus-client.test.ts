@@ -166,7 +166,7 @@ describe("MorpheusClient.createSession", () => {
     expect(calls[0].init?.method).toBe("POST");
     expect(calls[0].init?.headers).toEqual({
       "content-type": "application/json",
-      authorization: "Bearer secret",
+      "X-API-Key": "secret",
     });
     expect(JSON.parse(String(calls[0].init?.body))).toEqual({
       agentId: "agent-1",
@@ -242,7 +242,7 @@ describe("MorpheusClient.streamPrompt", () => {
     ]);
   });
 
-  it("sends authorization, agent-scoped query body, and signal", async () => {
+  it("sends X-API-Key auth, agent-scoped query body, and signal", async () => {
     const controller = new AbortController();
     const { fetchFn, calls } = makeFetchMock([
       streamResponse(['data: {"event":"done","data":{}}\n\n']),
@@ -269,7 +269,7 @@ describe("MorpheusClient.streamPrompt", () => {
     expect(calls[0].init?.method).toBe("POST");
     expect(calls[0].init?.headers).toEqual({
       "content-type": "application/json",
-      authorization: "Bearer secret",
+      "X-API-Key": "secret",
     });
     expect(calls[0].init?.signal).toBe(controller.signal);
     expect(JSON.parse(String(calls[0].init?.body))).toEqual({

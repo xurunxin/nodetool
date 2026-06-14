@@ -193,12 +193,62 @@ function sessionConfigsMatch(
   );
 }
 
+function isTemporaryLlmSessionId(sessionId: string): boolean {
+  return sessionId.startsWith("llm-session-");
+}
+
+function maybePromoteLlmSessionId(
+  socketSessionId: string,
+  threadId: string,
+  message: ProtocolAgentMessage,
+  set: Set,
+  get: Get
+): void {
+  const realSessionId = message.session_id;
+  if (
+    !realSessionId ||
+    realSessionId === socketSessionId ||
+    get().agentSessionConfigByThread[threadId]?.provider !== "llm"
+  ) {
+    return;
+  }
+
+  liveSessions.add(realSessionId);
+  set((state) => {
+    if (
+      state.agentSessionByThread[threadId] === realSessionId &&
+      state.agentThreadBySession[realSessionId] === threadId
+    ) {
+      return state;
+    }
+    return mirrorAgentState({
+      agentSessionByThread: {
+        ...state.agentSessionByThread,
+        [threadId]: realSessionId
+      },
+      agentThreadBySession: {
+        ...state.agentThreadBySession,
+        [socketSessionId]: threadId,
+        [realSessionId]: threadId
+      }
+    });
+  });
+}
+
 function handleAgentStream(event: AgentStreamEvent, set: Set, get: Get): void {
   const { sessionId, message, done } = event;
   const threadId = get().agentThreadBySession[sessionId];
   if (!threadId) {
     return;
   }
+
+  maybePromoteLlmSessionId(
+    sessionId,
+    threadId,
+    message as ProtocolAgentMessage,
+    set,
+    get
+  );
 
   if (done) {
     turnHasAssistant.delete(threadId);
@@ -303,7 +353,12 @@ async function ensureAgentSession(
     provider: agentProvider,
     model: agentModel
   };
-  if (existing && canReuseExisting && agentProvider !== "morpheus") {
+  if (
+    existing &&
+    canReuseExisting &&
+    agentProvider !== "morpheus" &&
+    !(agentProvider === "llm" && isTemporaryLlmSessionId(existing))
+  ) {
     options.resumeSessionId = existing;
   }
   if (agentProvider === "pi" && agentWorkspacePath) {
