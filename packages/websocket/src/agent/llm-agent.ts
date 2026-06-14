@@ -72,6 +72,10 @@ import {
 import type { AgentTransport } from "./transport.js";
 import { resolveNodeToolProvider } from "../custom-provider-resolver.js";
 import { getCustomEndpointLanguageModels } from "../custom-model-endpoints.js";
+import {
+  filterProviderIdsForSurface,
+  isProviderVisibleForSurface,
+} from "../model-surface.js";
 
 const log = createLogger("nodetool.websocket.agent.llm");
 
@@ -578,6 +582,11 @@ class LlmAgentSession implements AgentQuerySession {
 
     try {
       await this.hydrate();
+      if (!isProviderVisibleForSurface(this.chatProviderId)) {
+        throw new Error(
+          `Provider "${this.chatProviderId}" is disabled by the current model surface`,
+        );
+      }
       const provider = await resolveNodeToolProvider(
         this.chatProviderId,
         this.userId,
@@ -747,18 +756,20 @@ async function getConfiguredProvidersForUser(
     getStoredSecret(key, userId).then((v) => v ?? undefined);
 
   await Promise.all(
-    listRegisteredProviderIds().map(async (providerId) => {
-      try {
-        if (await isProviderConfigured(providerId, getSecret)) {
-          providers[providerId] = await getRuntimeProvider(providerId, getSecret);
+    filterProviderIdsForSurface(listRegisteredProviderIds()).map(
+      async (providerId) => {
+        try {
+          if (await isProviderConfigured(providerId, getSecret)) {
+            providers[providerId] = await getRuntimeProvider(providerId, getSecret);
+          }
+        } catch (error) {
+          log.debug("Skipping provider for graph-planner model lookup", {
+            provider: providerId,
+            error: error instanceof Error ? error.message : String(error)
+          });
         }
-      } catch (error) {
-        log.debug("Skipping provider for graph-planner model lookup", {
-          provider: providerId,
-          error: error instanceof Error ? error.message : String(error)
-        });
       }
-    })
+    )
   );
 
   providers[fallbackProvider.provider] = fallbackProvider;
@@ -774,7 +785,7 @@ async function getConfiguredProvidersForUser(
 async function listAllToolCapableLanguageModels(
   userId: string,
 ): Promise<AgentModelDescriptor[]> {
-  const providerIds = listRegisteredProviderIds();
+  const providerIds = filterProviderIdsForSurface(listRegisteredProviderIds());
   const out: AgentModelDescriptor[] = [];
   const getSecret = (key: string) =>
     getStoredSecret(key, userId).then((v) => v ?? undefined);

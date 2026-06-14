@@ -518,7 +518,7 @@ async function isServerReachable(url: string): Promise<boolean> {
 }
 
 async function getServerAvailability(): Promise<Record<string, boolean>> {
-  if (isProduction()) {
+  if (isProduction() || !isLocalModelManagementEnabled()) {
     return { ollama: false, llama_cpp: false, lmstudio: false, vllm: false };
   }
 
@@ -566,7 +566,7 @@ async function serverAllowsModel(
 async function getRecommendedModels(
   checkServers: boolean
 ): Promise<UnifiedModel[]> {
-  const models = [...RECOMMENDED_MODELS];
+  const models = filterModelsForSurface([...RECOMMENDED_MODELS]);
   if (!checkServers) return models;
   const servers = await getServerAvailability();
   const filtered: UnifiedModel[] = [];
@@ -582,8 +582,10 @@ function selectRecommended(
   modality: RecommendedUnifiedModel["modality"],
   task?: RecommendedUnifiedModel["task"]
 ): UnifiedModel[] {
-  return RECOMMENDED_MODELS.filter(
-    (model) => model.modality === modality && (!task || model.task === task)
+  return filterModelsForSurface(
+    RECOMMENDED_MODELS.filter(
+      (model) => model.modality === modality && (!task || model.task === task)
+    )
   );
 }
 

@@ -15,13 +15,17 @@
  * The harness providers are stubbed so the LLM provider path is exercised
  * in isolation.
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { initTestDb, Thread, Message, Setting } from "@nodetool-ai/models";
 import {
   CUSTOM_MODEL_ENDPOINTS_SETTING,
   customEndpointProviderId,
 } from "../src/custom-model-endpoints.js";
-import { getProvider } from "@nodetool-ai/runtime";
+import {
+  getProvider,
+  isProviderConfigured,
+  listRegisteredProviderIds,
+} from "@nodetool-ai/runtime";
 
 // ── Mocks ─────────────────────────────────────────────────────────────
 
@@ -76,6 +80,16 @@ vi.mock("@nodetool-ai/runtime", async (importOriginal) => {
 import { LlmAgentSdkProvider } from "../src/agent/llm-agent.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────
+
+const originalModelSurface = process.env.NODETOOL_MODEL_SURFACE;
+
+function resetModelSurface(): void {
+  if (originalModelSurface == null) {
+    delete process.env.NODETOOL_MODEL_SURFACE;
+    return;
+  }
+  process.env.NODETOOL_MODEL_SURFACE = originalModelSurface;
+}
 
 const makeTransport = () => ({
   streamMessage: vi.fn(),
@@ -132,8 +146,13 @@ async function saveRawCustomEndpointsSetting(
 describe("LlmAgentSession persistence", () => {
   beforeEach(() => {
     initTestDb();
+    delete process.env.NODETOOL_MODEL_SURFACE;
     processChatSpy.mockClear();
     resolveNodeToolProviderSpy.mockClear();
+  });
+
+  afterEach(() => {
+    resetModelSurface();
   });
 
   it("creates a Thread on first send() and persists user + assistant messages", async () => {
@@ -283,11 +302,68 @@ describe("LlmAgentSession persistence", () => {
       "alice",
     );
   });
+
+  it("rejects local-only chatProviderId in API-first mode before resolving the provider", async () => {
+    const provider = new LlmAgentSdkProvider();
+    const session = provider.createSession({
+      model: "llama3",
+      workspacePath: "",
+      userId: "alice",
+      chatProviderId: "ollama",
+    });
+
+    const result = await session.send("hello", makeTransport(), "tmp-id-1", []);
+
+    expect(result).toContainEqual(
+      expect.objectContaining({
+        type: "result",
+        subtype: "error",
+        is_error: true,
+        errors: [expect.stringMatching(/ollama.*disabled.*model surface/i)],
+      }),
+    );
+    expect(resolveNodeToolProviderSpy).not.toHaveBeenCalled();
+  });
+
+  it("allows local-only chatProviderId in local-first mode", async () => {
+    process.env.NODETOOL_MODEL_SURFACE = "local_first";
+    const provider = new LlmAgentSdkProvider();
+    const session = provider.createSession({
+      model: "llama3",
+      workspacePath: "",
+      userId: "alice",
+      chatProviderId: "ollama",
+    });
+
+    const result = await session.send("hello", makeTransport(), "tmp-id-1", []);
+
+    expect(result).toContainEqual(
+      expect.objectContaining({
+        type: "result",
+        subtype: "success",
+        is_error: false,
+      }),
+    );
+    expect(resolveNodeToolProviderSpy).toHaveBeenCalledWith("ollama", "alice");
+  });
 });
 
 describe("LlmAgentSdkProvider listModels", () => {
   beforeEach(() => {
     initTestDb();
+    delete process.env.NODETOOL_MODEL_SURFACE;
+    vi.clearAllMocks();
+    vi.mocked(listRegisteredProviderIds).mockReturnValue(["anthropic"]);
+    vi.mocked(isProviderConfigured).mockResolvedValue(true);
+    vi.mocked(getProvider).mockResolvedValue({
+      provider: "anthropic",
+      hasToolSupport: async () => true,
+      getAvailableLanguageModels: async () => [],
+    } as never);
+  });
+
+  afterEach(() => {
+    resetModelSurface();
   });
 
   it("includes enabled custom endpoint models and skips disabled endpoints", async () => {
@@ -338,6 +414,66 @@ describe("LlmAgentSdkProvider listModels", () => {
         provider: "llm",
         chatProviderId: "anthropic",
         isDefault: true,
+      }),
+    );
+  });
+
+  it("hides local-only provider models in API-first mode", async () => {
+    vi.mocked(listRegisteredProviderIds).mockReturnValue(["anthropic", "ollama"]);
+    vi.mocked(getProvider).mockImplementation(
+      async (providerId: string) =>
+        ({
+          provider: providerId,
+          hasToolSupport: async () => true,
+          getAvailableLanguageModels: async () => [
+            {
+              id: `${providerId}-chat`,
+              name: `${providerId} Chat`,
+              provider: providerId,
+            },
+          ],
+        }) as never,
+    );
+
+    const models = await new LlmAgentSdkProvider().listModels("alice");
+
+    expect(models).toContainEqual(
+      expect.objectContaining({
+        id: "anthropic-chat",
+        chatProviderId: "anthropic",
+      }),
+    );
+    expect(models.map((model) => model.id)).not.toContain("ollama-chat");
+    expect(getProvider).not.toHaveBeenCalledWith(
+      "ollama",
+      expect.any(Function),
+    );
+  });
+
+  it("shows local-only provider models in local-first mode", async () => {
+    process.env.NODETOOL_MODEL_SURFACE = "local_first";
+    vi.mocked(listRegisteredProviderIds).mockReturnValue(["anthropic", "ollama"]);
+    vi.mocked(getProvider).mockImplementation(
+      async (providerId: string) =>
+        ({
+          provider: providerId,
+          hasToolSupport: async () => true,
+          getAvailableLanguageModels: async () => [
+            {
+              id: `${providerId}-chat`,
+              name: `${providerId} Chat`,
+              provider: providerId,
+            },
+          ],
+        }) as never,
+    );
+
+    const models = await new LlmAgentSdkProvider().listModels("alice");
+
+    expect(models).toContainEqual(
+      expect.objectContaining({
+        id: "ollama-chat",
+        chatProviderId: "ollama",
       }),
     );
   });

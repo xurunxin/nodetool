@@ -392,6 +392,22 @@ describe("models router", () => {
         expect(providers.has(providerId)).toBe(false);
       }
     });
+
+    it("does not probe local model servers in API-first mode when check_servers is true", async () => {
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(new Response("ok"));
+      (getSecret as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+      const caller = createCaller(makeCtx());
+      const result = await caller.models.recommended({ check_servers: true });
+      const providers = modelProviders(result);
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+      for (const providerId of LOCAL_PROVIDER_IDS) {
+        expect(providers.has(providerId)).toBe(false);
+      }
+    });
   });
 
   // ── recommendedImage ─────────────────────────────────────────────────────
@@ -417,6 +433,20 @@ describe("models router", () => {
       // language modality includes language_model and embedding_model
       for (const model of result) {
         expect(model.type).toMatch(/language|embedding/);
+      }
+    });
+
+    it("hides local-only task-specific language recommendations in API-first mode", async () => {
+      const caller = createCaller(makeCtx());
+      const results = [
+        ...(await caller.models.recommendedLanguage()),
+        ...(await caller.models.recommendedLanguageTextGeneration()),
+        ...(await caller.models.recommendedLanguageEmbedding())
+      ];
+      const providers = modelProviders(results);
+
+      for (const providerId of LOCAL_PROVIDER_IDS) {
+        expect(providers.has(providerId)).toBe(false);
       }
     });
   });

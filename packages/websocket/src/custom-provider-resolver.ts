@@ -12,6 +12,7 @@ import {
   customEndpointSecretKey,
   listCustomModelEndpoints
 } from "./custom-model-endpoints.js";
+import { isProviderVisibleForSurface } from "./model-surface.js";
 
 function secretResolverFor(userId: string) {
   return (key: string) =>
@@ -29,7 +30,13 @@ export async function resolveNodeToolProvider(
   userId: string
 ): Promise<BaseProvider> {
   if (!providerId.startsWith("custom:")) {
-    return getProvider(providerId.toLowerCase(), secretResolverFor(userId));
+    const normalizedProviderId = providerId.toLowerCase();
+    if (!isProviderVisibleForSurface(normalizedProviderId)) {
+      throw new Error(
+        `Provider "${normalizedProviderId}" is disabled by the current model surface`
+      );
+    }
+    return getProvider(normalizedProviderId, secretResolverFor(userId));
   }
 
   const endpointId = providerId.slice("custom:".length);
