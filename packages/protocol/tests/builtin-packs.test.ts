@@ -23,6 +23,7 @@ describe("BUILTIN_NODE_PACKS catalog", () => {
       "replicate",
       "kie",
       "kling",
+      "dashscope",
       "volcengine"
     ]) {
       expect(byId.get(id)?.defaultEnabled).toBe(true);
@@ -71,6 +72,12 @@ describe("findBuiltinPackForNodeType", () => {
 
   it("maps Kling image-to-video nodes to the Kling pack", () => {
     expect(findBuiltinPackForNodeType("kling.ImageToVideo")?.id).toBe("kling");
+  });
+
+  it("maps DashScope Wanxiang media nodes to the DashScope pack", () => {
+    expect(findBuiltinPackForNodeType("dashscope.WanxImageToVideo")?.id).toBe(
+      "dashscope"
+    );
   });
 
   it("maps Volcengine Ark media nodes to the Volcengine pack", () => {

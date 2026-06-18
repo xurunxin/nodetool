@@ -35,6 +35,7 @@ import { registerMinimaxNodes } from "@nodetool-ai/minimax-nodes";
 import { registerTransformersJsNodes } from "@nodetool-ai/transformers-js-nodes";
 import { registerFalNodes } from "@nodetool-ai/fal-nodes";
 import { registerKlingNodes } from "@nodetool-ai/kling-nodes";
+import { registerDashScopeNodes } from "@nodetool-ai/dashscope-nodes";
 import { registerVolcengineNodes } from "@nodetool-ai/volcengine-nodes";
 import { registerReplicateNodes } from "@nodetool-ai/replicate-nodes";
 import { registerReveNodes } from "@nodetool-ai/reve-nodes";
@@ -511,6 +512,7 @@ workflows
         registerTransformersJsNodes(registry);
         registerFalNodes(registry);
         registerKlingNodes(registry);
+        registerDashScopeNodes(registry);
         registerVolcengineNodes(registry);
         registerReplicateNodes(registry);
         registerReveNodes(registry);

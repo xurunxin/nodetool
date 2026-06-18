@@ -22,6 +22,7 @@
     "packages/elevenlabs-nodes",
     "packages/minimax-nodes",
     "packages/kling-nodes",
+    "packages/dashscope-nodes",
     "packages/volcengine-nodes",
     "packages/transformers-js-nodes",
     "packages/transformers-js-provider",

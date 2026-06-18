@@ -30,6 +30,7 @@ describe("namespaceClass", () => {
     for (const ns of PROVIDER_NAMESPACES) {
       expect(namespaceClass(`${ns}.foo`)).toBe("provider");
     }
+    expect(PROVIDER_NAMESPACES).toContain("dashscope");
     expect(namespaceClass("openai")).toBe("provider");
   });
 

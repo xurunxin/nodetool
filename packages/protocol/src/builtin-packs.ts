@@ -108,6 +108,13 @@ export const BUILTIN_NODE_PACKS: readonly BuiltinNodePack[] = [
     namespaces: ["kling"]
   },
   {
+    id: "dashscope",
+    name: "DashScope",
+    description: "Wanxiang image and video generation on Alibaba Model Studio.",
+    defaultEnabled: true,
+    namespaces: ["dashscope"]
+  },
+  {
     id: "volcengine",
     name: "Volcengine Ark",
     description: "Doubao Seedance video and Seedream image generation on Volcengine Ark.",

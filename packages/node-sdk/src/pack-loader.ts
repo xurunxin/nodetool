@@ -71,6 +71,7 @@ export const DEFAULT_RESERVED_NAMESPACES: readonly string[] = [
   "ollama",
   "replicate",
   "fal",
+  "dashscope",
   "elevenlabs",
   "kie",
   "volcengine",

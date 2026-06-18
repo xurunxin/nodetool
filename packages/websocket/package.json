@@ -38,6 +38,7 @@
     "@nodetool-ai/fal-nodes": "*",
     "@nodetool-ai/kie-nodes": "*",
     "@nodetool-ai/kling-nodes": "*",
+    "@nodetool-ai/dashscope-nodes": "*",
     "@nodetool-ai/volcengine-nodes": "*",
     "@nodetool-ai/topaz-nodes": "*",
     "@nodetool-ai/reve-nodes": "*",

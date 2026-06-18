@@ -23,6 +23,7 @@
     { "path": "packages/elevenlabs-nodes" },
     { "path": "packages/minimax-nodes" },
     { "path": "packages/kling-nodes" },
+    { "path": "packages/dashscope-nodes" },
     { "path": "packages/volcengine-nodes" },
     { "path": "packages/transformers-js-nodes" },
     { "path": "packages/transformers-js-provider" },
