@@ -1,7 +1,9 @@
 import {
   compilePromptResources,
+  createDataUrl,
   downloadBytes,
   pollTask,
+  type CompiledPromptReference,
   type PromptResourceInput
 } from "@nodetool-ai/nodes-utils";
 
@@ -39,6 +41,10 @@ export interface KlingTaskResult {
   message: string | undefined;
 }
 
+type KlingImageToVideoContent =
+  | { type: "prompt"; text: string }
+  | { type: "first_frame"; url: string };
+
 export function getKlingApiKey(secrets: Record<string, string>): string {
   const key = secrets?.KLING_API_KEY || process.env.KLING_API_KEY || "";
   if (!key) {
@@ -72,11 +78,16 @@ export function buildKlingImageToVideoBody(
     options.prompt,
     options.resources ?? []
   );
+  const contents: KlingImageToVideoContent[] = [
+    { type: "prompt", text: compiled.text },
+    { type: "first_frame", url: options.firstFrameUrl }
+  ];
+  for (const reference of compiled.references) {
+    contents.push(createKlingImageToVideoContent(reference));
+  }
+
   const body: Record<string, unknown> = {
-    contents: [
-      { type: "prompt", text: compiled.text },
-      { type: "first_frame", url: options.firstFrameUrl }
-    ],
+    contents,
     settings: {
       resolution: options.resolution,
       duration: options.duration
@@ -94,6 +105,44 @@ export function buildKlingImageToVideoBody(
     requestOptions.watermark_info = options.watermarkInfo;
   }
   return body;
+}
+
+function createKlingImageToVideoContent(
+  reference: CompiledPromptReference
+): KlingImageToVideoContent {
+  if (reference.alias !== "first_frame") {
+    throw new Error(
+      `Kling image-to-video does not support prompt resource ${formatPromptResource(reference)}; use the first-frame image input instead.`
+    );
+  }
+  if (reference.type !== "image") {
+    throw new Error(
+      `Kling image-to-video first_frame resources must be images; received ${reference.type}.`
+    );
+  }
+  return {
+    type: "first_frame",
+    url: promptResourceUrl(reference)
+  };
+}
+
+function promptResourceUrl(reference: CompiledPromptReference): string {
+  if (reference.url) {
+    return reference.url;
+  }
+  if (reference.dataUrl) {
+    return reference.dataUrl;
+  }
+  if (reference.bytes) {
+    return createDataUrl(reference.bytes, reference.mimeType);
+  }
+  throw new Error(
+    `Kling image-to-video resource ${formatPromptResource(reference)} must include a URL, data URL, or bytes.`
+  );
+}
+
+function formatPromptResource(reference: CompiledPromptReference): string {
+  return reference.alias ? `@${reference.alias}` : reference.marker;
 }
 
 export async function submitKlingTask(

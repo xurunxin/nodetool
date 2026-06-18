@@ -34,6 +34,7 @@ import { registerElevenLabsNodes } from "@nodetool-ai/elevenlabs-nodes";
 import { registerMinimaxNodes } from "@nodetool-ai/minimax-nodes";
 import { registerTransformersJsNodes } from "@nodetool-ai/transformers-js-nodes";
 import { registerFalNodes } from "@nodetool-ai/fal-nodes";
+import { registerKlingNodes } from "@nodetool-ai/kling-nodes";
 import { registerReplicateNodes } from "@nodetool-ai/replicate-nodes";
 import { registerReveNodes } from "@nodetool-ai/reve-nodes";
 import { registerHuggingFaceNodes } from "@nodetool-ai/huggingface-nodes";
@@ -508,6 +509,7 @@ workflows
         registerMinimaxNodes(registry);
         registerTransformersJsNodes(registry);
         registerFalNodes(registry);
+        registerKlingNodes(registry);
         registerReplicateNodes(registry);
         registerReveNodes(registry);
         registerHuggingFaceNodes(registry);

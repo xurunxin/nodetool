@@ -37,6 +37,7 @@
     "@nodetool-ai/transformers-js-provider": "*",
     "@nodetool-ai/fal-nodes": "*",
     "@nodetool-ai/kie-nodes": "*",
+    "@nodetool-ai/kling-nodes": "*",
     "@nodetool-ai/topaz-nodes": "*",
     "@nodetool-ai/reve-nodes": "*",
     "@nodetool-ai/atlascloud-nodes": "*",

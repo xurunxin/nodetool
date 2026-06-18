@@ -101,6 +101,13 @@ export const BUILTIN_NODE_PACKS: readonly BuiltinNodePack[] = [
     namespaces: ["kie"]
   },
   {
+    id: "kling",
+    name: "Kling",
+    description: "Kling image-to-video generation models.",
+    defaultEnabled: true,
+    namespaces: ["kling"]
+  },
+  {
     id: "topaz",
     name: "Topaz Labs",
     description: "Image and video upscaling and enhancement via Topaz Labs.",

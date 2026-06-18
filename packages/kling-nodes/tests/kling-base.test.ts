@@ -38,17 +38,10 @@ describe("Kling base helpers", () => {
 
   it("builds the confirmed Kling 3.0 Turbo image-to-video request body", () => {
     const body = buildKlingImageToVideoBody({
-      prompt: "make @hero walk",
+      prompt: "make hero walk",
       firstFrameUrl: "data:image/png;base64,AAAA",
       resolution: "1080p",
       duration: 5,
-      resources: [
-        {
-          type: "image",
-          alias: "hero",
-          url: "https://assets.example/hero.png"
-        }
-      ],
       callbackUrl: "https://callback.example/kling",
       externalTaskId: "external-1",
       watermarkInfo: { text: "nodetool" }
@@ -56,7 +49,7 @@ describe("Kling base helpers", () => {
 
     expect(body).toEqual({
       contents: [
-        { type: "prompt", text: "make [reference: hero] walk" },
+        { type: "prompt", text: "make hero walk" },
         { type: "first_frame", url: "data:image/png;base64,AAAA" }
       ],
       settings: {
@@ -69,6 +62,24 @@ describe("Kling base helpers", () => {
         watermark_info: { text: "nodetool" }
       }
     });
+  });
+
+  it("rejects prompt image resources instead of silently dropping them", () => {
+    expect(() =>
+      buildKlingImageToVideoBody({
+        prompt: "make @hero walk",
+        firstFrameUrl: "data:image/png;base64,AAAA",
+        resolution: "1080p",
+        duration: 5,
+        resources: [
+          {
+            type: "image",
+            alias: "hero",
+            url: "https://assets.example/hero.png"
+          }
+        ]
+      })
+    ).toThrow(/does not support prompt resource @hero/);
   });
 
   it("submits an image-to-video task to the model-specific endpoint", async () => {
