@@ -861,6 +861,9 @@ export const PROVIDER_IDS = {
   // Media / 3D / utility APIs
   REPLICATE: "replicate",
   FAL_AI: "fal_ai",
+  DASHSCOPE: "dashscope",
+  VOLCENGINE_ARK: "volcengine_ark",
+  KLING: "kling",
   KIE: "kie",
   TOPAZ: "topaz",
   REVE: "reve",
