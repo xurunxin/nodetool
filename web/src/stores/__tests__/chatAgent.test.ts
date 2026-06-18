@@ -587,6 +587,49 @@ describe("chatAgent store slice", () => {
     );
   });
 
+  it("renders terminal error frames before closing the stream", async () => {
+    mockAgentClient.createSession.mockResolvedValue("session-morpheus");
+    let streamHandler: ((event: AgentStreamEvent) => void) | undefined;
+    mockAgentClient.on.mockImplementation(
+      (eventName: string, handler: (event: AgentStreamEvent) => void) => {
+        if (eventName === "stream") {
+          streamHandler = handler;
+        }
+      }
+    );
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "morpheus",
+      agentModel: "morpheus/default",
+      agentModels: [morpheusModel],
+      currentThreadId: "thread-m"
+    });
+
+    await store.getState().sendAgentMessage("thread-m", "forward");
+    streamHandler?.({
+      sessionId: "session-morpheus",
+      done: true,
+      message: {
+        type: "result",
+        uuid: "terminal-error",
+        session_id: "session-morpheus",
+        subtype: "error",
+        text: "Tool manifest timed out",
+        is_error: true
+      }
+    });
+
+    expect(store.getState().messageCache["thread-m"]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "terminal-error",
+          content: [{ type: "text", text: "Tool manifest timed out" }]
+        })
+      ])
+    );
+    expect(store.getState().status).toBe("connected");
+  });
+
   it("deduplicates final LLM summaries after streamed tool turns", async () => {
     mockAgentClient.createSession.mockResolvedValue("llm-session-1");
     let streamHandler: ((event: AgentStreamEvent) => void) | undefined;

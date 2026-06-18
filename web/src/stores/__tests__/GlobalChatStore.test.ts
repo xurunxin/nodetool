@@ -261,8 +261,8 @@ describe("GlobalChatStore", () => {
           workflow_id: null,
           thread_id: threadId,
           memory_enabled: false,
-          model: "gpt-oss:20b",
-          provider: "empty",
+          model: "gpt-4o",
+          provider: "openai",
           permission_mode: "default",
           media_generation: null
         }
@@ -870,8 +870,8 @@ describe("GlobalChatStore", () => {
           workflow_id: "test-workflow",
           thread_id: threadId,
           memory_enabled: false,
-          model: "gpt-oss:20b",
-          provider: "empty",
+          model: "gpt-4o",
+          provider: "openai",
           permission_mode: "default",
           media_generation: null
         }

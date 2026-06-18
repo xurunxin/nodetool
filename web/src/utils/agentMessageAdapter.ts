@@ -121,6 +121,18 @@ export function agentMessageToNodeToolMessage(
           model: "agent"
         };
       }
+      if (msg.is_error && msg.text) {
+        return {
+          type: "message",
+          id: msg.uuid,
+          role: "assistant",
+          content: [{ type: "text", text: msg.text }],
+          created_at: new Date().toISOString(),
+          thread_id: msg.session_id,
+          provider: "anthropic",
+          model: "agent"
+        };
+      }
       return null;
     }
 

@@ -254,7 +254,7 @@ export interface GlobalChatState extends ChatAgentSlice {
 function buildDefaultLanguageModel(): LanguageModel {
   return {
     type: "language_model",
-    provider: "empty",
+    provider: "openai",
     id: DEFAULT_MODEL,
     name: DEFAULT_MODEL
   };

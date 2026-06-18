@@ -106,12 +106,12 @@ export const parseMorpheusSseFrame = (
     case "text_delta":
       return {
         type: "text_delta",
-        text: stringValue(data.delta),
+        text: stringValue(data.delta ?? data.text),
       };
     case "thinking_delta":
       return {
         type: "thinking_delta",
-        text: stringValue(data.delta),
+        text: stringValue(data.delta ?? data.text),
       };
     case "tool_call":
     case "toolcall_end": {
@@ -131,7 +131,7 @@ export const parseMorpheusSseFrame = (
     case "error":
       return {
         type: "error",
-        message: stringValue(data.message, "Morpheus stream error"),
+        message: stringValue(data.message ?? data.error, "Morpheus stream error"),
       };
     default:
       return null;

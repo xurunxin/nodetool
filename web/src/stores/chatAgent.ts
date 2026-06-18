@@ -297,6 +297,13 @@ function handleAgentStream(event: AgentStreamEvent, set: Set, get: Get): void {
   if (!threadId) {
     return;
   }
+  const finishTurn = (): void => {
+    turnHasAssistant.delete(threadId);
+    turnAssistantMessageIds.delete(threadId);
+    if (get().currentThreadId === threadId) {
+      set({ status: "connected" });
+    }
+  };
 
   maybePromoteLlmSessionId(
     sessionId,
@@ -306,21 +313,18 @@ function handleAgentStream(event: AgentStreamEvent, set: Set, get: Get): void {
     get
   );
 
-  if (done) {
-    turnHasAssistant.delete(threadId);
-    turnAssistantMessageIds.delete(threadId);
-    if (get().currentThreadId === threadId) {
-      set({ status: "connected" });
-    }
-    return;
-  }
-
   if (message.type === "system") {
+    if (done) {
+      finishTurn();
+    }
     return;
   }
 
   const converted = agentMessageToNodeToolMessage(message as ProtocolAgentMessage);
   if (!converted) {
+    if (done) {
+      finishTurn();
+    }
     return;
   }
 
@@ -330,6 +334,9 @@ function handleAgentStream(event: AgentStreamEvent, set: Set, get: Get): void {
     const existing = get().messageCache[threadId] ?? [];
     const streamedText = turnAssistantText(threadId, existing);
     if (streamedText && streamedText === textContent(converted)) {
+      if (done) {
+        finishTurn();
+      }
       return;
     }
   }
@@ -350,6 +357,9 @@ function handleAgentStream(event: AgentStreamEvent, set: Set, get: Get): void {
     },
     status: state.currentThreadId === threadId ? "streaming" : state.status
   }));
+  if (done) {
+    finishTurn();
+  }
 }
 
 function ensureAgentStream(set: Set, get: Get): void {

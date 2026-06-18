@@ -943,6 +943,8 @@ const isUnsetChatProvider = (provider: unknown): boolean =>
   provider === "empty" ||
   (typeof provider === "string" && provider.trim().length === 0);
 
+const LEGACY_LOCAL_DEFAULT_MODEL = "gpt-oss:20b";
+
 export class UnifiedWebSocketRunner {
   websocket: WebSocketConnection | null = null;
   mode: WebSocketMode = "binary";
@@ -1073,7 +1075,7 @@ export class UnifiedWebSocketRunner {
   constructor(options: UnifiedWebSocketRunnerOptions) {
     this.userId = options.userId ?? null;
     this.authToken = options.authToken ?? null;
-    this.defaultModel = options.defaultModel ?? "gpt-oss:20b";
+    this.defaultModel = options.defaultModel ?? "gpt-4o";
     this.defaultProvider = options.defaultProvider ?? "openai";
     this.resolveExecutor = options.resolveExecutor;
     this.resolveNodeType = options.resolveNodeType;
@@ -2426,8 +2428,11 @@ export class UnifiedWebSocketRunner {
     data.thread_id = threadId;
 
     // Apply defaults — matches Python's handle_chat_message
-    if (!data.model) data.model = this.defaultModel;
-    if (isUnsetChatProvider(data.provider)) {
+    const providerWasUnset = isUnsetChatProvider(data.provider);
+    if (!data.model || (providerWasUnset && data.model === LEGACY_LOCAL_DEFAULT_MODEL)) {
+      data.model = this.defaultModel;
+    }
+    if (providerWasUnset) {
       data.provider = this.defaultProvider;
     }
 

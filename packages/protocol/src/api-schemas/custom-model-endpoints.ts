@@ -64,6 +64,15 @@ function parseIpv4MappedIpv6(host: string): number[] | null {
   return [high >> 8, high & 0xff, low >> 8, low & 0xff];
 }
 
+function isIpv6LinkLocal(host: string): boolean {
+  const firstSegment = host.split(":")[0];
+  if (!/^[0-9a-f]{1,4}$/.test(firstSegment)) {
+    return false;
+  }
+  const value = Number.parseInt(firstSegment, 16);
+  return value >= 0xfe80 && value <= 0xfebf;
+}
+
 function isDisallowedEndpointHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
   if (
@@ -92,7 +101,7 @@ function isDisallowedEndpointHost(hostname: string): boolean {
     (host === "::1" ||
       host.startsWith("fc") ||
       host.startsWith("fd") ||
-      host.startsWith("fe80:"))
+      isIpv6LinkLocal(host))
   ) {
     return true;
   }

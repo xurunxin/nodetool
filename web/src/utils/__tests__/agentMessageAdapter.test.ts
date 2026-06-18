@@ -293,6 +293,23 @@ describe("agentMessageAdapter", () => {
         ]);
       });
 
+      it("converts result message with error text", () => {
+        const msg: AgentMessage = {
+          type: "result",
+          uuid: "test-uuid-error-text",
+          session_id: "test-session-error-text",
+          is_error: true,
+          text: "Tool manifest timed out",
+        };
+
+        const result = agentMessageToNodeToolMessage(msg);
+
+        expect(result).not.toBeNull();
+        expect(result?.content).toEqual([
+          { type: "text", text: "Tool manifest timed out" },
+        ]);
+      });
+
       it("returns null for result message without success subtype or error", () => {
         const msg: AgentMessage = {
           type: "result",

@@ -53,14 +53,24 @@ describe("UnifiedWebSocketRunner provider resolution", () => {
     });
 
     expect(
-      (runner as unknown as { defaultProvider: string }).defaultProvider,
-    ).toBe("openai");
+      (runner as unknown as { defaultProvider: string; defaultModel: string }),
+    ).toEqual(
+      expect.objectContaining({
+        defaultProvider: "openai",
+        defaultModel: "gpt-4o",
+      }),
+    );
   });
 
-  it("treats the frontend empty provider sentinel as unset", async () => {
-    const resolveProvider = vi.fn(async (providerId: string) =>
-      makeChatProvider(providerId),
-    );
+  it("treats the frontend empty provider sentinel and legacy model as unset", async () => {
+    let capturedModel: string | undefined;
+    const resolveProvider = vi.fn(async (providerId: string) => ({
+      ...makeChatProvider(providerId),
+      async *generateMessagesTraced(options: { model: string }) {
+        capturedModel = options.model;
+        yield { type: "chunk", content: "ok" };
+      },
+    } as unknown as BaseProvider));
     const runner = new UnifiedWebSocketRunner({
       userId: "alice",
       resolveProvider,
@@ -75,6 +85,7 @@ describe("UnifiedWebSocketRunner provider resolution", () => {
     });
 
     expect(resolveProvider).toHaveBeenCalledWith("openai", "alice");
+    expect(capturedModel).toBe("gpt-4o");
   });
 
   it("installs the runner provider resolver on run_job execution contexts", async () => {
