@@ -8,6 +8,14 @@ export { SeedanceImageToVideoNode } from "./nodes/seedance-image-to-video.js";
 export { SeedanceTextToVideoNode } from "./nodes/seedance-text-to-video.js";
 export { SeedreamImageEditNode } from "./nodes/seedream-image-edit.js";
 export { SeedreamTextToImageNode } from "./nodes/seedream-text-to-image.js";
+export {
+  buildSeedanceContent,
+  buildSeedreamBody,
+  generateSeedreamImage,
+  getArkApiKey,
+  submitSeedanceTask,
+  waitForSeedanceResult
+} from "./volcengine-base.js";
 
 export const VOLCENGINE_NODES: readonly NodeClass[] = [
   ...SEEDANCE_TEXT_TO_VIDEO_NODES,

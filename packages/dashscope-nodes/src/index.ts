@@ -6,6 +6,14 @@ import { WANX_TEXT_TO_IMAGE_NODES } from "./nodes/wanx-text-to-image.js";
 export { WanxImageEditNode } from "./nodes/wanx-image-edit.js";
 export { WanxImageToVideoNode } from "./nodes/wanx-image-to-video.js";
 export { WanxTextToImageNode } from "./nodes/wanx-text-to-image.js";
+export {
+  buildWanxImageBody,
+  buildWanxVideoBody,
+  generateWanxImage,
+  getDashScopeApiKey,
+  submitWanxVideoTask,
+  waitForWanxVideoResult
+} from "./dashscope-base.js";
 
 export const DASHSCOPE_NODES: readonly NodeClass[] = [
   ...WANX_IMAGE_TO_VIDEO_NODES,

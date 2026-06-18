@@ -27,6 +27,12 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./dashscope-base": {
+      "nodetool-dev": "./src/dashscope-base.ts",
+      "types": "./dist/dashscope-base.d.ts",
+      "import": "./dist/dashscope-base.js",
+      "default": "./dist/dashscope-base.js"
     }
   },
   "license": "MIT",

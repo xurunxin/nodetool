@@ -23,9 +23,16 @@
   },
   "exports": {
     ".": {
+      "nodetool-dev": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./kling-base": {
+      "nodetool-dev": "./src/kling-base.ts",
+      "types": "./dist/kling-base.d.ts",
+      "import": "./dist/kling-base.js",
+      "default": "./dist/kling-base.js"
     }
   },
   "license": "MIT",
