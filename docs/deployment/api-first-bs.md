@@ -43,8 +43,8 @@ client explicitly selects another provider.
 authenticated API access.
 
 Keep the usual deployment/auth variables from the end-to-end deployment guide,
-for example `NODETOOL_SERVER_MODE`, `AUTH_PROVIDER`, `SERVER_AUTH_TOKEN`, or
-Supabase configuration, according to the server mode you are using.
+for example `NODETOOL_SERVER_MODE`, `AUTH_PROVIDER`, and Supabase
+configuration, according to the server mode you are using.
 
 ## Start The Server
 
@@ -54,8 +54,9 @@ For a private API-first deployment:
 export NODETOOL_ENV=production
 export NODETOOL_MODEL_SURFACE=api_first
 export NODETOOL_SERVER_MODE=private
-export AUTH_PROVIDER=static
-export SERVER_AUTH_TOKEN=<strong-token>
+export AUTH_PROVIDER=supabase
+export SUPABASE_URL=https://<project>.supabase.co
+export SUPABASE_KEY=<service-role-or-server-key>
 export SECRETS_MASTER_KEY=<strong-random-secret>
 export MORPHEUS_BASE_URL=https://<morpheus-host>
 export MORPHEUS_API_KEY=<optional-morpheus-api-key>
@@ -69,6 +70,12 @@ Verify the server is reachable:
 curl -i http://<nodetool-host>:7777/health
 curl -i http://<nodetool-host>:7777/ping
 ```
+
+Remote `/trpc`, `/api`, `/v1`, and `/ws/agent` requests must include a
+Supabase bearer token for this deployment shape. The TypeScript server only
+accepts non-local authenticated requests when `SUPABASE_URL` and
+`SUPABASE_KEY` enable Supabase auth; `SERVER_AUTH_TOKEN` alone is not a
+supported private API-first auth mode for these handlers.
 
 ## Custom Endpoint Configuration
 

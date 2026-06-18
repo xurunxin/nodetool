@@ -7,6 +7,18 @@ import {
 } from "../src/custom-model-endpoints.js";
 import { resolveNodeToolProvider } from "../src/custom-provider-resolver.js";
 
+const { anthropicConstructor, fetchMock, lookupMock, openAIConstructor } =
+  vi.hoisted(() => ({
+    anthropicConstructor: vi.fn(),
+    fetchMock: vi.fn(),
+    lookupMock: vi.fn(),
+    openAIConstructor: vi.fn()
+  }));
+
+vi.mock("node:dns/promises", () => ({
+  lookup: lookupMock
+}));
+
 vi.mock("@nodetool-ai/runtime", async (orig) => {
   const actual = await orig<typeof import("@nodetool-ai/runtime")>();
   const sourceAnthropic = await import(
@@ -34,11 +46,6 @@ vi.mock("../src/custom-model-endpoints.js", async (orig) => {
     listCustomModelEndpoints: vi.fn()
   };
 });
-
-const { anthropicConstructor, openAIConstructor } = vi.hoisted(() => ({
-  anthropicConstructor: vi.fn(),
-  openAIConstructor: vi.fn()
-}));
 
 vi.mock("openai", () => ({
   default: openAIConstructor,
@@ -77,6 +84,9 @@ function endpoint(
 describe("resolveNodeToolProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("fetch", fetchMock);
+    lookupMock.mockResolvedValue([{ address: "203.0.113.10", family: 4 }]);
+    fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
     openAIConstructor.mockImplementation(function OpenAIMock(args) {
       return { kind: "openai", args };
     });
@@ -91,6 +101,7 @@ describe("resolveNodeToolProvider", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -135,7 +146,8 @@ describe("resolveNodeToolProvider", () => {
       kind: "openai",
       args: {
         apiKey: "db-secret",
-        baseURL: "https://gateway.example.test/v1"
+        baseURL: "https://gateway.example.test/v1",
+        fetch: expect.any(Function)
       }
     });
     await expect(provider.getAvailableLanguageModels()).resolves.toEqual([
@@ -167,9 +179,79 @@ describe("resolveNodeToolProvider", () => {
       kind: "anthropic",
       args: {
         apiKey: "db-secret",
-        baseURL: "https://anthropic-gateway.example.test"
+        baseURL: "https://anthropic-gateway.example.test",
+        fetch: expect.any(Function)
       }
     });
+  });
+
+  it("validates custom endpoint request destinations before SDK fetch", async () => {
+    (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
+      endpoint()
+    ]);
+
+    const provider = await resolveNodeToolProvider(
+      "custom:case-sensitive_1",
+      "user-1"
+    );
+    const client = (provider as { getClient: () => unknown }).getClient() as {
+      args: { fetch: typeof fetch };
+    };
+
+    await client.args.fetch("https://gateway.example.test/v1/chat/completions");
+
+    expect(lookupMock).toHaveBeenCalledWith("gateway.example.test", {
+      all: true,
+      verbatim: true
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://gateway.example.test/v1/chat/completions",
+      { redirect: "manual" }
+    );
+  });
+
+  it("rejects custom endpoint requests that resolve to private addresses", async () => {
+    (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
+      endpoint()
+    ]);
+    lookupMock.mockResolvedValue([{ address: "10.0.0.5", family: 4 }]);
+
+    const provider = await resolveNodeToolProvider(
+      "custom:case-sensitive_1",
+      "user-1"
+    );
+    const client = (provider as { getClient: () => unknown }).getClient() as {
+      args: { fetch: typeof fetch };
+    };
+
+    await expect(
+      client.args.fetch("https://gateway.example.test/v1/chat/completions")
+    ).rejects.toThrow(/private or link-local/i);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects cross-host redirects from custom endpoint requests", async () => {
+    (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
+      endpoint()
+    ]);
+    fetchMock.mockResolvedValue(
+      new Response(null, {
+        status: 302,
+        headers: { location: "https://gateway-redirect.example.test/v1" }
+      })
+    );
+
+    const provider = await resolveNodeToolProvider(
+      "custom:case-sensitive_1",
+      "user-1"
+    );
+    const client = (provider as { getClient: () => unknown }).getClient() as {
+      args: { fetch: typeof fetch };
+    };
+
+    await expect(
+      client.args.fetch("https://gateway.example.test/v1/chat/completions")
+    ).rejects.toThrow(/cross-host redirects/i);
   });
 
   it.each([

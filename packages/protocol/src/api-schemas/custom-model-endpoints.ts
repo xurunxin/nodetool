@@ -73,7 +73,7 @@ function isIpv6LinkLocal(host: string): boolean {
   return value >= 0xfe80 && value <= 0xfebf;
 }
 
-function isDisallowedEndpointHost(hostname: string): boolean {
+export function isDisallowedEndpointHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
   if (
     host === "localhost" ||
