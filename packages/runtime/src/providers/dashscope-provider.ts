@@ -61,6 +61,10 @@ export class DashScopeProvider extends BaseProvider {
     return { DASHSCOPE_API_KEY: this.apiKey };
   }
 
+  override supportsChatGeneration(): boolean {
+    return false;
+  }
+
   override async getAvailableImageModels(): Promise<ImageModel[]> {
     return IMAGE_MODELS;
   }

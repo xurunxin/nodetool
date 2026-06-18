@@ -1,12 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PROVIDER_IDS } from "@nodetool-ai/protocol";
-import { providerCapabilities } from "../src/providers/base-provider.js";
+import {
+  BaseProvider,
+  providerCapabilities
+} from "../src/providers/base-provider.js";
 import {
   getProvider,
   listRegisteredProviderIds
 } from "../src/providers/index.js";
 import type {
   ImageModel,
+  Message,
+  ProviderStreamItem,
   VideoModel
 } from "../src/providers/types.js";
 
@@ -74,6 +79,28 @@ function postedBodies(mockFetch: ReturnType<typeof vi.fn>): Record<string, unkno
     .map((init) => JSON.parse(init.body as string) as Record<string, unknown>);
 }
 
+function sortedCapabilities(instance: BaseProvider): string[] {
+  return [...providerCapabilities(instance)].sort();
+}
+
+class ChatCapableProvider extends BaseProvider {
+  constructor() {
+    super(PROVIDER_IDS.OPENAI);
+  }
+
+  override async generateMessage(
+    _args: Parameters<BaseProvider["generateMessage"]>[0]
+  ): Promise<Message> {
+    return { role: "assistant", content: "ok" };
+  }
+
+  override async *generateMessages(
+    _args: Parameters<BaseProvider["generateMessages"]>[0]
+  ): AsyncGenerator<ProviderStreamItem> {
+    yield { type: "chunk", content: "ok", done: true };
+  }
+}
+
 describe("China media providers", () => {
   it("defines stable provider ids", () => {
     expect(PROVIDER_IDS.DASHSCOPE).toBe("dashscope");
@@ -128,32 +155,25 @@ describe("China media providers", () => {
     );
     const kling = await getProvider(PROVIDER_IDS.KLING, async () => "k");
 
-    expect(providerCapabilities(dashscope)).toEqual(
-      expect.arrayContaining([
-        "generate_message",
-        "generate_messages",
-        "text_to_image",
-        "image_to_image",
-        "image_to_video"
-      ])
-    );
-    expect(providerCapabilities(dashscope)).not.toContain("text_to_video");
+    expect(sortedCapabilities(dashscope)).toEqual([
+      "image_to_image",
+      "image_to_video",
+      "text_to_image"
+    ]);
+    expect(sortedCapabilities(volcengine)).toEqual([
+      "image_to_image",
+      "image_to_video",
+      "text_to_image",
+      "text_to_video"
+    ]);
+    expect(sortedCapabilities(kling)).toEqual(["image_to_video"]);
+  });
 
-    expect(providerCapabilities(volcengine)).toEqual(
-      expect.arrayContaining([
-        "text_to_image",
-        "image_to_image",
-        "text_to_video",
-        "image_to_video"
-      ])
-    );
-
-    expect(providerCapabilities(kling)).toEqual(
-      expect.arrayContaining(["image_to_video"])
-    );
-    expect(providerCapabilities(kling)).not.toContain("text_to_image");
-    expect(providerCapabilities(kling)).not.toContain("image_to_image");
-    expect(providerCapabilities(kling)).not.toContain("text_to_video");
+  it("keeps chat capabilities for providers that opt in to chat generation", () => {
+    expect(sortedCapabilities(new ChatCapableProvider())).toEqual([
+      "generate_message",
+      "generate_messages"
+    ]);
   });
 
   it("DashScope textToImage builds a Wanxiang image request and returns downloaded bytes", async () => {

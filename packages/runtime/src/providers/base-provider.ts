@@ -69,9 +69,10 @@ export type ProviderCapability =
 
 /**
  * Derive a provider's capability set by checking which optional `getAvailable*`
- * methods it overrides on its prototype. Every provider can always generate
- * messages; executable image/video task capabilities are advertised only when
- * the concrete class exposes a catalog and overrides the matching task method.
+ * methods it overrides on its prototype. Chat capabilities are advertised only
+ * when the concrete provider opts in; executable image/video task capabilities
+ * are advertised only when the concrete class exposes a catalog and overrides
+ * the matching task method.
  *
  * Shared by `packages/websocket/src/models-api.ts` (REST leftover) and the
  * `models` tRPC router so both report identical capabilities for the same
@@ -80,10 +81,10 @@ export type ProviderCapability =
 export function providerCapabilities(
   instance: BaseProvider
 ): ProviderCapability[] {
-  const capabilities: ProviderCapability[] = [
-    "generate_message",
-    "generate_messages"
-  ];
+  const capabilities: ProviderCapability[] = [];
+  if (instance.supportsChatGeneration()) {
+    capabilities.push("generate_message", "generate_messages");
+  }
   const hasImageCatalog =
     instance.getAvailableImageModels !==
     BaseProvider.prototype.getAvailableImageModels;
@@ -189,6 +190,10 @@ export abstract class BaseProvider {
 
   getContainerEnv(): Record<string, string> {
     return {};
+  }
+
+  supportsChatGeneration(): boolean {
+    return true;
   }
 
   async hasToolSupport(_model: string): Promise<boolean> {
