@@ -17,7 +17,14 @@ describe("BUILTIN_NODE_PACKS catalog", () => {
   it("base is required; the essentials are enabled by default", () => {
     const byId = new Map(BUILTIN_NODE_PACKS.map((p) => [p.id, p]));
     expect(byId.get("base")?.required).toBe(true);
-    for (const id of ["huggingface", "fal", "replicate", "kie", "kling"]) {
+    for (const id of [
+      "huggingface",
+      "fal",
+      "replicate",
+      "kie",
+      "kling",
+      "volcengine"
+    ]) {
       expect(byId.get(id)?.defaultEnabled).toBe(true);
     }
   });
@@ -64,6 +71,11 @@ describe("findBuiltinPackForNodeType", () => {
 
   it("maps Kling image-to-video nodes to the Kling pack", () => {
     expect(findBuiltinPackForNodeType("kling.ImageToVideo")?.id).toBe("kling");
+  });
+
+  it("maps Volcengine Ark media nodes to the Volcengine pack", () => {
+    expect(findBuiltinPackForNodeType("volcengine.SeedanceTextToVideo")?.id)
+      .toBe("volcengine");
   });
 
   it("returns undefined for unknown namespaces", () => {

@@ -73,6 +73,7 @@ export const DEFAULT_RESERVED_NAMESPACES: readonly string[] = [
   "fal",
   "elevenlabs",
   "kie",
+  "volcengine",
   "vector",
   "apify",
   "search",

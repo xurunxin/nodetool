@@ -149,6 +149,7 @@ describe("packs router", () => {
     expect(byId.get("base")).toMatchObject({ enabled: true, required: true });
     expect(byId.get("fal")?.enabled).toBe(true);
     expect(byId.get("kie")?.enabled).toBe(true);
+    expect(byId.get("volcengine")?.enabled).toBe(true);
     // Opt-in packs start disabled.
     expect(byId.get("elevenlabs")?.enabled).toBe(false);
     expect(byId.get("minimax")?.enabled).toBe(false);
