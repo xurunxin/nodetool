@@ -1,6 +1,3 @@
-import { lookup as dnsLookup } from "node:dns/promises";
-import { isIP } from "node:net";
-
 import { bytesToBase64 } from "./base64.js";
 
 export type PromptResourceType = "image" | "video" | "audio";
@@ -35,7 +32,7 @@ export interface PollTaskOptions<T> {
 
 const DEFAULT_POLL_INTERVAL_MS = 1_000;
 const DEFAULT_POLL_TIMEOUT_MS = 60_000;
-const ALIAS_PATTERN = /@([A-Za-z0-9_-]+)/g;
+const ALIAS_PATTERN = /@([\p{L}\p{N}_-]+)/gu;
 const OCTET_STREAM_MIME = "application/octet-stream";
 const MAX_PROVIDER_MEDIA_REDIRECTS = 5;
 
@@ -63,7 +60,7 @@ export function compilePromptResources(
   const text = prompt.replace(ALIAS_PATTERN, (match, alias: string) => {
     const matchingResources = resourcesByAlias.get(alias);
     if (matchingResources === undefined) {
-      return match;
+      throw new Error(`Prompt references unknown resource @${alias}`);
     }
 
     referencedAliases.add(alias);
@@ -366,12 +363,13 @@ async function assertSafeProviderMediaDns(
 ): Promise<void> {
   const parsed = new URL(url);
   const hostname = normalizeHostname(parsed.hostname);
-  if (isIP(hostname) !== 0) {
+  if (isIpAddress(hostname)) {
     return;
   }
 
   let answers: Array<{ address: string; family: number }>;
   try {
+    const { lookup: dnsLookup } = await import("node:dns/promises");
     answers = await dnsLookup(hostname, { all: true, verbatim: true });
   } catch {
     throw new Error(
@@ -412,7 +410,7 @@ function isPublicProviderHost(rawHostname: string): boolean {
     return false;
   }
 
-  if (isIP(hostname) === 6) {
+  if (isIpv6Address(hostname)) {
     return isPublicIpv6(hostname);
   }
 
@@ -430,7 +428,7 @@ function isPublicProviderHost(rawHostname: string): boolean {
 
 function isPublicIpAddress(address: string): boolean {
   const normalizedAddress = normalizeHostname(address);
-  if (isIP(normalizedAddress) === 6) {
+  if (isIpv6Address(normalizedAddress)) {
     return isPublicIpv6(normalizedAddress);
   }
   const ipv4 = parseIpv4InetAton(normalizedAddress);
@@ -444,6 +442,14 @@ function normalizeHostname(hostname: string): string {
     .replace(/^\[/, "")
     .replace(/\]$/, "")
     .replace(/\.$/, "");
+}
+
+function isIpAddress(hostname: string): boolean {
+  return isIpv6Address(hostname) || parseIpv4InetAton(hostname) !== undefined;
+}
+
+function isIpv6Address(hostname: string): boolean {
+  return hostname.includes(":");
 }
 
 function parseIpv4InetAton(hostname: string): number[] | undefined {

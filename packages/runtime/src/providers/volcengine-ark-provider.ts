@@ -6,7 +6,10 @@ import {
   submitSeedanceTask,
   waitForSeedanceResult
 } from "@nodetool-ai/nodes-utils/volcengine";
-import { createDataUrl, inferImageMime } from "@nodetool-ai/nodes-utils";
+import {
+  createDataUrl,
+  inferImageMime
+} from "@nodetool-ai/nodes-utils/china-media";
 import { BaseProvider } from "./base-provider.js";
 import type {
   ImageToImageParams,

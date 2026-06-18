@@ -14,8 +14,6 @@
  *     the Prompt, Format Text and Agent nodes.
  *   - `base64.ts` — Buffer-free base64 encode/decode usable in Node and the
  *     browser bundle alike.
- *   - `china-media.ts` — provider-neutral prompt resource, byte download,
- *     MIME, data URL and async polling helpers for direct media nodes.
  */
 
 export {
@@ -36,17 +34,3 @@ export {
 export { renderTemplate } from "./template.js";
 
 export { base64ToBytes, bytesToBase64 } from "./base64.js";
-
-export {
-  compilePromptResources,
-  createDataUrl,
-  downloadProviderMediaBytes,
-  downloadBytes,
-  inferImageMime,
-  pollTask,
-  type CompiledPromptReference,
-  type CompiledPromptResources,
-  type PollTaskOptions,
-  type PromptResourceInput,
-  type PromptResourceType
-} from "./china-media.js";

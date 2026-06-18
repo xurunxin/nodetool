@@ -76,7 +76,6 @@ describe("Volcengine nodes", () => {
       duration: 5,
       ratio: "16:9",
       resolution: "1080p",
-      generate_audio: false,
       watermark: false
     });
 
@@ -88,7 +87,6 @@ describe("Volcengine nodes", () => {
     expect(submitBody()).toMatchObject({
       content: [{ type: "text", text: "cinematic dragon" }],
       duration: 5,
-      generate_audio: false,
       ratio: "16:9",
       resolution: "1080p",
       watermark: false

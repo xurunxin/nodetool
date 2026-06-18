@@ -84,14 +84,6 @@ export class SeedanceTextToVideoNode extends BaseNode {
 
   @prop({
     type: "bool",
-    default: true,
-    title: "Generate Audio",
-    description: "Ask Seedance to generate matching audio when supported."
-  })
-  declare generate_audio: unknown;
-
-  @prop({
-    type: "bool",
     default: false,
     title: "Watermark",
     description: "Whether to apply a provider watermark."
@@ -111,7 +103,6 @@ export class SeedanceTextToVideoNode extends BaseNode {
       ratio: String(this.ratio ?? "16:9"),
       duration: Number(this.duration ?? 5),
       resolution: String(this.resolution ?? "1080p"),
-      generate_audio: Boolean(this.generate_audio ?? true),
       watermark: Boolean(this.watermark ?? false)
     };
     const seed = Number(this.seed ?? -1);

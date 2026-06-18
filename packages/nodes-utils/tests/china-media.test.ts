@@ -34,11 +34,23 @@ describe("compilePromptResources", () => {
     ]);
   });
 
-  it("leaves missing aliases readable and does not crash", () => {
-    const result = compilePromptResources("use @missing please");
+  it("throws when a prompt references an unknown alias", () => {
+    expect(() => compilePromptResources("use @missing please")).toThrow(
+      "Prompt references unknown resource @missing"
+    );
+  });
 
-    expect(result.text).toBe("use @missing please");
-    expect(result.references).toEqual([]);
+  it("supports unicode aliases in prompt references", () => {
+    const result = compilePromptResources("让 @主图 动起来", [
+      { type: "image", alias: "主图", url: "https://example.com/hero.png" }
+    ]);
+
+    expect(result.text).toBe("让 [reference: 主图] 动起来");
+    expect(result.references[0]).toMatchObject({
+      type: "image",
+      alias: "主图",
+      url: "https://example.com/hero.png"
+    });
   });
 
   it("deduplicates repeated aliases without duplicating references", () => {

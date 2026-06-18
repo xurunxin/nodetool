@@ -3,10 +3,12 @@ import type { NodeClass } from "@nodetool-ai/node-sdk";
 import type { ProcessingContext } from "@nodetool-ai/runtime";
 import { loadMediaRefBytes } from "@nodetool-ai/runtime";
 import {
-  bytesToBase64,
+  bytesToBase64
+} from "@nodetool-ai/nodes-utils";
+import {
   createDataUrl,
   inferImageMime
-} from "@nodetool-ai/nodes-utils";
+} from "@nodetool-ai/nodes-utils/china-media";
 import {
   buildKlingImageToVideoBody,
   getKlingApiKey,
@@ -123,4 +125,3 @@ async function resolveFirstFrameUrl(
   }
   return createDataUrl(bytes, inferImageMime(bytes, "image/png"));
 }
-

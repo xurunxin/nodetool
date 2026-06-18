@@ -1,4 +1,7 @@
-import { createDataUrl, inferImageMime } from "@nodetool-ai/nodes-utils";
+import {
+  createDataUrl,
+  inferImageMime
+} from "@nodetool-ai/nodes-utils/china-media";
 import { loadMediaRefBytes } from "@nodetool-ai/runtime";
 import type { ProcessingContext } from "@nodetool-ai/runtime";
 

@@ -5,7 +5,10 @@ import {
   submitKlingTask,
   waitForKlingResult
 } from "@nodetool-ai/nodes-utils/kling";
-import { createDataUrl, inferImageMime } from "@nodetool-ai/nodes-utils";
+import {
+  createDataUrl,
+  inferImageMime
+} from "@nodetool-ai/nodes-utils/china-media";
 import { BaseProvider } from "./base-provider.js";
 import type {
   ImageToVideoParams,

@@ -6,7 +6,10 @@ import {
   submitWanxVideoTask,
   waitForWanxVideoResult
 } from "@nodetool-ai/nodes-utils/dashscope";
-import { createDataUrl, inferImageMime } from "@nodetool-ai/nodes-utils";
+import {
+  createDataUrl,
+  inferImageMime
+} from "@nodetool-ai/nodes-utils/china-media";
 import { BaseProvider } from "./base-provider.js";
 import type {
   ImageToImageParams,

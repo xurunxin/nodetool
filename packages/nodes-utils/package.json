@@ -32,6 +32,12 @@
       "import": "./dist/providers/dashscope.js",
       "default": "./dist/providers/dashscope.js"
     },
+    "./china-media": {
+      "nodetool-dev": "./src/china-media.ts",
+      "types": "./dist/china-media.d.ts",
+      "import": "./dist/china-media.js",
+      "default": "./dist/china-media.js"
+    },
     "./kling": {
       "nodetool-dev": "./src/providers/kling.ts",
       "types": "./dist/providers/kling.d.ts",
