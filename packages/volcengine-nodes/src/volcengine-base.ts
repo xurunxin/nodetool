@@ -12,6 +12,20 @@ import {
 export const ARK_BASE_URL = "https://ark.cn-beijing.volces.com";
 const SEEDANCE_TASKS_PATH = "/api/v3/contents/generations/tasks";
 const SEEDREAM_IMAGES_PATH = "/api/v3/images/generations";
+const SEEDANCE_SUCCESS_STATUSES = new Set([
+  "succeeded",
+  "success",
+  "completed",
+  "done"
+]);
+const SEEDANCE_FAILURE_STATUSES = new Set([
+  "failed",
+  "fail",
+  "expired",
+  "error",
+  "cancelled",
+  "canceled"
+]);
 
 export interface SeedanceWaitOptions {
   pollIntervalMs?: number;
@@ -153,7 +167,7 @@ export async function waitForSeedanceResult(
   if (!mediaUrl) {
     throw new Error("Seedance task succeeded but returned no media URL");
   }
-  return downloadBytes(mediaUrl);
+  return downloadBytes(assertSafeProviderMediaUrl(mediaUrl, "Seedance"));
 }
 
 export function parseSeedanceTaskResult(payload: unknown): SeedanceTaskResult {
@@ -234,7 +248,7 @@ export async function generateSeedreamImage(
       `Seedream image generation returned no image URL: ${JSON.stringify(payload)}`
     );
   }
-  return downloadBytes(imageUrl);
+  return downloadBytes(assertSafeProviderMediaUrl(imageUrl, "Seedream"));
 }
 
 export function imageRefFromBytes(
@@ -270,11 +284,11 @@ async function querySeedanceTask(
 }
 
 function isSeedanceSucceeded(status: string): boolean {
-  return status === "succeeded" || status === "success";
+  return SEEDANCE_SUCCESS_STATUSES.has(status);
 }
 
 function isSeedanceFailed(status: string): boolean {
-  return status === "failed" || status === "expired" || status === "error";
+  return SEEDANCE_FAILURE_STATUSES.has(status);
 }
 
 function unwrapData(record: Record<string, unknown>): Record<string, unknown> {
@@ -342,6 +356,156 @@ function isMediaUrl(value: string): boolean {
   return value.startsWith("http://") ||
     value.startsWith("https://") ||
     value.startsWith("data:");
+}
+
+function assertSafeProviderMediaUrl(url: string, provider: string): string {
+  if (url.startsWith("data:")) {
+    return url;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error(
+      `${provider} returned invalid media URL: ${safeUrlLabel(url)}`
+    );
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(
+      `${provider} returned unsupported media URL: ${safeUrlLabel(parsed)}`
+    );
+  }
+
+  if (!isPublicProviderHost(parsed.hostname)) {
+    throw new Error(
+      `${provider} returned unsafe media URL: ${safeUrlLabel(parsed)}`
+    );
+  }
+
+  return url;
+}
+
+function safeUrlLabel(url: string | URL): string {
+  try {
+    const parsed = typeof url === "string" ? new URL(url) : new URL(url.href);
+    parsed.username = "";
+    parsed.password = "";
+    parsed.search = "";
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    return String(url).split(/[?#]/, 1)[0] ?? "";
+  }
+}
+
+function isPublicProviderHost(rawHostname: string): boolean {
+  const hostname = normalizeHostname(rawHostname);
+  if (!hostname) {
+    return false;
+  }
+
+  const ipv4 = parseIpv4(hostname);
+  if (ipv4) {
+    return isPublicIpv4(ipv4);
+  }
+
+  if (isBlockedIpv6(hostname)) {
+    return false;
+  }
+
+  return isPublicDnsName(hostname);
+}
+
+function normalizeHostname(hostname: string): string {
+  return hostname
+    .trim()
+    .toLowerCase()
+    .replace(/^\[/, "")
+    .replace(/\]$/, "")
+    .replace(/\.$/, "");
+}
+
+function parseIpv4(hostname: string): number[] | undefined {
+  if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname)) {
+    return undefined;
+  }
+  const octets = hostname.split(".").map((part) => Number(part));
+  return octets.every((octet) => Number.isInteger(octet) && octet <= 255)
+    ? octets
+    : undefined;
+}
+
+function isPublicIpv4([first, second]: number[]): boolean {
+  if (first === 10 || first === 127 || first === 0) {
+    return false;
+  }
+  if (first === 172 && second >= 16 && second <= 31) {
+    return false;
+  }
+  if (first === 192 && second === 168) {
+    return false;
+  }
+  if (first === 169 && second === 254) {
+    return false;
+  }
+  if (first === 100 && second >= 64 && second <= 127) {
+    return false;
+  }
+  if (first === 198 && (second === 18 || second === 19)) {
+    return false;
+  }
+  if (first >= 224) {
+    return false;
+  }
+  return true;
+}
+
+function isBlockedIpv6(hostname: string): boolean {
+  if (!hostname.includes(":")) {
+    return false;
+  }
+  const mappedIpv4 = hostname.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (mappedIpv4) {
+    const ipv4 = parseIpv4(mappedIpv4[1]);
+    return !ipv4 || !isPublicIpv4(ipv4);
+  }
+  return hostname === "::" ||
+    hostname === "::1" ||
+    hostname.startsWith("fe80:") ||
+    hostname.startsWith("fc") ||
+    hostname.startsWith("fd");
+}
+
+function isPublicDnsName(hostname: string): boolean {
+  const blockedNames = new Set([
+    "localhost",
+    "localhost.localdomain",
+    "metadata",
+    "metadata.google.internal",
+    "metadata.azure.internal",
+    "instance-data"
+  ]);
+  if (blockedNames.has(hostname)) {
+    return false;
+  }
+  const firstLabel = hostname.split(".", 1)[0];
+  if (firstLabel === "metadata" || firstLabel === "instance-data") {
+    return false;
+  }
+  if (!hostname.includes(".")) {
+    return false;
+  }
+  return !(
+    hostname.endsWith(".localhost") ||
+    hostname.endsWith(".local") ||
+    hostname.endsWith(".internal") ||
+    hostname.endsWith(".home") ||
+    hostname.endsWith(".lan") ||
+    hostname.endsWith(".test") ||
+    hostname.endsWith(".invalid")
+  );
 }
 
 function cleanBody(body: Record<string, unknown>): Record<string, unknown> {

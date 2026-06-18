@@ -169,6 +169,67 @@ describe("Volcengine Ark base helpers", () => {
     expect(mockFetch.mock.calls[2][0]).toBe("https://cdn.example/video.mp4");
   });
 
+  it("rejects private Seedance media URLs before downloading", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          id: "task-1",
+          status: "succeeded",
+          content: {
+            video_url: {
+              url: "http://169.254.169.254/latest/meta-data?signature=secret"
+            }
+          }
+        }),
+        { status: 200 }
+      )
+    );
+
+    let caught: unknown;
+    try {
+      await waitForSeedanceResult("secret-key", "task-1", {
+        pollIntervalMs: 0,
+        timeoutMs: 100
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    const message = caught instanceof Error ? caught.message : String(caught);
+    expect(message).toContain("http://169.254.169.254/latest/meta-data");
+    expect(message).not.toContain("secret");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["completed", "done"])(
+    "treats Seedance %s status as success",
+    async (status) => {
+      const videoBytes = new Uint8Array([5, 6, 7, 8]);
+      mockFetch
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              id: "task-1",
+              status,
+              content: { video_url: { url: "https://cdn.example/video.mp4" } }
+            }),
+            { status: 200 }
+          )
+        )
+        .mockResolvedValueOnce(new Response(videoBytes, { status: 200 }));
+
+      await expect(
+        waitForSeedanceResult("secret-key", "task-1", {
+          pollIntervalMs: 0,
+          timeoutMs: 100
+        })
+      ).resolves.toEqual(videoBytes);
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      mockFetch.mockReset();
+    }
+  );
+
   it("surfaces failed Seedance task status", async () => {
     mockFetch.mockResolvedValueOnce(
       new Response(
@@ -188,6 +249,32 @@ describe("Volcengine Ark base helpers", () => {
       })
     ).rejects.toThrow("content rejected");
   });
+
+  it.each(["fail", "cancelled", "canceled"])(
+    "treats Seedance %s status as failure",
+    async (status) => {
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "task-1",
+            status,
+            error: { message: "task stopped" }
+          }),
+          { status: 200 }
+        )
+      );
+
+      await expect(
+        waitForSeedanceResult("secret-key", "task-1", {
+          pollIntervalMs: 0,
+          timeoutMs: 100
+        })
+      ).rejects.toThrow("task stopped");
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      mockFetch.mockReset();
+    }
+  );
 
   it("generates a Seedream image and downloads URL output", async () => {
     const imageBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
@@ -213,6 +300,36 @@ describe("Volcengine Ark base helpers", () => {
       "https://ark.cn-beijing.volces.com/api/v3/images/generations"
     );
     expect(mockFetch.mock.calls[1][0]).toBe("https://cdn.example/image.png");
+  });
+
+  it("rejects private Seedream media URLs before downloading", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: [
+            {
+              url: "http://169.254.169.254/latest/meta-data?signature=secret"
+            }
+          ]
+        }),
+        { status: 200 }
+      )
+    );
+
+    let caught: unknown;
+    try {
+      await generateSeedreamImage("secret-key", {
+        model: "seedream-4-0-250828",
+        prompt: "a cat"
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    const message = caught instanceof Error ? caught.message : String(caught);
+    expect(message).toContain("http://169.254.169.254/latest/meta-data");
+    expect(message).not.toContain("secret");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
   it("throws clearly when Seedream returns no image URL", async () => {
