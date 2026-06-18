@@ -70,8 +70,8 @@ export type ProviderCapability =
 /**
  * Derive a provider's capability set by checking which optional `getAvailable*`
  * methods it overrides on its prototype. Every provider can always generate
- * messages; image/video/TTS/ASR/embedding are advertised only when the concrete
- * class overrides the matching base method.
+ * messages; executable image/video task capabilities are advertised only when
+ * the concrete class exposes a catalog and overrides the matching task method.
  *
  * Shared by `packages/websocket/src/models-api.ts` (REST leftover) and the
  * `models` tRPC router so both report identical capabilities for the same
@@ -84,17 +84,36 @@ export function providerCapabilities(
     "generate_message",
     "generate_messages"
   ];
-  if (
+  const hasImageCatalog =
     instance.getAvailableImageModels !==
-    BaseProvider.prototype.getAvailableImageModels
+    BaseProvider.prototype.getAvailableImageModels;
+  const hasVideoCatalog =
+    instance.getAvailableVideoModels !==
+    BaseProvider.prototype.getAvailableVideoModels;
+
+  if (
+    hasImageCatalog &&
+    instance.textToImage !== BaseProvider.prototype.textToImage
   ) {
-    capabilities.push("text_to_image", "image_to_image");
+    capabilities.push("text_to_image");
   }
   if (
-    instance.getAvailableVideoModels !==
-    BaseProvider.prototype.getAvailableVideoModels
+    hasImageCatalog &&
+    instance.imageToImage !== BaseProvider.prototype.imageToImage
   ) {
-    capabilities.push("text_to_video", "image_to_video");
+    capabilities.push("image_to_image");
+  }
+  if (
+    hasVideoCatalog &&
+    instance.textToVideo !== BaseProvider.prototype.textToVideo
+  ) {
+    capabilities.push("text_to_video");
+  }
+  if (
+    hasVideoCatalog &&
+    instance.imageToVideo !== BaseProvider.prototype.imageToVideo
+  ) {
+    capabilities.push("image_to_video");
   }
   // The remaining task types don't have their own model-discovery method —
   // they reuse Image/VideoModel (advertised via each model's `supportedTasks`).

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PROVIDER_IDS } from "@nodetool-ai/protocol";
+import { providerCapabilities } from "../src/providers/base-provider.js";
 import {
   getProvider,
   listRegisteredProviderIds
@@ -59,6 +60,23 @@ describe("China media providers", () => {
       expect(videoModels.every((model) => model.provider === provider.id)).toBe(
         true
       );
+    }
+  });
+
+  it("does not advertise generic media capabilities before execution methods exist", async () => {
+    for (const provider of CHINA_MEDIA_PROVIDERS) {
+      const instance = await getProvider(provider.id, async (key) =>
+        key === provider.secretKey ? "test-key" : undefined
+      );
+
+      const capabilities = providerCapabilities(instance);
+
+      expect(capabilities).not.toContain("text_to_image");
+      expect(capabilities).not.toContain("image_to_image");
+      expect(capabilities).not.toContain("text_to_video");
+      expect(capabilities).not.toContain("image_to_video");
+      expect(await instance.getAvailableImageModels()).not.toHaveLength(0);
+      expect(await instance.getAvailableVideoModels()).not.toHaveLength(0);
     }
   });
 });
