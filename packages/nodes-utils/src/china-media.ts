@@ -149,7 +149,7 @@ export async function downloadBytes(
     const statusText =
       response.statusText.length > 0 ? ` ${response.statusText}` : "";
     throw new Error(
-      `Failed to download ${url}: HTTP ${response.status}${statusText}`
+      `Failed to download ${formatDownloadTarget(url)}: HTTP ${response.status}${statusText}`
     );
   }
 
@@ -160,6 +160,7 @@ export async function pollTask<T>(options: PollTaskOptions<T>): Promise<T> {
   const intervalMs = options.intervalMs ?? DEFAULT_POLL_INTERVAL_MS;
   const timeoutMs = options.timeoutMs ?? DEFAULT_POLL_TIMEOUT_MS;
   const startedAt = Date.now();
+  const deadlineAt = startedAt + timeoutMs;
   let hasPolled = false;
 
   while (true) {
@@ -168,7 +169,12 @@ export async function pollTask<T>(options: PollTaskOptions<T>): Promise<T> {
       throw new Error(`Polling timed out after ${timeoutMs}ms`);
     }
 
-    const value = await options.poll();
+    const value = await withPollingDeadline(
+      options.poll,
+      deadlineAt,
+      timeoutMs,
+      options.signal
+    );
     hasPolled = true;
     const failure = options.isFailed?.(value);
     if (failure) {
@@ -238,6 +244,19 @@ function formatFailureReason(reason: boolean | string | Error): string {
   return "task reported failure";
 }
 
+function formatDownloadTarget(url: string): string {
+  try {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:") {
+      return `${parsedUrl.origin}${parsedUrl.pathname}`;
+    }
+  } catch {
+    return "resource";
+  }
+
+  return "resource";
+}
+
 function formatAbortReason(reason: unknown): string {
   if (reason instanceof Error) {
     return reason.message;
@@ -250,31 +269,115 @@ function formatAbortReason(reason: unknown): string {
   return "signal was aborted";
 }
 
+function createPollingTimeoutError(timeoutMs: number): Error {
+  return new Error(`Polling timed out after ${timeoutMs}ms`);
+}
+
+function createPollingAbortError(signal: AbortSignal | undefined): Error {
+  return new Error(`Polling aborted: ${formatAbortReason(signal?.reason)}`);
+}
+
 function throwIfAborted(signal: AbortSignal | undefined): void {
   if (signal?.aborted) {
-    throw new Error(`Polling aborted: ${formatAbortReason(signal.reason)}`);
+    throw createPollingAbortError(signal);
   }
+}
+
+function withPollingDeadline<T>(
+  operation: () => Promise<T> | T,
+  deadlineAt: number,
+  timeoutMs: number,
+  signal: AbortSignal | undefined
+): Promise<T> {
+  throwIfAborted(signal);
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const cleanup = (): void => {
+      if (timeout !== undefined) {
+        clearTimeout(timeout);
+      }
+      signal?.removeEventListener("abort", abort);
+    };
+    const resolveOnce = (value: T): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      resolve(value);
+    };
+    const rejectOnce = (error: unknown): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+    const abort = (): void => {
+      rejectOnce(createPollingAbortError(signal));
+    };
+
+    signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) {
+      abort();
+      return;
+    }
+
+    timeout = setTimeout(
+      () => rejectOnce(createPollingTimeoutError(timeoutMs)),
+      Math.max(0, deadlineAt - Date.now())
+    );
+
+    try {
+      Promise.resolve(operation()).then(resolveOnce, rejectOnce);
+    } catch (error) {
+      rejectOnce(error);
+    }
+  });
 }
 
 function delay(ms: number, signal: AbortSignal | undefined): Promise<void> {
   if (ms <= 0) {
+    throwIfAborted(signal);
     return Promise.resolve();
   }
 
   return new Promise((resolve, reject) => {
+    let settled = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     const cleanup = (): void => {
+      if (timeout !== undefined) {
+        clearTimeout(timeout);
+      }
       signal?.removeEventListener("abort", abort);
     };
-    const timeout = setTimeout(() => {
+    const resolveOnce = (): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
       cleanup();
       resolve();
-    }, ms);
-    const abort = (): void => {
-      clearTimeout(timeout);
+    };
+    const rejectOnce = (error: Error): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
       cleanup();
-      reject(new Error(`Polling aborted: ${formatAbortReason(signal?.reason)}`));
+      reject(error);
+    };
+    const abort = (): void => {
+      rejectOnce(createPollingAbortError(signal));
     };
 
+    timeout = setTimeout(resolveOnce, ms);
     signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) {
+      abort();
+    }
   });
 }

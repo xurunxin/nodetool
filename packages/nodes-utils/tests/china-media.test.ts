@@ -140,9 +140,18 @@ describe("downloadBytes", () => {
     });
 
     try {
-      await expect(downloadBytes("https://example.com/file")).rejects.toThrow(
+      await expect(
+        downloadBytes(
+          "https://example.com/file?signature=secret-token#private-fragment"
+        )
+      ).rejects.toThrow(
         "Failed to download https://example.com/file: HTTP 500 Server Error"
       );
+      await expect(
+        downloadBytes(
+          "https://example.com/file?signature=secret-token#private-fragment"
+        )
+      ).rejects.not.toThrow("secret-token");
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -190,6 +199,33 @@ describe("pollTask", () => {
     ).rejects.toThrow("Polling timed out after 1ms");
   });
 
+  it("times out while a poll attempt is still pending", async () => {
+    vi.useFakeTimers();
+
+    try {
+      const result = pollTask({
+        poll: () =>
+          new Promise<{ status: "running" }>(() => {
+            // Intentionally pending to prove timeout races the poll operation.
+          }),
+        isComplete: (value) => value.status === "done",
+        intervalMs: 1,
+        timeoutMs: 25
+      }).then(
+        () => "resolved",
+        (error: unknown) =>
+          error instanceof Error ? error.message : String(error)
+      );
+
+      await vi.advanceTimersByTimeAsync(25);
+
+      await expect(Promise.race([result, Promise.resolve("pending")])).resolves
+        .toBe("Polling timed out after 25ms");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("respects abort signals", async () => {
     const controller = new AbortController();
     controller.abort("stop");
@@ -203,5 +239,50 @@ describe("pollTask", () => {
         signal: controller.signal
       })
     ).rejects.toThrow("Polling aborted: stop");
+  });
+
+  it("does not miss aborts while registering the delay listener", async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const originalAddEventListener =
+      controller.signal.addEventListener.bind(controller.signal);
+    let abortListenerRegistrations = 0;
+    vi.spyOn(controller.signal, "addEventListener").mockImplementation(
+      (
+        type: string,
+        listener: EventListenerOrEventListenerObject | null,
+        options?: boolean | AddEventListenerOptions
+      ): void => {
+        if (type === "abort") {
+          abortListenerRegistrations += 1;
+        }
+        if (type === "abort" && abortListenerRegistrations === 2) {
+          controller.abort("between checks");
+        }
+        originalAddEventListener(type, listener, options);
+      }
+    );
+
+    try {
+      const result = pollTask({
+        poll: async () => ({ status: "running" }),
+        isComplete: (value) => value.status === "done",
+        intervalMs: 1_000,
+        timeoutMs: 5_000,
+        signal: controller.signal
+      }).then(
+        () => "resolved",
+        (error: unknown) =>
+          error instanceof Error ? error.message : String(error)
+      );
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      await expect(Promise.race([result, Promise.resolve("pending")])).resolves
+        .toBe("Polling aborted: between checks");
+    } finally {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    }
   });
 });
