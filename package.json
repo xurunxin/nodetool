@@ -21,6 +21,7 @@
     "packages/huggingface-nodes",
     "packages/elevenlabs-nodes",
     "packages/minimax-nodes",
+    "packages/kling-nodes",
     "packages/transformers-js-nodes",
     "packages/transformers-js-provider",
     "packages/websocket",
