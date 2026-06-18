@@ -3,6 +3,7 @@ import {
   compilePromptResources,
   createDataUrl,
   downloadProviderMediaBytes,
+  fetchProviderResponseWithRetries,
   inferImageMime,
   pollTask,
   type CompiledPromptReference,
@@ -280,9 +281,14 @@ async function queryDashScopeTask(
   apiKey: string,
   taskId: string
 ): Promise<DashScopeTaskResult> {
-  const response = await fetch(
-    dashscopeCreatePath(`${DASH_SCOPE_TASK_PATH}/${encodeURIComponent(taskId)}`),
-    { headers: dashscopeHeaders(apiKey) }
+  const response = await fetchProviderResponseWithRetries(
+    () =>
+      fetch(
+        dashscopeCreatePath(
+          `${DASH_SCOPE_TASK_PATH}/${encodeURIComponent(taskId)}`
+        ),
+        { headers: dashscopeHeaders(apiKey) }
+      )
   );
   if (!response.ok) {
     throw new Error(

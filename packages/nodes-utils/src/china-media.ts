@@ -30,11 +30,29 @@ export interface PollTaskOptions<T> {
   signal?: AbortSignal;
 }
 
+export interface ProviderRequestRetryOptions {
+  retries?: number;
+  retryDelayMs?: number;
+}
+
 const DEFAULT_POLL_INTERVAL_MS = 1_000;
 const DEFAULT_POLL_TIMEOUT_MS = 60_000;
 const ALIAS_PATTERN = /@([\p{L}\p{N}_-]+)/gu;
 const OCTET_STREAM_MIME = "application/octet-stream";
 const MAX_PROVIDER_MEDIA_REDIRECTS = 5;
+const DEFAULT_TRANSIENT_RETRIES = 2;
+const DEFAULT_TRANSIENT_RETRY_DELAY_MS = 250;
+
+class TransientProviderRequestError extends Error {}
+
+class ProviderHttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message);
+  }
+}
 
 export function compilePromptResources(
   prompt: string,
@@ -60,7 +78,7 @@ export function compilePromptResources(
   const text = prompt.replace(ALIAS_PATTERN, (match, alias: string) => {
     const matchingResources = resourcesByAlias.get(alias);
     if (matchingResources === undefined) {
-      throw new Error(`Prompt references unknown resource @${alias}`);
+      return match;
     }
 
     referencedAliases.add(alias);
@@ -159,6 +177,18 @@ export async function downloadBytes(
 
 export async function downloadProviderMediaBytes(
   mediaUrl: string,
+  provider: string,
+  options: ProviderRequestRetryOptions = {}
+): Promise<Uint8Array> {
+  return withTransientRetries(
+    () => downloadProviderMediaBytesOnce(mediaUrl, provider),
+    options.retries ?? DEFAULT_TRANSIENT_RETRIES,
+    options.retryDelayMs ?? DEFAULT_TRANSIENT_RETRY_DELAY_MS
+  );
+}
+
+async function downloadProviderMediaBytesOnce(
+  mediaUrl: string,
   provider: string
 ): Promise<Uint8Array> {
   let currentUrl = assertSafeProviderMediaUrl(mediaUrl, provider);
@@ -173,7 +203,16 @@ export async function downloadProviderMediaBytes(
   ) {
     await assertSafeProviderMediaDns(currentUrl, provider);
 
-    const response = await fetch(currentUrl, { redirect: "manual" });
+    let response: Response;
+    try {
+      response = await fetch(currentUrl, { redirect: "manual" });
+    } catch (error) {
+      throw new TransientProviderRequestError(
+        `${provider} media URL download failed: ${safeUrlLabel(
+          currentUrl
+        )} ${formatErrorMessage(error)}`
+      );
+    }
     const responseUrl = response.url;
     if (responseUrl && responseUrl !== currentUrl) {
       const validatedResponseUrl = assertSafeProviderMediaUrl(
@@ -210,10 +249,11 @@ export async function downloadProviderMediaBytes(
     if (!response.ok) {
       const statusText =
         response.statusText.length > 0 ? ` ${response.statusText}` : "";
-      throw new Error(
+      throw new ProviderHttpError(
         `${provider} media URL download failed: ${safeUrlLabel(
           currentUrl
-        )} HTTP ${response.status}${statusText}`
+        )} HTTP ${response.status}${statusText}`,
+        response.status
       );
     }
 
@@ -225,6 +265,30 @@ export async function downloadProviderMediaBytes(
       currentUrl
     )}`
   );
+}
+
+export async function fetchProviderResponseWithRetries(
+  operation: () => Promise<Response>,
+  options: ProviderRequestRetryOptions = {}
+): Promise<Response> {
+  const retries = options.retries ?? DEFAULT_TRANSIENT_RETRIES;
+  const retryDelayMs =
+    options.retryDelayMs ?? DEFAULT_TRANSIENT_RETRY_DELAY_MS;
+
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      const response = await operation();
+      if (!isTransientHttpStatus(response.status) || attempt >= retries) {
+        return response;
+      }
+    } catch (error) {
+      if (attempt >= retries) {
+        throw error;
+      }
+    }
+
+    await delay(retryDelayMs * (attempt + 1), undefined);
+  }
 }
 
 export async function pollTask<T>(options: PollTaskOptions<T>): Promise<T> {
@@ -389,6 +453,43 @@ async function assertSafeProviderMediaDns(
 
 function isRedirectResponse(response: Response): boolean {
   return response.status >= 300 && response.status < 400;
+}
+
+async function withTransientRetries<T>(
+  operation: () => Promise<T>,
+  retries: number,
+  retryDelayMs: number
+): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt >= retries || !isTransientProviderError(error)) {
+        throw error;
+      }
+      attempt += 1;
+      await delay(retryDelayMs * attempt, undefined);
+    }
+  }
+}
+
+function isTransientProviderError(error: unknown): boolean {
+  if (error instanceof TransientProviderRequestError) {
+    return true;
+  }
+  if (error instanceof ProviderHttpError) {
+    return isTransientHttpStatus(error.status);
+  }
+  return false;
+}
+
+function isTransientHttpStatus(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+function formatErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function safeUrlLabel(url: string | URL): string {

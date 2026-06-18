@@ -12,6 +12,7 @@ import {
 import {
   buildKlingImageToVideoBody,
   getKlingApiKey,
+  KLING_IMAGE_TO_VIDEO_PATH,
   KLING_IMAGE_TO_VIDEO_MODEL,
   KLING_IMAGE_TO_VIDEO_MODELS,
   submitKlingTask,
@@ -82,6 +83,7 @@ export class KlingImageToVideoNode extends BaseNode {
 
     const model = String(this.model ?? KLING_IMAGE_TO_VIDEO_MODEL);
     const body = buildKlingImageToVideoBody({
+      model,
       prompt: String(this.prompt ?? ""),
       firstFrameUrl,
       resolution: String(this.resolution ?? "1080p"),
@@ -89,7 +91,7 @@ export class KlingImageToVideoNode extends BaseNode {
     });
     const taskId = await submitKlingTask({
       apiKey,
-      path: `/image-to-video/${model}`,
+      path: KLING_IMAGE_TO_VIDEO_PATH,
       body
     });
     const bytes = await waitForKlingResult(apiKey, taskId);

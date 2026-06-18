@@ -1,7 +1,7 @@
 import {
   compilePromptResources,
-  createDataUrl,
   downloadProviderMediaBytes,
+  fetchProviderResponseWithRetries,
   pollTask,
   type CompiledPromptReference,
   type PromptResourceInput
@@ -10,8 +10,10 @@ import {
 export const KLING_BASE_URL = "https://api-beijing.klingai.com";
 export const KLING_IMAGE_TO_VIDEO_MODEL = "kling-3.0-turbo";
 export const KLING_IMAGE_TO_VIDEO_MODELS = [KLING_IMAGE_TO_VIDEO_MODEL];
+export const KLING_IMAGE_TO_VIDEO_PATH = "/v1/videos/image2video";
 
 export interface KlingImageToVideoBodyOptions {
+  model: string;
   prompt: string;
   firstFrameUrl: string;
   resolution: string;
@@ -40,10 +42,6 @@ export interface KlingTaskResult {
   mediaUrls: string[];
   message: string | undefined;
 }
-
-type KlingImageToVideoContent =
-  | { type: "prompt"; text: string }
-  | { type: "first_frame"; url: string };
 
 export function getKlingApiKey(secrets: Record<string, string>): string {
   const key = secrets?.KLING_API_KEY || process.env.KLING_API_KEY || "";
@@ -78,66 +76,26 @@ export function buildKlingImageToVideoBody(
     options.prompt,
     options.resources ?? []
   );
-  const contents: KlingImageToVideoContent[] = [
-    { type: "prompt", text: compiled.text },
-    { type: "first_frame", url: options.firstFrameUrl }
-  ];
   for (const reference of compiled.references) {
-    contents.push(createKlingImageToVideoContent(reference));
+    assertKlingPromptReference(reference);
   }
 
-  const body: Record<string, unknown> = {
-    contents,
-    settings: {
-      resolution: options.resolution,
-      duration: options.duration
-    },
-    options: {}
-  };
-  const requestOptions = body.options as Record<string, unknown>;
-  if (options.callbackUrl) {
-    requestOptions.callback_url = options.callbackUrl;
-  }
-  if (options.externalTaskId) {
-    requestOptions.external_task_id = options.externalTaskId;
-  }
-  if (options.watermarkInfo) {
-    requestOptions.watermark_info = options.watermarkInfo;
-  }
-  return body;
+  return cleanBody({
+    model_name: options.model,
+    image: options.firstFrameUrl,
+    prompt: compiled.text,
+    duration: options.duration,
+    callback_url: options.callbackUrl,
+    external_task_id: options.externalTaskId,
+    watermark_info: options.watermarkInfo
+  });
 }
 
-function createKlingImageToVideoContent(
+function assertKlingPromptReference(
   reference: CompiledPromptReference
-): KlingImageToVideoContent {
-  if (reference.alias !== "first_frame") {
-    throw new Error(
-      `Kling image-to-video does not support prompt resource ${formatPromptResource(reference)}; use the first-frame image input instead.`
-    );
-  }
-  if (reference.type !== "image") {
-    throw new Error(
-      `Kling image-to-video first_frame resources must be images; received ${reference.type}.`
-    );
-  }
-  return {
-    type: "first_frame",
-    url: promptResourceUrl(reference)
-  };
-}
-
-function promptResourceUrl(reference: CompiledPromptReference): string {
-  if (reference.url) {
-    return reference.url;
-  }
-  if (reference.dataUrl) {
-    return reference.dataUrl;
-  }
-  if (reference.bytes) {
-    return createDataUrl(reference.bytes, reference.mimeType);
-  }
+): void {
   throw new Error(
-    `Kling image-to-video resource ${formatPromptResource(reference)} must include a URL, data URL, or bytes.`
+    `Kling image-to-video does not support prompt resource ${formatPromptResource(reference)}; use the first-frame image input instead.`
   );
 }
 
@@ -230,9 +188,14 @@ async function queryKlingTask(
   apiKey: string,
   taskId: string
 ): Promise<KlingTaskResult> {
-  const response = await fetch(
-    klingCreatePath("/tasks", { task_id: taskId }),
-    { headers: klingHeaders(apiKey) }
+  const response = await fetchProviderResponseWithRetries(
+    () =>
+      fetch(
+        klingCreatePath(
+          `${KLING_IMAGE_TO_VIDEO_PATH}/${encodeURIComponent(taskId)}`
+        ),
+        { headers: klingHeaders(apiKey) }
+      )
   );
   if (!response.ok) {
     throw new Error(
@@ -243,7 +206,7 @@ async function queryKlingTask(
 }
 
 function isKlingSucceeded(status: string): boolean {
-  return status === "succeeded" || status === "success";
+  return status === "succeeded" || status === "success" || status === "succeed";
 }
 
 function isKlingFailed(status: string): boolean {
@@ -282,7 +245,15 @@ function collectMediaUrls(record: Record<string, unknown>): string[] {
         urls.push(mediaUrl);
       }
     }
-    for (const key of ["outputs", "output", "result", "results", "videos", "images"]) {
+    for (const key of [
+      "outputs",
+      "output",
+      "result",
+      "results",
+      "task_result",
+      "videos",
+      "images"
+    ]) {
       visit(item[key]);
     }
   };
@@ -299,4 +270,15 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function cleanBody(body: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(body)) {
+    if (value === undefined || value === null || value === "") {
+      continue;
+    }
+    out[key] = value;
+  }
+  return out;
 }

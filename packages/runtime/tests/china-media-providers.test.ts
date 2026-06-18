@@ -428,8 +428,10 @@ describe("China media providers", () => {
       responseJson({
         data: {
           task_id: "task-1",
-          status: "succeeded",
-          outputs: [{ url: dataUrl(output, "video/mp4") }]
+          task_status: "succeed",
+          task_result: {
+            videos: [{ url: dataUrl(output, "video/mp4") }]
+          }
         }
       })
     ]);
@@ -445,17 +447,14 @@ describe("China media providers", () => {
     ).resolves.toEqual(output);
 
     expect(mockFetch.mock.calls[0][0]).toBe(
-      "https://api-beijing.klingai.com/image-to-video/kling-3.0-turbo"
+      "https://api-beijing.klingai.com/v1/videos/image2video"
     );
     const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
     expect(body).toMatchObject({
-      contents: [
-        { type: "prompt", text: "make the character wave" },
-        { type: "first_frame" }
-      ],
-      settings: { resolution: "1080p", duration: 5 },
-      options: {}
+      model_name: "kling-3.0-turbo",
+      image: expect.stringMatching(/^data:image\/png;base64,/),
+      prompt: "make the character wave",
+      duration: 5
     });
-    expect(body.contents[1].url).toMatch(/^data:image\/png;base64,/);
   });
 });

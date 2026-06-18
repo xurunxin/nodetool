@@ -1,6 +1,7 @@
 import { PROVIDER_IDS } from "@nodetool-ai/protocol";
 import {
   buildKlingImageToVideoBody,
+  KLING_IMAGE_TO_VIDEO_PATH,
   KLING_IMAGE_TO_VIDEO_MODEL,
   submitKlingTask,
   waitForKlingResult
@@ -78,8 +79,9 @@ export class KlingProvider extends BaseProvider {
     const model = params.model.id || KLING_IMAGE_TO_VIDEO_MODEL;
     const taskId = await submitKlingTask({
       apiKey: this.requireApiKey(),
-      path: `/image-to-video/${model}`,
+      path: KLING_IMAGE_TO_VIDEO_PATH,
       body: buildKlingImageToVideoBody({
+        model,
         prompt: params.prompt ?? "",
         firstFrameUrl,
         resolution: params.resolution ?? "1080p",

@@ -30,6 +30,8 @@ export const PROVIDER_NAMESPACES: readonly string[] = [
   "huggingface",
   "fal",
   "dashscope",
+  "kling",
+  "volcengine",
   "replicate",
   "kie",
   "atlascloud",

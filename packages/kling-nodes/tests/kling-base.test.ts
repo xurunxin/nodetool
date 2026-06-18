@@ -26,8 +26,8 @@ describe("Kling base helpers", () => {
 
   it("uses the official China base URL and bearer auth header", () => {
     expect(KLING_BASE_URL).toBe("https://api-beijing.klingai.com");
-    expect(klingCreatePath("/image-to-video/kling-3.0-turbo")).toBe(
-      "https://api-beijing.klingai.com/image-to-video/kling-3.0-turbo"
+    expect(klingCreatePath("/v1/videos/image2video")).toBe(
+      "https://api-beijing.klingai.com/v1/videos/image2video"
     );
     expect(getKlingApiKey({ KLING_API_KEY: "secret-key" })).toBe("secret-key");
     expect(klingHeaders("secret-key")).toEqual({
@@ -38,6 +38,7 @@ describe("Kling base helpers", () => {
 
   it("builds the confirmed Kling 3.0 Turbo image-to-video request body", () => {
     const body = buildKlingImageToVideoBody({
+      model: "kling-3.0-turbo",
       prompt: "make hero walk",
       firstFrameUrl: "data:image/png;base64,AAAA",
       resolution: "1080p",
@@ -48,25 +49,20 @@ describe("Kling base helpers", () => {
     });
 
     expect(body).toEqual({
-      contents: [
-        { type: "prompt", text: "make hero walk" },
-        { type: "first_frame", url: "data:image/png;base64,AAAA" }
-      ],
-      settings: {
-        resolution: "1080p",
-        duration: 5
-      },
-      options: {
-        callback_url: "https://callback.example/kling",
-        external_task_id: "external-1",
-        watermark_info: { text: "nodetool" }
-      }
+      model_name: "kling-3.0-turbo",
+      image: "data:image/png;base64,AAAA",
+      prompt: "make hero walk",
+      duration: 5,
+      callback_url: "https://callback.example/kling",
+      external_task_id: "external-1",
+      watermark_info: { text: "nodetool" }
     });
   });
 
   it("rejects prompt image resources instead of silently dropping them", () => {
     expect(() =>
       buildKlingImageToVideoBody({
+        model: "kling-3.0-turbo",
         prompt: "make @hero walk",
         firstFrameUrl: "data:image/png;base64,AAAA",
         resolution: "1080p",
@@ -82,7 +78,7 @@ describe("Kling base helpers", () => {
     ).toThrow(/does not support prompt resource @hero/);
   });
 
-  it("submits an image-to-video task to the model-specific endpoint", async () => {
+  it("submits an image-to-video task to the documented endpoint", async () => {
     mockFetch.mockResolvedValueOnce(
       new Response(JSON.stringify({ data: { task_id: "task-1" } }), {
         status: 200
@@ -92,36 +88,44 @@ describe("Kling base helpers", () => {
     await expect(
       submitKlingTask({
         apiKey: "secret-key",
-        path: "/image-to-video/kling-3.0-turbo",
-        body: { contents: [], settings: {}, options: {} }
+        path: "/v1/videos/image2video",
+        body: {
+          model_name: "kling-3.0-turbo",
+          image: "data:image/png;base64,AAAA"
+        }
       })
     ).resolves.toBe("task-1");
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://api-beijing.klingai.com/image-to-video/kling-3.0-turbo",
+      "https://api-beijing.klingai.com/v1/videos/image2video",
       {
         method: "POST",
         headers: {
           Authorization: "Bearer secret-key",
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ contents: [], settings: {}, options: {} })
+        body: JSON.stringify({
+          model_name: "kling-3.0-turbo",
+          image: "data:image/png;base64,AAAA"
+        })
       }
     );
   });
 
-  it("parses successful task payloads with media URLs", () => {
+  it("parses successful task_result payloads with media URLs", () => {
     const result = parseKlingTaskResult({
       data: {
         task_id: "task-1",
-        status: "succeeded",
-        outputs: [{ type: "video", url: "https://cdn.example/video.mp4" }]
+        task_status: "succeed",
+        task_result: {
+          videos: [{ url: "https://cdn.example/video.mp4" }]
+        }
       }
     });
 
     expect(result).toEqual({
       taskId: "task-1",
-      status: "succeeded",
+      status: "succeed",
       mediaUrls: ["https://cdn.example/video.mp4"],
       message: undefined
     });
@@ -141,8 +145,10 @@ describe("Kling base helpers", () => {
           JSON.stringify({
             data: {
               task_id: "task-1",
-              status: "succeeded",
-              outputs: [{ url: "https://93.184.216.34/video.mp4" }]
+              task_status: "succeed",
+              task_result: {
+                videos: [{ url: "https://93.184.216.34/video.mp4" }]
+              }
             }
           }),
           { status: 200 }
@@ -158,10 +164,10 @@ describe("Kling base helpers", () => {
     ).resolves.toEqual(videoBytes);
 
     expect(mockFetch.mock.calls[0][0]).toBe(
-      "https://api-beijing.klingai.com/tasks?task_id=task-1"
+      "https://api-beijing.klingai.com/v1/videos/image2video/task-1"
     );
     expect(mockFetch.mock.calls[1][0]).toBe(
-      "https://api-beijing.klingai.com/tasks?task_id=task-1"
+      "https://api-beijing.klingai.com/v1/videos/image2video/task-1"
     );
     expect(mockFetch.mock.calls[2][0]).toBe("https://93.184.216.34/video.mp4");
   });

@@ -34,10 +34,13 @@ describe("compilePromptResources", () => {
     ]);
   });
 
-  it("throws when a prompt references an unknown alias", () => {
-    expect(() => compilePromptResources("use @missing please")).toThrow(
-      "Prompt references unknown resource @missing"
+  it("leaves unknown at-mentions as literal prompt text", () => {
+    const result = compilePromptResources(
+      "use @missing please and mail a@b.com"
     );
+
+    expect(result.text).toBe("use @missing please and mail a@b.com");
+    expect(result.references).toEqual([]);
   });
 
   it("supports unicode aliases in prompt references", () => {
@@ -172,6 +175,29 @@ describe("downloadBytes", () => {
 });
 
 describe("downloadProviderMediaBytes", () => {
+  it("retries transient result download failures", async () => {
+    const originalFetch = globalThis.fetch;
+    const output = new Uint8Array([4, 5, 6]);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("slow down", { status: 429 }))
+      .mockResolvedValueOnce(new Response(output, { status: 200 }));
+    globalThis.fetch = fetchMock;
+
+    try {
+      await expect(
+        downloadProviderMediaBytes(
+          "https://93.184.216.34/file.mp4",
+          "Test provider",
+          { retryDelayMs: 0 }
+        )
+      ).resolves.toEqual(output);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("rejects unsafe redirect targets and redacts URL secrets", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = vi.fn(async () => {

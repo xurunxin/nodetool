@@ -18,8 +18,10 @@ function queueKlingVideoSuccess(): void {
         JSON.stringify({
           data: {
             task_id: "task-1",
-            status: "succeeded",
-            outputs: [{ url: "https://cdn.klingai.com/video.mp4" }]
+            task_status: "succeed",
+            task_result: {
+              videos: [{ url: "https://cdn.klingai.com/video.mp4" }]
+            }
           }
         }),
         { status: 200 }
@@ -58,15 +60,13 @@ describe("KlingImageToVideoNode", () => {
       (mockFetch.mock.calls[0][1] as RequestInit).body as string
     ) as Record<string, unknown>;
     expect(mockFetch.mock.calls[0][0]).toBe(
-      "https://api-beijing.klingai.com/image-to-video/kling-3.0-turbo"
+      "https://api-beijing.klingai.com/v1/videos/image2video"
     );
     expect(submitBody).toMatchObject({
-      contents: [
-        { type: "prompt", text: "cinematic walk" },
-        { type: "first_frame", url: "data:image/png;base64,iVBORw==" }
-      ],
-      settings: { resolution: "1080p", duration: 5 },
-      options: {}
+      model_name: "kling-3.0-turbo",
+      image: "data:image/png;base64,iVBORw==",
+      prompt: "cinematic walk",
+      duration: 5
     });
     expect(result.output).toEqual({ type: "video", data: videoB64 });
   });
