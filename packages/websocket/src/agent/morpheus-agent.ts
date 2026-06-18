@@ -443,9 +443,9 @@ export class MorpheusQuerySession implements AgentQuerySession {
           );
           emit({
             type: "result",
-            uuid: event.id,
+            uuid: randomUUID(),
             session_id: sessionId,
-            subtype: "success",
+            subtype: "tool_result",
             text: stringifyToolResult(result),
             is_error: false,
           });
@@ -453,7 +453,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
           const errMsg = error instanceof Error ? error.message : String(error);
           emit({
             type: "result",
-            uuid: event.id,
+            uuid: randomUUID(),
             session_id: sessionId,
             subtype: "tool_result",
             text: `Error: ${errMsg}`,

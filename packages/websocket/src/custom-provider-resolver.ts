@@ -4,7 +4,8 @@ import {
   AnthropicProvider,
   getProvider,
   OpenAIProvider,
-  type BaseProvider
+  type BaseProvider,
+  type LanguageModel
 } from "@nodetool-ai/runtime";
 import OpenAI from "openai";
 import {
@@ -17,6 +18,27 @@ import { isProviderVisibleForSurface } from "./model-surface.js";
 function secretResolverFor(userId: string) {
   return (key: string) =>
     getStoredSecret(key, userId).then((value) => value ?? undefined);
+}
+
+function endpointLanguageModels(
+  endpoint: Awaited<ReturnType<typeof listCustomModelEndpoints>>[number],
+  providerId: string
+): LanguageModel[] {
+  return endpoint.models.map((model) => ({
+    id: model.id,
+    name: model.name || model.id,
+    provider: providerId
+  }));
+}
+
+function withEndpointModelDiscovery<T extends BaseProvider>(
+  provider: T,
+  endpoint: Awaited<ReturnType<typeof listCustomModelEndpoints>>[number],
+  providerId: string
+): T {
+  provider.getAvailableLanguageModels = async () =>
+    endpointLanguageModels(endpoint, providerId);
+  return provider;
 }
 
 type AnthropicProviderOptionsWithProviderId = NonNullable<
@@ -61,7 +83,7 @@ export async function resolveNodeToolProvider(
 
   const customProviderId = customEndpointProviderId(endpoint.id);
   if (endpoint.kind === "openai") {
-    return new OpenAIProvider(
+    const provider = new OpenAIProvider(
       { OPENAI_API_KEY: apiKey },
       {
         providerId: customProviderId,
@@ -69,6 +91,7 @@ export async function resolveNodeToolProvider(
           new OpenAI({ apiKey: key, baseURL: endpoint.baseUrl })
       }
     );
+    return withEndpointModelDiscovery(provider, endpoint, customProviderId);
   }
 
   const options: AnthropicProviderOptionsWithProviderId = {
@@ -76,5 +99,6 @@ export async function resolveNodeToolProvider(
     clientFactory: (key) =>
       new Anthropic({ apiKey: key, baseURL: endpoint.baseUrl })
   };
-  return new AnthropicProvider({ ANTHROPIC_API_KEY: apiKey }, options);
+  const provider = new AnthropicProvider({ ANTHROPIC_API_KEY: apiKey }, options);
+  return withEndpointModelDiscovery(provider, endpoint, customProviderId);
 }

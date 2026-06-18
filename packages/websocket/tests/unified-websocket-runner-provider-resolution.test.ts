@@ -35,6 +35,16 @@ describe("UnifiedWebSocketRunner provider resolution", () => {
     initTestDb();
   });
 
+  it("defaults fresh inference requests to an API-visible provider", () => {
+    const runner = new UnifiedWebSocketRunner({
+      userId: "alice",
+    });
+
+    expect(
+      (runner as unknown as { defaultProvider: string }).defaultProvider,
+    ).toBe("openai");
+  });
+
   it("installs the runner provider resolver on run_job execution contexts", async () => {
     const customProviderId = "custom:alpha_gateway";
     const resolveProvider = vi.fn(async (providerId: string) =>

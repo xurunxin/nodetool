@@ -10,7 +10,7 @@ describe("custom model endpoint schemas", () => {
       id: "local_gateway",
       name: "Local Gateway",
       kind: "openai",
-      baseUrl: "http://127.0.0.1:8080/v1",
+      baseUrl: "https://gateway.example.test/v1",
       enabled: true,
       models: [{ id: "test-chat", name: "Test Chat" }],
       createdAt: "2026-06-14T00:00:00.000Z",
@@ -18,6 +18,43 @@ describe("custom model endpoint schemas", () => {
     });
 
     expect(parsed.id).toBe("local_gateway");
+  });
+
+  it("allows public HTTPS hostnames that resemble IPv6 private prefixes", () => {
+    expect(() =>
+      customModelEndpointUpsertInputSchema.parse({
+        id: "public-prefix",
+        name: "Public Prefix",
+        kind: "openai",
+        baseUrl: "https://fc-public.example.test/v1",
+        enabled: true,
+        models: [{ id: "gpt-test", name: "GPT Test" }],
+      }),
+    ).not.toThrow();
+  });
+
+  it.each([
+    "http://gateway.example.test/v1",
+    "https://localhost:8080/v1",
+    "https://127.0.0.1:8080/v1",
+    "https://10.0.0.2/v1",
+    "https://172.16.0.2/v1",
+    "https://192.168.1.10/v1",
+    "https://169.254.169.254/latest",
+    "https://[::1]/v1",
+    "https://[fd00::1]/v1",
+    "https://metadata.google.internal/v1",
+  ])("rejects unsafe custom endpoint URL %s", (baseUrl) => {
+    expect(() =>
+      customModelEndpointUpsertInputSchema.parse({
+        id: "unsafe",
+        name: "Unsafe",
+        kind: "openai",
+        baseUrl,
+        enabled: true,
+        models: [{ id: "gpt-test", name: "GPT Test" }],
+      }),
+    ).toThrow();
   });
 
   it("rejects endpoint ids that cannot be used in provider ids", () => {

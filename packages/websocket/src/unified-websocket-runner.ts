@@ -1068,7 +1068,7 @@ export class UnifiedWebSocketRunner {
     this.userId = options.userId ?? null;
     this.authToken = options.authToken ?? null;
     this.defaultModel = options.defaultModel ?? "gpt-oss:20b";
-    this.defaultProvider = options.defaultProvider ?? "ollama";
+    this.defaultProvider = options.defaultProvider ?? "openai";
     this.resolveExecutor = options.resolveExecutor;
     this.resolveNodeType = options.resolveNodeType;
     this.resolveProvider = options.resolveProvider;

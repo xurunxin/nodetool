@@ -226,15 +226,19 @@ describe("MorpheusAgentSdkProvider", () => {
         ],
       }),
     );
-    expect(messages).toContainEqual(
+    const toolResult = messages.find(
+      (message) =>
+        message.type === "result" &&
+        message.subtype === "tool_result" &&
+        message.text === JSON.stringify({ nodeId: "n1" }),
+    );
+    expect(toolResult).toEqual(
       expect.objectContaining({
         type: "result",
-        uuid: "tool-1",
-        subtype: "success",
-        text: JSON.stringify({ nodeId: "n1" }),
         is_error: false,
       }),
     );
+    expect(toolResult?.uuid).not.toBe("tool-1");
   });
 
   it("keeps streamed Morpheus transcripts available after the live turn", async () => {
@@ -356,15 +360,19 @@ describe("MorpheusAgentSdkProvider", () => {
     const messages = await session.send("open panel", transport, "ui-session-1", []);
 
     expect(transport.executeTool).not.toHaveBeenCalled();
-    expect(messages).toContainEqual(
+    const toolResult = messages.find(
+      (message) =>
+        message.type === "result" &&
+        message.subtype === "tool_result" &&
+        message.text.includes("Unsupported forward_to_frontend"),
+    );
+    expect(toolResult).toEqual(
       expect.objectContaining({
         type: "result",
-        uuid: "tool-unsupported",
-        subtype: "tool_result",
         is_error: true,
-        text: expect.stringContaining("Unsupported forward_to_frontend"),
       }),
     );
+    expect(toolResult?.uuid).not.toBe("tool-unsupported");
   });
 
   it("accumulates Morpheus text deltas under one stable assistant message id", async () => {

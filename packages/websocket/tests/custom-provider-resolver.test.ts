@@ -138,6 +138,13 @@ describe("resolveNodeToolProvider", () => {
         baseURL: "https://gateway.example.test/v1"
       }
     });
+    await expect(provider.getAvailableLanguageModels()).resolves.toEqual([
+      {
+        id: "custom-chat",
+        name: "Custom Chat",
+        provider: customEndpointProviderId("case-sensitive_1")
+      }
+    ]);
   });
 
   it("resolves an enabled custom Anthropic-compatible endpoint with its custom provider id", async () => {
