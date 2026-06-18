@@ -128,6 +128,28 @@ describe("parseMorpheusSseFrame", () => {
     });
   });
 
+  it("parses stringified MorpheusCore tool arguments", () => {
+    const frame = `data: ${JSON.stringify({
+      type: "tool_call",
+      id: "tool-5",
+      name: "forward_to_frontend",
+      arguments: JSON.stringify({
+        forwardType: "nodetool:create_node",
+        payload: "{}",
+      }),
+    })}`;
+
+    expect(parseMorpheusSseFrame(frame)).toEqual({
+      type: "tool_call",
+      id: "tool-5",
+      name: "forward_to_frontend",
+      arguments: {
+        forwardType: "nodetool:create_node",
+        payload: "{}",
+      },
+    });
+  });
+
   it("joins multiple data lines before parsing", () => {
     expect(
       parseMorpheusSseFrame(

@@ -511,7 +511,7 @@ describe("chatAgent store slice", () => {
         type: "result",
         uuid: "tool-1",
         session_id: "session-morpheus",
-        subtype: "success",
+        subtype: "tool_result",
         text: "frontend returned ok",
         is_error: false
       }
@@ -593,7 +593,7 @@ describe("chatAgent store slice", () => {
         type: "result",
         uuid: "tool-1",
         session_id: "thread-llm",
-        subtype: "success",
+        subtype: "tool_result",
         text: "frontend returned ok",
         is_error: false
       }

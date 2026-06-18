@@ -60,6 +60,18 @@ jest.mock("../../lib/websocket/GlobalWebSocketManager", () => ({
   globalWebSocketManager: mockGlobalWebSocketManager
 }));
 
+const mockAgentClient = {
+  getSessionMessages: jest.fn(),
+  on: jest.fn(),
+  off: jest.fn(),
+  sendToolsManifestResponse: jest.fn(),
+  sendToolCallResponse: jest.fn()
+};
+
+jest.mock("../../lib/agent/AgentSocketClient", () => ({
+  getAgentSocketClient: () => mockAgentClient
+}));
+
 import { encode } from "@msgpack/msgpack";
 import { Server } from "mock-socket";
 import useGlobalChatStore from "../GlobalChatStore";
@@ -117,6 +129,7 @@ describe("GlobalChatStore", () => {
     jest.clearAllMocks();
     jest.setTimeout(60000);
     uuidCounter = 0;
+    mockAgentClient.getSessionMessages.mockResolvedValue([]);
     (supabase.auth.getSession as jest.Mock).mockResolvedValue({
       data: { session: null }
     });
@@ -151,6 +164,58 @@ describe("GlobalChatStore", () => {
     const state = store.getState();
     expect(state.currentThreadId).toBe(id);
     expect(state.threads[id]).toBeDefined();
+  });
+
+  it("loads LLM agent transcripts through the real session id", async () => {
+    mockAgentClient.getSessionMessages.mockResolvedValue([
+      {
+        type: "user",
+        uuid: "user-message-1",
+        session_id: "db-thread-1",
+        text: "hello"
+      },
+      {
+        type: "assistant",
+        uuid: "assistant-message-1",
+        session_id: "db-thread-1",
+        text: "hi there"
+      }
+    ]);
+    store.setState({
+      agentSessionConfigByThread: {
+        "visible-thread": {
+          provider: "llm",
+          model: "claude-sonnet",
+          workspacePath: null,
+          chatProviderId: "anthropic"
+        }
+      },
+      agentResumeSessionByThread: {
+        "visible-thread": "db-thread-1"
+      },
+      messageCache: {}
+    } as any);
+
+    const messages = await store.getState().loadMessages("visible-thread");
+
+    expect(mockAgentClient.getSessionMessages).toHaveBeenCalledWith({
+      sessionId: "db-thread-1"
+    });
+    expect(messages).toEqual([
+      expect.objectContaining({
+        id: "user-message-1",
+        role: "user",
+        thread_id: "visible-thread",
+        content: [{ type: "text", text: "hello" }]
+      }),
+      expect.objectContaining({
+        id: "assistant-message-1",
+        role: "assistant",
+        thread_id: "visible-thread",
+        content: [{ type: "text", text: "hi there" }]
+      })
+    ]);
+    expect(store.getState().messageCache["visible-thread"]).toBe(messages);
   });
 
   it("sendMessage adds message to thread and sends via socket", async () => {

@@ -93,7 +93,10 @@ export function agentMessageToNodeToolMessage(
     }
 
     case "result": {
-      if (msg.subtype === "success" && msg.text) {
+      if (
+        (msg.subtype === "success" || msg.subtype === "tool_result") &&
+        msg.text
+      ) {
         return {
           type: "message",
           id: msg.uuid,
@@ -144,4 +147,3 @@ export function agentMessageToNodeToolMessage(
       return null;
   }
 }
-

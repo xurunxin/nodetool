@@ -38,6 +38,8 @@ import { globalWebSocketManager } from "../lib/websocket/GlobalWebSocketManager"
 import { FrontendToolRegistry } from "../lib/tools/frontendTools";
 import { uuidv4 } from "./uuidv4";
 import { createChatAgentSlice, type ChatAgentSlice } from "./chatAgent";
+import { getAgentSocketClient } from "../lib/agent/AgentSocketClient";
+import type { AgentTranscriptMessage } from "../lib/agent/agentTypes";
 import {
   handleChatWebSocketMessage,
   MsgpackData,
@@ -78,6 +80,22 @@ type AgentExecutionToolCalls = Record<
 >;
 
 const DEFAULT_PERMISSION_MODE: PermissionMode = "default";
+
+function agentTranscriptToMessage(
+  threadId: string,
+  entry: AgentTranscriptMessage
+): Message {
+  return {
+    type: "message",
+    id: entry.uuid,
+    role: entry.type,
+    content: [{ type: "text", text: entry.text }],
+    created_at: new Date().toISOString(),
+    thread_id: threadId,
+    provider: "anthropic",
+    model: "agent"
+  };
+}
 
 /** Decision a user can make on an inline tool-approval prompt. */
 export type ApprovalDecision = "allow" | "allow_for_chat" | "deny";
@@ -1027,6 +1045,36 @@ const useGlobalChatStore = create<GlobalChatState>()(
 
         const load = (async (): Promise<Message[]> => {
           try {
+            const state = get();
+            const agentTranscriptSessionId =
+              !cursor &&
+              state.agentSessionConfigByThread[threadId]?.provider ===
+                "llm"
+                ? state.agentResumeSessionByThread[threadId]
+                : undefined;
+            if (agentTranscriptSessionId) {
+              const transcript =
+                await getAgentSocketClient().getSessionMessages({
+                  sessionId: agentTranscriptSessionId
+                });
+              const messages = transcript.map((entry) =>
+                agentTranscriptToMessage(threadId, entry)
+              );
+
+              set((state) => ({
+                messageCache: {
+                  ...state.messageCache,
+                  [threadId]: messages
+                },
+                messageCursors: {
+                  ...state.messageCursors,
+                  [threadId]: null
+                }
+              }));
+
+              return get().messageCache[threadId] || [];
+            }
+
             const data = await trpcClient.messages.list.query({
               thread_id: threadId,
               ...(cursor ? { cursor } : {}),

@@ -241,6 +241,24 @@ describe("agentMessageAdapter", () => {
         ]);
       });
 
+      it("converts rendered tool result messages", () => {
+        const msg: AgentMessage = {
+          type: "result",
+          uuid: "tool-call-1",
+          session_id: "test-session-2",
+          subtype: "tool_result",
+          text: "frontend returned ok",
+        };
+
+        const result = agentMessageToNodeToolMessage(msg);
+
+        expect(result).not.toBeNull();
+        expect(result?.id).toBe("tool-call-1");
+        expect(result?.content).toEqual([
+          { type: "text", text: "frontend returned ok" },
+        ]);
+      });
+
       it("converts result message with error and errors array", () => {
         const msg: AgentMessage = {
           type: "result",

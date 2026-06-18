@@ -42,6 +42,21 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const stringValue = (value: unknown, fallback = "") =>
   typeof value === "string" ? value : fallback;
 
+const recordValue = (value: unknown): Record<string, unknown> => {
+  if (isRecord(value)) {
+    return value;
+  }
+  if (typeof value !== "string") {
+    return {};
+  }
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return isRecord(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
 const jsonHeaders = (apiKey?: string): Record<string, string> => {
   const headers: Record<string, string> = {
     "content-type": "application/json",
@@ -105,7 +120,7 @@ export const parseMorpheusSseFrame = (
         type: "tool_call",
         id,
         name: stringValue(toolCall.name),
-        arguments: isRecord(args) ? args : {},
+        arguments: recordValue(args),
       };
     }
     case "done":
