@@ -537,6 +537,105 @@ describe("chatAgent store slice", () => {
     );
   });
 
+  it("deduplicates final LLM summaries after streamed tool turns", async () => {
+    mockAgentClient.createSession.mockResolvedValue("llm-session-1");
+    let streamHandler: ((event: AgentStreamEvent) => void) | undefined;
+    mockAgentClient.on.mockImplementation(
+      (eventName: string, handler: (event: AgentStreamEvent) => void) => {
+        if (eventName === "stream") {
+          streamHandler = handler;
+        }
+      }
+    );
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "llm",
+      agentModel: "claude-sonnet",
+      agentModels: [llmModel]
+    });
+
+    await store.getState().sendAgentMessage("thread-llm", "run a tool");
+    streamHandler?.({
+      sessionId: "llm-session-1",
+      done: false,
+      message: {
+        type: "assistant",
+        uuid: "assistant-before-tool",
+        session_id: "thread-llm",
+        text: "Before tool. ",
+        content: [{ type: "text", text: "Before tool. " }]
+      }
+    });
+    streamHandler?.({
+      sessionId: "llm-session-1",
+      done: false,
+      message: {
+        type: "assistant",
+        uuid: "assistant-tool-call",
+        session_id: "thread-llm",
+        content: [],
+        tool_calls: [
+          {
+            id: "tool-1",
+            type: "function",
+            function: {
+              name: "forward_to_frontend",
+              arguments: "{}"
+            }
+          }
+        ]
+      }
+    });
+    streamHandler?.({
+      sessionId: "llm-session-1",
+      done: false,
+      message: {
+        type: "result",
+        uuid: "tool-1",
+        session_id: "thread-llm",
+        subtype: "success",
+        text: "frontend returned ok",
+        is_error: false
+      }
+    });
+    streamHandler?.({
+      sessionId: "llm-session-1",
+      done: false,
+      message: {
+        type: "assistant",
+        uuid: "assistant-after-tool",
+        session_id: "thread-llm",
+        text: "After tool.",
+        content: [{ type: "text", text: "After tool." }]
+      }
+    });
+    streamHandler?.({
+      sessionId: "llm-session-1",
+      done: false,
+      message: {
+        type: "result",
+        uuid: "final-summary",
+        session_id: "thread-llm",
+        subtype: "success",
+        text: "Before tool. After tool.",
+        is_error: false
+      }
+    });
+
+    const messageIds = (store.getState().messageCache["thread-llm"] ?? []).map(
+      (message) => (message as { id: string }).id
+    );
+    expect(messageIds).toEqual(
+      expect.arrayContaining([
+        "assistant-before-tool",
+        "assistant-tool-call",
+        "tool-1",
+        "assistant-after-tool"
+      ])
+    );
+    expect(messageIds).not.toContain("final-summary");
+  });
+
   it("creates a new session after changing Pi workspace for an existing thread", async () => {
     mockAgentClient.createSession
       .mockResolvedValueOnce("session-workspace-a")

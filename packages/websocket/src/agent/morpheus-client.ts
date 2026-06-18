@@ -79,7 +79,8 @@ export const parseMorpheusSseFrame = (
   }
 
   const payload = JSON.parse(dataLines.join("\n")) as MorpheusEnvelope;
-  const data = isRecord(payload.data) ? payload.data : payload;
+  const payloadRecord = payload as Record<string, unknown>;
+  const data = isRecord(payload.data) ? payload.data : payloadRecord;
   const eventType =
     typeof payload.event === "string" ? payload.event : payload.type;
 
@@ -94,6 +95,7 @@ export const parseMorpheusSseFrame = (
         type: "thinking_delta",
         text: stringValue(data.delta),
       };
+    case "tool_call":
     case "toolcall_end": {
       const toolCall = isRecord(data.toolCall) ? data.toolCall : data;
       const args = toolCall.arguments ?? {};

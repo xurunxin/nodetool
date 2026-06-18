@@ -100,6 +100,7 @@ const liveSessions = new Set<string>();
 // Per-thread guard so a "result" message does not duplicate assistant text
 // already streamed in the same turn.
 const turnHasAssistant = new Map<string, boolean>();
+const turnAssistantMessageIds = new Map<string, globalThis.Set<string>>();
 
 export function agentModelSelectionKey(model: AgentModelDescriptor): string {
   return model.chatProviderId
@@ -137,6 +138,23 @@ function textContent(message: Message): string {
         ? String(part.text ?? "")
         : ""
     )
+    .join("");
+}
+
+function turnAssistantText(threadId: string, messages: Message[]): string {
+  const assistantIds = turnAssistantMessageIds.get(threadId);
+  if (!assistantIds) {
+    return "";
+  }
+  return messages
+    .filter(
+      (candidate) =>
+        typeof candidate.id === "string" &&
+        assistantIds.has(candidate.id) &&
+        candidate.type === "message" &&
+        candidate.role === "assistant"
+    )
+    .map(textContent)
     .join("");
 }
 
@@ -290,6 +308,7 @@ function handleAgentStream(event: AgentStreamEvent, set: Set, get: Get): void {
 
   if (done) {
     turnHasAssistant.delete(threadId);
+    turnAssistantMessageIds.delete(threadId);
     if (get().currentThreadId === threadId) {
       set({ status: "connected" });
     }
@@ -309,21 +328,19 @@ function handleAgentStream(event: AgentStreamEvent, set: Set, get: Get): void {
     message.type === "result" && message.subtype === "success";
   if (isSuccessResult && turnHasAssistant.get(threadId)) {
     const existing = get().messageCache[threadId] ?? [];
-    const lastAssistant = existing.findLast(
-      (candidate) =>
-        candidate.type === "message" &&
-        candidate.role === "assistant" &&
-        !candidate.tool_calls
-    );
-    if (
-      lastAssistant &&
-      textContent(lastAssistant) === textContent(converted)
-    ) {
+    const streamedText = turnAssistantText(threadId, existing);
+    if (streamedText && streamedText === textContent(converted)) {
       return;
     }
   }
   if (message.type === "assistant") {
     turnHasAssistant.set(threadId, true);
+    const assistantIds =
+      turnAssistantMessageIds.get(threadId) ?? new globalThis.Set<string>();
+    if (typeof converted.id === "string") {
+      assistantIds.add(converted.id);
+      turnAssistantMessageIds.set(threadId, assistantIds);
+    }
   }
 
   set((state) => ({
@@ -608,6 +625,7 @@ export function createChatAgentSlice(set: Set, get: Get): ChatAgentSlice {
         created_at: new Date().toISOString()
       };
       turnHasAssistant.set(threadId, false);
+      turnAssistantMessageIds.set(threadId, new globalThis.Set<string>());
       set((state) => ({
         messageCache: {
           ...state.messageCache,

@@ -115,6 +115,19 @@ describe("parseMorpheusSseFrame", () => {
     });
   });
 
+  it("maps top-level MorpheusCore tool_call payloads", () => {
+    expect(
+      parseMorpheusSseFrame(
+        'data: {"type":"tool_call","id":"tool-4","name":"forward_to_frontend","arguments":{"kind":"ui"}}',
+      ),
+    ).toEqual({
+      type: "tool_call",
+      id: "tool-4",
+      name: "forward_to_frontend",
+      arguments: { kind: "ui" },
+    });
+  });
+
   it("joins multiple data lines before parsing", () => {
     expect(
       parseMorpheusSseFrame(
