@@ -43,6 +43,10 @@ describe("custom model endpoint schemas", () => {
     "https://169.254.169.254/latest",
     "https://[::1]/v1",
     "https://[fd00::1]/v1",
+    "https://[::ffff:127.0.0.1]/v1",
+    "https://[::ffff:7f00:1]/v1",
+    "https://[::ffff:c0a8:101]/v1",
+    "https://[0:0:0:0:0:ffff:ac10:1]/v1",
     "https://metadata.google.internal/v1",
   ])("rejects unsafe custom endpoint URL %s", (baseUrl) => {
     expect(() =>

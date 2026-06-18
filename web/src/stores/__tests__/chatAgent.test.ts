@@ -17,6 +17,7 @@ const mockAgentClient = {
   createSession: jest.fn(),
   sendMessage: jest.fn(),
   stopExecution: jest.fn(),
+  setMemoryEnabled: jest.fn(),
   on: jest.fn(),
   off: jest.fn()
 };
@@ -30,6 +31,7 @@ type TestChatAgentStore = ChatAgentSlice & {
   error: string | null;
   currentThreadId: string | null;
   messageCache: Record<string, unknown[]>;
+  memoryEnabled: boolean;
 };
 
 const morpheusModel: AgentModelDescriptor = {
@@ -60,6 +62,7 @@ function createTestStore(): StoreApi<TestChatAgentStore> {
     error: null,
     currentThreadId: null,
     messageCache: {},
+    memoryEnabled: false,
     ...createChatAgentSlice(
       set as StoreApi<never>["setState"],
       get as StoreApi<never>["getState"]
@@ -84,6 +87,7 @@ describe("chatAgent store slice", () => {
     mockAgentClient.createSession.mockResolvedValue("session-default");
     mockAgentClient.sendMessage.mockResolvedValue(undefined);
     mockAgentClient.stopExecution.mockResolvedValue(undefined);
+    mockAgentClient.setMemoryEnabled.mockResolvedValue(undefined);
     mockAgentClient.on.mockReturnValue(undefined);
     mockAgentClient.off.mockReturnValue(undefined);
     Object.defineProperty(global, "crypto", {
@@ -434,6 +438,52 @@ describe("chatAgent store slice", () => {
     expect(mockAgentClient.sendMessage).toHaveBeenCalledWith(
       "llm-session-custom",
       "hello"
+    );
+  });
+
+  it("passes memory opt-in when creating LLM agent sessions", async () => {
+    mockAgentClient.createSession.mockResolvedValue("llm-session-memory");
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "llm",
+      agentModel: "claude-sonnet",
+      agentModels: [llmModel],
+      memoryEnabled: true
+    });
+
+    await store.getState().sendAgentMessage("thread-llm", "remember this");
+
+    expect(mockAgentClient.createSession).toHaveBeenCalledWith({
+      provider: "llm",
+      model: "claude-sonnet",
+      memoryEnabled: true,
+      chatProviderId: "anthropic"
+    });
+  });
+
+  it("updates reused live LLM sessions with the current memory toggle", async () => {
+    mockAgentClient.createSession.mockResolvedValue("llm-session-live");
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "llm",
+      agentModel: "claude-sonnet",
+      agentModels: [llmModel],
+      memoryEnabled: false
+    });
+
+    await store.getState().sendAgentMessage("thread-llm", "first");
+
+    store.setState({ memoryEnabled: true });
+    await store.getState().sendAgentMessage("thread-llm", "second");
+
+    expect(mockAgentClient.createSession).toHaveBeenCalledTimes(1);
+    expect(mockAgentClient.setMemoryEnabled).toHaveBeenCalledWith(
+      "llm-session-live",
+      true
+    );
+    expect(mockAgentClient.sendMessage).toHaveBeenLastCalledWith(
+      "llm-session-live",
+      "second"
     );
   });
 

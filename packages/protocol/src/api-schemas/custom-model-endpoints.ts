@@ -33,6 +33,37 @@ function isPrivateIpv4(octets: number[]): boolean {
   );
 }
 
+function parseIpv4MappedIpv6(host: string): number[] | null {
+  const dotted = host.match(
+    /^((::ffff)|(0:0:0:0:0:ffff)):(\d+\.\d+\.\d+\.\d+)$/,
+  );
+  if (dotted) {
+    return parseIpv4(dotted[4]);
+  }
+
+  const parts = host.split(":");
+  if (parts.length < 4) {
+    return null;
+  }
+
+  const prefix = parts.slice(0, -2).join(":");
+  if (prefix !== "::ffff" && prefix !== "0:0:0:0:0:ffff") {
+    return null;
+  }
+
+  const [highPart, lowPart] = parts.slice(-2);
+  if (
+    !/^[0-9a-f]{1,4}$/.test(highPart) ||
+    !/^[0-9a-f]{1,4}$/.test(lowPart)
+  ) {
+    return null;
+  }
+
+  const high = Number.parseInt(highPart, 16);
+  const low = Number.parseInt(lowPart, 16);
+  return [high >> 8, high & 0xff, low >> 8, low & 0xff];
+}
+
 function isDisallowedEndpointHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
   if (
@@ -43,6 +74,11 @@ function isDisallowedEndpointHost(hostname: string): boolean {
     host.endsWith(".local")
   ) {
     return true;
+  }
+
+  const ipv4Mapped = parseIpv4MappedIpv6(host);
+  if (ipv4Mapped) {
+    return isPrivateIpv4(ipv4Mapped);
   }
 
   const ipv4 = parseIpv4(host);
@@ -59,12 +95,6 @@ function isDisallowedEndpointHost(hostname: string): boolean {
       host.startsWith("fe80:"))
   ) {
     return true;
-  }
-
-  const ipv4Mapped = host.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  if (ipv4Mapped) {
-    const mapped = parseIpv4(ipv4Mapped[1]);
-    return mapped ? isPrivateIpv4(mapped) : true;
   }
 
   return false;

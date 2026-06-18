@@ -43,6 +43,7 @@ export interface MorpheusClientLike {
     agentId: string;
     sessionId: string;
     prompt: string;
+    tools?: FrontendToolManifest[];
     signal?: AbortSignal;
   }): AsyncIterable<MorpheusStreamEvent>;
 }
@@ -270,7 +271,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
     message: string,
     transport: AgentTransport | null,
     sessionId: string,
-    _manifest: FrontendToolManifest[],
+    manifest: FrontendToolManifest[],
     onMessage?: (message: AgentMessage) => void,
     _mcpServerUrl?: string | null,
   ): Promise<AgentMessage[]> {
@@ -308,6 +309,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
         agentId: this.options.agentId,
         sessionId: remoteSessionId,
         prompt: message,
+        tools: manifest,
         signal,
       });
 

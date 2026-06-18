@@ -14,6 +14,18 @@ function makeProvider(providerId: string): BaseProvider {
   } as unknown as BaseProvider;
 }
 
+function makeChatProvider(providerId: string): BaseProvider {
+  return {
+    provider: providerId,
+    setMessageEmitter: vi.fn(),
+    async *generateMessagesTraced() {
+      yield { type: "chunk", content: "ok" };
+    },
+    hasToolSupport: async () => false,
+    getAvailableLanguageModels: async () => [],
+  } as unknown as BaseProvider;
+}
+
 async function waitForFinishedJob(jobId: string): Promise<Job> {
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const job = (await Job.get(jobId)) as Job | null;
@@ -43,6 +55,26 @@ describe("UnifiedWebSocketRunner provider resolution", () => {
     expect(
       (runner as unknown as { defaultProvider: string }).defaultProvider,
     ).toBe("openai");
+  });
+
+  it("treats the frontend empty provider sentinel as unset", async () => {
+    const resolveProvider = vi.fn(async (providerId: string) =>
+      makeChatProvider(providerId),
+    );
+    const runner = new UnifiedWebSocketRunner({
+      userId: "alice",
+      resolveProvider,
+      resolveExecutor: () => makeProvider("unused") as unknown as NodeExecutor,
+    });
+
+    await runner.handleChatMessage({
+      thread_id: "fresh-chat",
+      content: "hello",
+      provider: "empty",
+      model: "gpt-oss:20b",
+    });
+
+    expect(resolveProvider).toHaveBeenCalledWith("openai", "alice");
   });
 
   it("installs the runner provider resolver on run_job execution contexts", async () => {

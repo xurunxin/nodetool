@@ -329,6 +329,41 @@ describe("MorpheusClient.streamPrompt", () => {
     });
   });
 
+  it("forwards frontend tool manifests with prompt requests", async () => {
+    const { fetchFn, calls } = makeFetchMock([
+      streamResponse(['data: {"event":"done","data":{}}\n\n']),
+    ]);
+    const client = new MorpheusClient({
+      baseUrl: "https://morpheus.example/",
+      fetchFn,
+    });
+    const tools = [
+      {
+        name: "ui_search_nodes",
+        description: "Search nodes",
+        parameters: {
+          type: "object",
+          properties: { query: { type: "string" } },
+        },
+      },
+    ];
+
+    await collectStream(
+      client.streamPrompt({
+        agentId: "canvas/agent",
+        sessionId: "s-1",
+        prompt: "hello",
+        tools,
+      }),
+    );
+
+    expect(JSON.parse(String(calls[0].init?.body))).toEqual({
+      sessionId: "s-1",
+      query: "hello",
+      tools,
+    });
+  });
+
   it("cancels the response body when the consumer exits early", async () => {
     const tracked = trackedStreamResponse(
       ['data: {"event":"text_delta","data":{"delta":"hello"}}\n\n'],

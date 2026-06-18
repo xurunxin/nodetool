@@ -420,6 +420,12 @@ async function ensureAgentSession(
     !!agentWorkspacePath;
   const canResumeExisting = canReuseExisting || canResumeLegacyPiSession;
   if (existing && liveSessions.has(existing) && canResumeExisting) {
+    if (agentProvider === "llm" && typeof state.memoryEnabled === "boolean") {
+      await getAgentSocketClient().setMemoryEnabled(
+        existing,
+        state.memoryEnabled
+      );
+    }
     return existing;
   }
 
@@ -442,6 +448,9 @@ async function ensureAgentSession(
     options.workspacePath = agentWorkspacePath;
   }
   if (agentProvider === "llm") {
+    if (state.memoryEnabled === true) {
+      options.memoryEnabled = true;
+    }
     const descriptor = selectedAgentModelDescriptor(state);
     if (descriptor?.chatProviderId) {
       options.chatProviderId = descriptor.chatProviderId;

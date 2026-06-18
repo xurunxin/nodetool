@@ -1,3 +1,5 @@
+import type { FrontendToolManifest } from "./types.js";
+
 export interface MorpheusClientOptions {
   baseUrl: string;
   apiKey?: string;
@@ -24,6 +26,7 @@ export interface StreamPromptOptions {
   agentId: string;
   sessionId: string;
   prompt: string;
+  tools?: FrontendToolManifest[];
   signal?: AbortSignal;
 }
 
@@ -185,6 +188,7 @@ export class MorpheusClient {
         body: JSON.stringify({
           query: options.prompt,
           sessionId: options.sessionId,
+          ...(options.tools ? { tools: options.tools } : {}),
         }),
         signal: options.signal,
       },

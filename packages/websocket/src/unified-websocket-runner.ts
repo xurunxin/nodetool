@@ -937,6 +937,12 @@ export interface UnifiedWebSocketRunnerOptions {
   apiOptions?: HttpApiOptions;
 }
 
+const isUnsetChatProvider = (provider: unknown): boolean =>
+  provider === undefined ||
+  provider === null ||
+  provider === "empty" ||
+  (typeof provider === "string" && provider.trim().length === 0);
+
 export class UnifiedWebSocketRunner {
   websocket: WebSocketConnection | null = null;
   mode: WebSocketMode = "binary";
@@ -2421,7 +2427,9 @@ export class UnifiedWebSocketRunner {
 
     // Apply defaults — matches Python's handle_chat_message
     if (!data.model) data.model = this.defaultModel;
-    if (!data.provider) data.provider = this.defaultProvider;
+    if (isUnsetChatProvider(data.provider)) {
+      data.provider = this.defaultProvider;
+    }
 
     const providerId = data.provider as string;
     const model = data.model as string;

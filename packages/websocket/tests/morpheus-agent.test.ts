@@ -136,7 +136,7 @@ describe("MorpheusAgentSdkProvider", () => {
     ]);
   });
 
-  it("passes agent id to Morpheus streamPrompt without forwarding renderer tool manifests", async () => {
+  it("passes agent id and frontend tool manifests to Morpheus streamPrompt", async () => {
     const client = makeClient([{ type: "done" }]);
     const provider = new MorpheusAgentSdkProvider({
       baseUrl: "https://morpheus.example",
@@ -167,6 +167,7 @@ describe("MorpheusAgentSdkProvider", () => {
         agentId: "canvas-agent",
         sessionId: "remote-session-1",
         prompt: "build",
+        tools: manifest,
         signal: expect.any(AbortSignal),
       },
     );
