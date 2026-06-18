@@ -9,7 +9,7 @@ export const customModelEndpointModelSchema = z.object({
 });
 
 export const customModelEndpointSchema = z.object({
-  id: z.string().regex(/^[a-zA-Z0-9_-]+$/),
+  id: z.string().regex(/^[a-z0-9_-]+$/),
   name: z.string().min(1),
   kind: customModelEndpointKindSchema,
   baseUrl: z.string().url(),
@@ -24,7 +24,7 @@ export const customModelEndpointUpsertInputSchema = customModelEndpointSchema
   .extend({ apiKey: z.string().min(1).optional() });
 
 export const customModelEndpointDeleteInputSchema = z.object({
-  id: z.string().regex(/^[a-zA-Z0-9_-]+$/),
+  id: z.string().regex(/^[a-z0-9_-]+$/),
 });
 
 export type CustomModelEndpoint = z.infer<typeof customModelEndpointSchema>;

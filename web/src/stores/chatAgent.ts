@@ -101,6 +101,19 @@ const liveSessions = new Set<string>();
 // already streamed in the same turn.
 const turnHasAssistant = new Map<string, boolean>();
 
+export function agentModelSelectionKey(model: AgentModelDescriptor): string {
+  return model.chatProviderId
+    ? `${model.chatProviderId}::${model.id}`
+    : model.id;
+}
+
+function agentModelMatchesSelection(
+  model: AgentModelDescriptor,
+  selection: string
+): boolean {
+  return model.id === selection || agentModelSelectionKey(model) === selection;
+}
+
 function upsertMessage(list: Message[], converted: Message): Message[] {
   const idx = list.findLastIndex((m) => m.id === converted.id);
   if (idx === -1) {
@@ -109,6 +122,22 @@ function upsertMessage(list: Message[], converted: Message): Message[] {
   const next = [...list];
   next[idx] = converted;
   return next;
+}
+
+function textContent(message: Message): string {
+  if (typeof message.content === "string") {
+    return message.content;
+  }
+  if (!Array.isArray(message.content)) {
+    return "";
+  }
+  return message.content
+    .map((part) =>
+      typeof part === "object" && part !== null && "text" in part
+        ? String(part.text ?? "")
+        : ""
+    )
+    .join("");
 }
 
 function mirrorAgentState(
@@ -161,20 +190,23 @@ function invalidateAgentModelLoads(): void {
 }
 
 function pickDefaultModel(models: AgentModelDescriptor[]): string {
-  return (models.find((m) => m.isDefault) ?? models[0] ?? null)?.id ?? "";
+  const model = models.find((m) => m.isDefault) ?? models[0] ?? null;
+  return model ? agentModelSelectionKey(model) : "";
 }
 
 function selectedAgentModelDescriptor(
   state: GlobalChatState
 ): AgentModelDescriptor | undefined {
-  return state.agentModels.find((m) => m.id === state.agentModel);
+  return state.agentModels.find((model) =>
+    agentModelMatchesSelection(model, state.agentModel)
+  );
 }
 
 function buildSessionConfig(state: GlobalChatState): AgentSessionConfig {
   const descriptor = selectedAgentModelDescriptor(state);
   return {
     provider: state.agentProvider,
-    model: state.agentModel,
+    model: descriptor?.id ?? state.agentModel,
     workspacePath:
       state.agentProvider === "pi" ? state.agentWorkspacePath ?? null : null,
     chatProviderId:
@@ -276,7 +308,19 @@ function handleAgentStream(event: AgentStreamEvent, set: Set, get: Get): void {
   const isSuccessResult =
     message.type === "result" && message.subtype === "success";
   if (isSuccessResult && turnHasAssistant.get(threadId)) {
-    return;
+    const existing = get().messageCache[threadId] ?? [];
+    const lastAssistant = existing.findLast(
+      (candidate) =>
+        candidate.type === "message" &&
+        candidate.role === "assistant" &&
+        !candidate.tool_calls
+    );
+    if (
+      lastAssistant &&
+      textContent(lastAssistant) === textContent(converted)
+    ) {
+      return;
+    }
   }
   if (message.type === "assistant") {
     turnHasAssistant.set(threadId, true);
@@ -343,8 +387,7 @@ async function ensureAgentSession(
   get: Get
 ): Promise<string> {
   const state = get();
-  const { agentSessionByThread, agentModel, agentProvider, agentWorkspacePath } =
-    state;
+  const { agentSessionByThread, agentProvider, agentWorkspacePath } = state;
   const config = buildSessionConfig(state);
   const existing = agentSessionByThread[threadId];
   const llmResumeSessionId =
@@ -367,7 +410,7 @@ async function ensureAgentSession(
 
   const options: AgentSessionOptions = {
     provider: agentProvider,
-    model: agentModel
+    model: config.model
   };
   if (canResumeExisting && agentProvider !== "morpheus") {
     if (agentProvider === "llm") {
@@ -487,7 +530,9 @@ export function createChatAgentSlice(set: Set, get: Get): ChatAgentSlice {
           return;
         }
         set((state) => {
-          const model = result.models.some((m) => m.id === state.agentModel)
+          const model = result.models.some((m) =>
+            agentModelMatchesSelection(m, state.agentModel)
+          )
             ? state.agentModel
             : pickDefaultModel(result.models);
           return {

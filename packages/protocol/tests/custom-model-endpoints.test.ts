@@ -32,4 +32,17 @@ describe("custom model endpoint schemas", () => {
       }),
     ).toThrow();
   });
+
+  it("rejects uppercase endpoint ids", () => {
+    expect(() =>
+      customModelEndpointUpsertInputSchema.parse({
+        id: "CaseSensitive_1",
+        name: "Bad",
+        kind: "openai",
+        baseUrl: "https://example.test",
+        enabled: true,
+        models: [{ id: "gpt-test", name: "GPT Test" }],
+      }),
+    ).toThrow();
+  });
 });

@@ -99,6 +99,22 @@ describe("parseMorpheusSseFrame", () => {
     ).toEqual({ type: "thinking_delta", text: "working" });
   });
 
+  it("maps top-level MorpheusCore typed payloads", () => {
+    expect(
+      parseMorpheusSseFrame('data: {"type":"text_delta","delta":"hello"}'),
+    ).toEqual({ type: "text_delta", text: "hello" });
+    expect(
+      parseMorpheusSseFrame(
+        'data: {"type":"toolcall_end","id":"tool-3","name":"forward_to_frontend","arguments":{"kind":"ui"}}',
+      ),
+    ).toEqual({
+      type: "tool_call",
+      id: "tool-3",
+      name: "forward_to_frontend",
+      arguments: { kind: "ui" },
+    });
+  });
+
   it("joins multiple data lines before parsing", () => {
     expect(
       parseMorpheusSseFrame(

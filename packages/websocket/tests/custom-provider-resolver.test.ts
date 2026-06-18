@@ -62,7 +62,7 @@ function endpoint(
   }> = {}
 ) {
   return {
-    id: "CaseSensitive_1",
+    id: "case-sensitive_1",
     name: "Case Sensitive",
     kind: "openai" as const,
     baseUrl: "https://gateway.example.test/v1",
@@ -120,13 +120,13 @@ describe("resolveNodeToolProvider", () => {
     ]);
 
     const provider = await resolveNodeToolProvider(
-      "custom:CaseSensitive_1",
+      "custom:case-sensitive_1",
       "user-1"
     );
 
-    expect(provider.provider).toBe(customEndpointProviderId("CaseSensitive_1"));
+    expect(provider.provider).toBe(customEndpointProviderId("case-sensitive_1"));
     expect(getSecret).toHaveBeenCalledWith(
-      customEndpointSecretKey("CaseSensitive_1"),
+      customEndpointSecretKey("case-sensitive_1"),
       "user-1"
     );
 
@@ -149,11 +149,11 @@ describe("resolveNodeToolProvider", () => {
     ]);
 
     const provider = await resolveNodeToolProvider(
-      "custom:CaseSensitive_1",
+      "custom:case-sensitive_1",
       "user-1"
     );
 
-    expect(provider.provider).toBe(customEndpointProviderId("CaseSensitive_1"));
+    expect(provider.provider).toBe(customEndpointProviderId("case-sensitive_1"));
 
     const client = (provider as { getClient: () => unknown }).getClient();
     expect(client).toEqual({
@@ -174,7 +174,7 @@ describe("resolveNodeToolProvider", () => {
     );
 
     await expect(
-      resolveNodeToolProvider("custom:CaseSensitive_1", "user-1")
+      resolveNodeToolProvider("custom:case-sensitive_1", "user-1")
     ).rejects.toThrow(/custom model endpoint/i);
   });
 
@@ -185,7 +185,7 @@ describe("resolveNodeToolProvider", () => {
     (getSecret as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
     await expect(
-      resolveNodeToolProvider("custom:CaseSensitive_1", "user-1")
+      resolveNodeToolProvider("custom:case-sensitive_1", "user-1")
     ).rejects.toThrow(/api key/i);
   });
 });

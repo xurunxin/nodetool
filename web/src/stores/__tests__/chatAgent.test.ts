@@ -1,6 +1,10 @@
 import { createStore } from "zustand/vanilla";
 import type { StoreApi } from "zustand/vanilla";
-import { createChatAgentSlice, type ChatAgentSlice } from "../chatAgent";
+import {
+  agentModelSelectionKey,
+  createChatAgentSlice,
+  type ChatAgentSlice
+} from "../chatAgent";
 import type {
   AgentModelDescriptor,
   AgentStreamEvent
@@ -121,7 +125,7 @@ describe("chatAgent store slice", () => {
       provider: "llm"
     });
     expect(store.getState().agentProvider).toBe("llm");
-    expect(store.getState().agentModel).toBe("claude-sonnet");
+    expect(store.getState().agentModel).toBe(agentModelSelectionKey(llmModel));
     expect(store.getState().agentModels).toEqual([llmModel]);
   });
 
@@ -399,6 +403,40 @@ describe("chatAgent store slice", () => {
     );
   });
 
+  it("creates LLM sessions with the provider selected for duplicate model ids", async () => {
+    mockAgentClient.createSession.mockResolvedValue("llm-session-custom");
+    const openAiModel: AgentModelDescriptor = {
+      id: "gpt-4o",
+      label: "GPT-4o",
+      provider: "llm",
+      chatProviderId: "openai"
+    };
+    const customModel: AgentModelDescriptor = {
+      id: "gpt-4o",
+      label: "Gateway GPT-4o",
+      provider: "llm",
+      chatProviderId: "custom:gateway"
+    };
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "llm",
+      agentModel: agentModelSelectionKey(customModel),
+      agentModels: [openAiModel, customModel]
+    });
+
+    await store.getState().sendAgentMessage("thread-llm", "hello");
+
+    expect(mockAgentClient.createSession).toHaveBeenCalledWith({
+      provider: "llm",
+      model: "gpt-4o",
+      chatProviderId: "custom:gateway"
+    });
+    expect(mockAgentClient.sendMessage).toHaveBeenCalledWith(
+      "llm-session-custom",
+      "hello"
+    );
+  });
+
   it("does not resume persisted temporary LLM socket session ids", async () => {
     mockAgentClient.createSession.mockResolvedValue("llm-session-new");
     const store = createTestStore();
@@ -426,6 +464,77 @@ describe("chatAgent store slice", () => {
       model: "claude-sonnet",
       chatProviderId: "anthropic"
     });
+  });
+
+  it("keeps successful tool results after assistant tool call messages", async () => {
+    mockAgentClient.createSession.mockResolvedValue("session-morpheus");
+    let streamHandler: ((event: AgentStreamEvent) => void) | undefined;
+    mockAgentClient.on.mockImplementation(
+      (eventName: string, handler: (event: AgentStreamEvent) => void) => {
+        if (eventName === "stream") {
+          streamHandler = handler;
+        }
+      }
+    );
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "morpheus",
+      agentModel: "morpheus/default",
+      agentModels: [morpheusModel]
+    });
+
+    await store.getState().sendAgentMessage("thread-m", "forward");
+    streamHandler?.({
+      sessionId: "session-morpheus",
+      done: false,
+      message: {
+        type: "assistant",
+        uuid: "assistant-tool-call",
+        session_id: "session-morpheus",
+        content: [],
+        tool_calls: [
+          {
+            id: "tool-1",
+            type: "function",
+            function: {
+              name: "forward_to_frontend",
+              arguments: "{}"
+            }
+          }
+        ]
+      }
+    });
+    streamHandler?.({
+      sessionId: "session-morpheus",
+      done: false,
+      message: {
+        type: "result",
+        uuid: "tool-1",
+        session_id: "session-morpheus",
+        subtype: "success",
+        text: "frontend returned ok",
+        is_error: false
+      }
+    });
+
+    expect(store.getState().messageCache["thread-m"]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "assistant-tool-call",
+          tool_calls: [
+            {
+              id: "tool-1",
+              name: "forward_to_frontend",
+              args: {}
+            }
+          ]
+        }),
+        expect.objectContaining({
+          id: "tool-1",
+          content: [{ type: "text", text: "frontend returned ok" }]
+        })
+      ])
+    );
   });
 
   it("creates a new session after changing Pi workspace for an existing thread", async () => {

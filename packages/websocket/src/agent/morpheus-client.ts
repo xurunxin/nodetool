@@ -29,7 +29,11 @@ export interface StreamPromptOptions {
 
 interface MorpheusEnvelope {
   event?: unknown;
+  type?: unknown;
   data?: unknown;
+  delta?: unknown;
+  message?: unknown;
+  toolCall?: unknown;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -75,9 +79,11 @@ export const parseMorpheusSseFrame = (
   }
 
   const payload = JSON.parse(dataLines.join("\n")) as MorpheusEnvelope;
-  const data = isRecord(payload.data) ? payload.data : {};
+  const data = isRecord(payload.data) ? payload.data : payload;
+  const eventType =
+    typeof payload.event === "string" ? payload.event : payload.type;
 
-  switch (payload.event) {
+  switch (eventType) {
     case "text_delta":
       return {
         type: "text_delta",
@@ -89,7 +95,7 @@ export const parseMorpheusSseFrame = (
         text: stringValue(data.delta),
       };
     case "toolcall_end": {
-      const toolCall = isRecord(data.toolCall) ? data.toolCall : {};
+      const toolCall = isRecord(data.toolCall) ? data.toolCall : data;
       const args = toolCall.arguments ?? {};
       const id =
         typeof toolCall.id === "string" ? toolCall.id : crypto.randomUUID();

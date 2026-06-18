@@ -11,6 +11,7 @@ import { isProduction } from "../../../lib/env";
 import { trpcClient } from "../../../trpc/client";
 import { getIsElectronDetails } from "../../../utils/browser";
 import type { WorkspaceResponse } from "../../../stores/ApiTypes";
+import { agentModelSelectionKey } from "../../../stores/chatAgent";
 import MediaControlChip from "./MediaControlChip";
 import MediaOptionMenu, { type MediaOption } from "./MediaOptionMenu";
 import { getSelectableAgentProviders } from "./agentProviderOptions";
@@ -119,7 +120,7 @@ const AgentComposerControls: React.FC<{ disabled?: boolean }> = ({
   const modelOptions = useMemo<MediaOption<string>[]>(
     () =>
       agentModels.map((model) => ({
-        id: model.id,
+        id: agentModelSelectionKey(model),
         label: model.label,
         icon: <SmartToyOutlinedIcon fontSize="small" />
       })),
@@ -141,6 +142,8 @@ const AgentComposerControls: React.FC<{ disabled?: boolean }> = ({
     agentWorkspacePath ??
     t("agentWorkspace");
   const modelLabel =
+    agentModels.find((model) => agentModelSelectionKey(model) === agentModel)
+      ?.label ||
     agentModels.find((model) => model.id === agentModel)?.label ||
     (agentModelsLoading ? t("loadingEllipsis") : agentModel || t("selectModel"));
 
