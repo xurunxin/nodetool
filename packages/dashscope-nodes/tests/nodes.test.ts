@@ -1,4 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const mockDnsLookup = vi.hoisted(() => vi.fn());
+
+vi.mock("node:dns/promises", () => ({
+  lookup: mockDnsLookup
+}));
+
 import { WanxImageEditNode } from "../src/nodes/wanx-image-edit.js";
 import { WanxImageToVideoNode } from "../src/nodes/wanx-image-to-video.js";
 import { WanxTextToImageNode } from "../src/nodes/wanx-text-to-image.js";
@@ -61,6 +68,7 @@ function submitBody(): Record<string, unknown> {
 describe("DashScope Wanxiang nodes", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", mockFetch);
+    mockDnsLookup.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
     process.env.DASHSCOPE_API_KEY = "test-key";
   });
 
@@ -68,6 +76,7 @@ describe("DashScope Wanxiang nodes", () => {
     delete process.env.DASHSCOPE_API_KEY;
     vi.unstubAllGlobals();
     mockFetch.mockReset();
+    mockDnsLookup.mockReset();
   });
 
   it("registers metadata expected by the content-card renderer", () => {
@@ -80,6 +89,15 @@ describe("DashScope Wanxiang nodes", () => {
       expect(Node.autoSaveAsset).toBe(true);
       expect(Node.body).toBe("content_card");
     }
+  });
+
+  it("does not expose multi-image count controls until multi-output is supported", () => {
+    expect(
+      WanxTextToImageNode.getDeclaredProperties().map((prop) => prop.name)
+    ).not.toContain("n");
+    expect(
+      WanxImageEditNode.getDeclaredProperties().map((prop) => prop.name)
+    ).not.toContain("n");
   });
 
   it("WanxImageToVideoNode submits first_frame media and returns a VideoRef", async () => {
@@ -123,7 +141,7 @@ describe("DashScope Wanxiang nodes", () => {
     const node = new WanxTextToImageNode({
       prompt: "a product poster",
       size: "1024*1024",
-      n: 1,
+      n: 4,
       watermark: false
     });
 
@@ -163,7 +181,7 @@ describe("DashScope Wanxiang nodes", () => {
         { type: "image", uri: "https://assets.example/ref.png" }
       ],
       size: "1024*1024",
-      n: 1,
+      n: 4,
       watermark: false,
       thinking_mode: "enabled"
     });
@@ -178,5 +196,10 @@ describe("DashScope Wanxiang nodes", () => {
       { image: "https://assets.example/ref.png" },
       { text: "combine references" }
     ]);
+    expect(submitBody()).toMatchObject({
+      parameters: {
+        n: 1
+      }
+    });
   });
 });

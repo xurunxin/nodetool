@@ -1,4 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const mockDnsLookup = vi.hoisted(() => vi.fn());
+
+vi.mock("node:dns/promises", () => ({
+  lookup: mockDnsLookup
+}));
+
 import {
   DASHSCOPE_BASE_URL,
   buildWanxImageBody,
@@ -17,6 +24,7 @@ const mockFetch = vi.fn();
 describe("DashScope Wanxiang base helpers", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", mockFetch);
+    mockDnsLookup.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
     process.env.DASHSCOPE_API_KEY = "env-key";
   });
 
@@ -24,6 +32,7 @@ describe("DashScope Wanxiang base helpers", () => {
     delete process.env.DASHSCOPE_API_KEY;
     vi.unstubAllGlobals();
     mockFetch.mockReset();
+    mockDnsLookup.mockReset();
   });
 
   it("uses the official DashScope base URL and async bearer headers", () => {
@@ -127,7 +136,7 @@ describe("DashScope Wanxiang base helpers", () => {
           "https://assets.example/ref-2.png"
         ],
         size: "1024*1024",
-        n: 1,
+        n: 3,
         watermark: false,
         thinkingMode: "enabled"
       })
@@ -334,5 +343,107 @@ describe("DashScope Wanxiang base helpers", () => {
     expect(message).not.toContain("secret");
     expect(mockFetch).toHaveBeenCalledTimes(1);
     mockFetch.mockReset();
+  });
+
+  it("rejects provider media URL when DNS resolves to a private address", async () => {
+    mockDnsLookup.mockResolvedValueOnce([
+      { address: "10.0.0.5", family: 4 }
+    ]);
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          output: {
+            choices: [
+              {
+                message: {
+                  content: [
+                    {
+                      image:
+                        "https://cdn.example/private.png?signature=secret"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }),
+        { status: 200 }
+      )
+    );
+
+    let caught: unknown;
+    try {
+      await generateWanxImage("secret-key", {
+        model: "wan2.7-image",
+        input: { messages: [] }
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    const message = caught instanceof Error ? caught.message : String(caught);
+    expect(message).toContain("unsafe media URL");
+    expect(message).not.toContain("secret");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects provider media URL redirects to private addresses", async () => {
+    const imageBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            output: {
+              choices: [
+                {
+                  message: {
+                    content: [
+                      {
+                        image:
+                          "https://cdn.example/image.png?signature=secret"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }),
+          { status: 200 }
+        )
+      )
+      .mockImplementationOnce(
+        (_url: string | URL | Request, init?: RequestInit) => {
+          if (init?.redirect === "manual") {
+            return Promise.resolve(
+              new Response(null, {
+                status: 302,
+                headers: {
+                  Location:
+                    "http://169.254.169.254/latest/meta-data?signature=secret"
+                }
+              })
+            );
+          }
+          return Promise.resolve(new Response(imageBytes, { status: 200 }));
+        }
+      );
+
+    let caught: unknown;
+    try {
+      await generateWanxImage("secret-key", {
+        model: "wan2.7-image",
+        input: { messages: [] }
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    const message = caught instanceof Error ? caught.message : String(caught);
+    expect(message).toContain("unsafe media URL");
+    expect(message).not.toContain("secret");
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect((mockFetch.mock.calls[1]?.[1] as RequestInit | undefined)?.redirect).toBe(
+      "manual"
+    );
   });
 });

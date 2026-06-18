@@ -56,14 +56,6 @@ export class WanxTextToImageNode extends BaseNode {
   declare size: unknown;
 
   @prop({
-    type: "int",
-    default: 1,
-    title: "Images",
-    description: "Number of images to request."
-  })
-  declare n: unknown;
-
-  @prop({
     type: "bool",
     default: false,
     title: "Watermark",
@@ -84,7 +76,6 @@ export class WanxTextToImageNode extends BaseNode {
         model: String(this.model ?? "wan2.7-image"),
         prompt,
         size: String(this.size ?? "1024*1024"),
-        n: Number(this.n ?? 1),
         watermark: Boolean(this.watermark ?? false)
       })
     );

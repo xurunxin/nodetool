@@ -1,3 +1,5 @@
+import { lookup as dnsLookup } from "node:dns/promises";
+import { isIP } from "node:net";
 import {
   bytesToBase64,
   compilePromptResources,
@@ -28,6 +30,7 @@ const DASH_SCOPE_FAILURE_STATUSES = new Set([
   "cancelled",
   "unknown"
 ]);
+const MAX_PROVIDER_MEDIA_REDIRECTS = 5;
 
 export interface WanxWaitOptions {
   pollIntervalMs?: number;
@@ -234,7 +237,7 @@ export async function waitForWanxVideoResult(
   if (!mediaUrl) {
     throw new Error("Wanxiang video task succeeded but returned no media URL");
   }
-  return downloadBytes(assertSafeProviderMediaUrl(mediaUrl, "Wanxiang video"));
+  return downloadProviderMediaBytes(mediaUrl, "Wanxiang video");
 }
 
 export function parseDashScopeTaskResult(
@@ -307,7 +310,7 @@ export function buildWanxImageBody(
   };
   const parameters = cleanBody({
     size: options.size,
-    n: options.n,
+    n: 1,
     watermark: options.watermark,
     thinking_mode: options.thinkingMode
   });
@@ -339,7 +342,7 @@ export async function generateWanxImage(
       `Wanxiang image generation returned no image URL: ${JSON.stringify(payload)}`
     );
   }
-  return downloadBytes(assertSafeProviderMediaUrl(imageUrl, "Wanxiang image"));
+  return downloadProviderMediaBytes(imageUrl, "Wanxiang image");
 }
 
 export function imageRefFromBytes(
@@ -460,6 +463,109 @@ function assertSafeProviderMediaUrl(url: string, provider: string): string {
   return url;
 }
 
+async function downloadProviderMediaBytes(
+  mediaUrl: string,
+  provider: string
+): Promise<Uint8Array> {
+  let currentUrl = assertSafeProviderMediaUrl(mediaUrl, provider);
+  if (currentUrl.startsWith("data:")) {
+    return downloadBytes(currentUrl);
+  }
+
+  for (
+    let redirectCount = 0;
+    redirectCount <= MAX_PROVIDER_MEDIA_REDIRECTS;
+    redirectCount++
+  ) {
+    await assertSafeProviderMediaDns(currentUrl, provider);
+
+    const response = await fetch(currentUrl, { redirect: "manual" });
+    const responseUrl = response.url;
+    if (responseUrl && responseUrl !== currentUrl) {
+      const validatedResponseUrl = assertSafeProviderMediaUrl(
+        responseUrl,
+        provider
+      );
+      await assertSafeProviderMediaDns(validatedResponseUrl, provider);
+    }
+
+    if (isRedirectResponse(response)) {
+      if (redirectCount === MAX_PROVIDER_MEDIA_REDIRECTS) {
+        throw new Error(
+          `${provider} returned too many media URL redirects: ${safeUrlLabel(
+            currentUrl
+          )}`
+        );
+      }
+
+      const location = response.headers.get("location");
+      if (!location) {
+        throw new Error(
+          `${provider} returned media URL redirect without Location: ${safeUrlLabel(
+            currentUrl
+          )}`
+        );
+      }
+      currentUrl = assertSafeProviderMediaUrl(
+        new URL(location, currentUrl).toString(),
+        provider
+      );
+      continue;
+    }
+
+    if (!response.ok) {
+      const statusText =
+        response.statusText.length > 0 ? ` ${response.statusText}` : "";
+      throw new Error(
+        `${provider} media URL download failed: ${safeUrlLabel(
+          currentUrl
+        )} HTTP ${response.status}${statusText}`
+      );
+    }
+
+    return new Uint8Array(await response.arrayBuffer());
+  }
+
+  throw new Error(
+    `${provider} returned too many media URL redirects: ${safeUrlLabel(
+      currentUrl
+    )}`
+  );
+}
+
+async function assertSafeProviderMediaDns(
+  url: string,
+  provider: string
+): Promise<void> {
+  const parsed = new URL(url);
+  const hostname = normalizeHostname(parsed.hostname);
+  if (isIP(hostname) !== 0) {
+    return;
+  }
+
+  let answers: Array<{ address: string; family: number }>;
+  try {
+    answers = await dnsLookup(hostname, { all: true, verbatim: true });
+  } catch {
+    throw new Error(
+      `${provider} returned unsafe media URL: ${safeUrlLabel(parsed)}`
+    );
+  }
+
+  if (
+    answers.length === 0 ||
+    answers.some((answer) => !isPublicIpAddress(answer.address))
+  ) {
+    throw new Error(
+      `${provider} returned unsafe media URL: ${safeUrlLabel(parsed)}`
+    );
+  }
+}
+
+function isRedirectResponse(response: Response): boolean {
+  return response.status >= 300 && response.status < 400;
+}
+
 function safeUrlLabel(url: string | URL): string {
   try {
     const parsed = typeof url === "string" ? new URL(url) : new URL(url.href);
@@ -479,6 +585,10 @@ function isPublicProviderHost(rawHostname: string): boolean {
     return false;
   }
 
+  if (isIP(hostname) === 6) {
+    return isPublicIpv6(hostname);
+  }
+
   const ipv4 = parseIpv4InetAton(hostname);
   if (ipv4) {
     return isPublicIpv4(ipv4);
@@ -489,6 +599,15 @@ function isPublicProviderHost(rawHostname: string): boolean {
   }
 
   return isPublicDnsName(hostname);
+}
+
+function isPublicIpAddress(address: string): boolean {
+  const normalizedAddress = normalizeHostname(address);
+  if (isIP(normalizedAddress) === 6) {
+    return isPublicIpv6(normalizedAddress);
+  }
+  const ipv4 = parseIpv4InetAton(normalizedAddress);
+  return ipv4 !== undefined && isPublicIpv4(ipv4);
 }
 
 function normalizeHostname(hostname: string): string {
@@ -553,7 +672,7 @@ function parseIpv4Part(part: string): number | undefined {
   return Number.isSafeInteger(value) ? value : undefined;
 }
 
-function isPublicIpv4([first, second]: number[]): boolean {
+function isPublicIpv4([first, second, third]: number[]): boolean {
   if (first === 10 || first === 127 || first === 0) {
     return false;
   }
@@ -569,7 +688,19 @@ function isPublicIpv4([first, second]: number[]): boolean {
   if (first === 100 && second >= 64 && second <= 127) {
     return false;
   }
+  if (first === 192 && second === 0 && (third === 0 || third === 2)) {
+    return false;
+  }
+  if (first === 192 && second === 88 && third === 99) {
+    return false;
+  }
   if (first === 198 && (second === 18 || second === 19)) {
+    return false;
+  }
+  if (first === 198 && second === 51 && third === 100) {
+    return false;
+  }
+  if (first === 203 && second === 0 && third === 113) {
     return false;
   }
   if (first >= 224) {
@@ -587,11 +718,24 @@ function isBlockedIpv6(hostname: string): boolean {
     const ipv4 = parseIpv4InetAton(mappedIpv4[1] ?? "");
     return !ipv4 || !isPublicIpv4(ipv4);
   }
+  const firstHextetText = hostname.split(":", 1)[0] ?? "";
+  const firstHextet =
+    firstHextetText.length > 0 ? Number.parseInt(firstHextetText, 16) : 0;
+  if (
+    Number.isFinite(firstHextet) &&
+    (((firstHextet & 0xffc0) === 0xfe80) ||
+      ((firstHextet & 0xfe00) === 0xfc00) ||
+      ((firstHextet & 0xff00) === 0xff00))
+  ) {
+    return true;
+  }
   return hostname === "::" ||
     hostname === "::1" ||
-    hostname.startsWith("fe80:") ||
-    hostname.startsWith("fc") ||
-    hostname.startsWith("fd");
+    hostname.startsWith("2001:db8:");
+}
+
+function isPublicIpv6(hostname: string): boolean {
+  return !isBlockedIpv6(hostname);
 }
 
 function isPublicDnsName(hostname: string): boolean {

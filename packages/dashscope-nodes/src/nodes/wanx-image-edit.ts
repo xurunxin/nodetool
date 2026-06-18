@@ -60,14 +60,6 @@ export class WanxImageEditNode extends BaseNode {
   declare size: unknown;
 
   @prop({
-    type: "int",
-    default: 1,
-    title: "Images",
-    description: "Number of images to request."
-  })
-  declare n: unknown;
-
-  @prop({
     type: "bool",
     default: false,
     title: "Watermark",
@@ -102,7 +94,6 @@ export class WanxImageEditNode extends BaseNode {
         prompt,
         imageUrls,
         size: String(this.size ?? "1024*1024"),
-        n: Number(this.n ?? 1),
         watermark: Boolean(this.watermark ?? false),
         thinkingMode: String(this.thinking_mode ?? "enabled")
       })
