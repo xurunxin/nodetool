@@ -149,7 +149,7 @@ describe("Volcengine Ark base helpers", () => {
           JSON.stringify({
             id: "task-1",
             status: "succeeded",
-            content: { video_url: { url: "https://cdn.example/video.mp4" } }
+            content: { video_url: { url: "https://93.184.216.34/video.mp4" } }
           }),
           { status: 200 }
         )
@@ -166,7 +166,7 @@ describe("Volcengine Ark base helpers", () => {
     expect(mockFetch.mock.calls[0][0]).toBe(
       "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/task-1"
     );
-    expect(mockFetch.mock.calls[2][0]).toBe("https://cdn.example/video.mp4");
+    expect(mockFetch.mock.calls[2][0]).toBe("https://93.184.216.34/video.mp4");
   });
 
   it("rejects private Seedance media URLs before downloading", async () => {
@@ -211,7 +211,7 @@ describe("Volcengine Ark base helpers", () => {
             JSON.stringify({
               id: "task-1",
               status,
-              content: { video_url: { url: "https://cdn.example/video.mp4" } }
+              content: { video_url: { url: "https://93.184.216.34/video.mp4" } }
             }),
             { status: 200 }
           )
@@ -282,7 +282,7 @@ describe("Volcengine Ark base helpers", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            data: [{ url: "https://cdn.example/image.png" }]
+            data: [{ url: "https://93.184.216.34/image.png" }]
           }),
           { status: 200 }
         )
@@ -299,7 +299,7 @@ describe("Volcengine Ark base helpers", () => {
     expect(mockFetch.mock.calls[0][0]).toBe(
       "https://ark.cn-beijing.volces.com/api/v3/images/generations"
     );
-    expect(mockFetch.mock.calls[1][0]).toBe("https://cdn.example/image.png");
+    expect(mockFetch.mock.calls[1][0]).toBe("https://93.184.216.34/image.png");
   });
 
   it("rejects private Seedream media URLs before downloading", async () => {

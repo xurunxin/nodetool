@@ -5,7 +5,7 @@ import {
   generateWanxImage,
   submitWanxVideoTask,
   waitForWanxVideoResult
-} from "@nodetool-ai/dashscope-nodes/dashscope-base";
+} from "@nodetool-ai/nodes-utils/dashscope";
 import { createDataUrl, inferImageMime } from "@nodetool-ai/nodes-utils";
 import { BaseProvider } from "./base-provider.js";
 import type {

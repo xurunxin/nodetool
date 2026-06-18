@@ -4,7 +4,7 @@ import {
   KLING_IMAGE_TO_VIDEO_MODEL,
   submitKlingTask,
   waitForKlingResult
-} from "@nodetool-ai/kling-nodes/kling-base";
+} from "@nodetool-ai/nodes-utils/kling";
 import { createDataUrl, inferImageMime } from "@nodetool-ai/nodes-utils";
 import { BaseProvider } from "./base-provider.js";
 import type {

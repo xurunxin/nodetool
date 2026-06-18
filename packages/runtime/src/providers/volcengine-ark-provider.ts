@@ -5,7 +5,7 @@ import {
   generateSeedreamImage,
   submitSeedanceTask,
   waitForSeedanceResult
-} from "@nodetool-ai/volcengine-nodes/volcengine-base";
+} from "@nodetool-ai/nodes-utils/volcengine";
 import { createDataUrl, inferImageMime } from "@nodetool-ai/nodes-utils";
 import { BaseProvider } from "./base-provider.js";
 import type {

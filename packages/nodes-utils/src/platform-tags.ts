@@ -22,13 +22,17 @@
  * one-time `Object.defineProperty` at module load.
  */
 
-import type { NodeClass } from "@nodetool-ai/node-sdk";
 import {
   ALL_PLATFORMS,
   NODE_AND_BROWSER_PLATFORMS,
   SERVER_PLATFORMS,
   type Platform
 } from "@nodetool-ai/protocol";
+
+type NodeClass = {
+  platforms?: readonly Platform[];
+  body?: unknown;
+};
 
 function tagWith<T extends readonly NodeClass[]>(
   classes: T,

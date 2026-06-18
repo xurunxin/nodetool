@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   compilePromptResources,
   createDataUrl,
+  downloadProviderMediaBytes,
   downloadBytes,
   inferImageMime,
   pollTask,
@@ -150,6 +151,39 @@ describe("downloadBytes", () => {
       await expect(
         downloadBytes(
           "https://example.com/file?signature=secret-token#private-fragment"
+        )
+      ).rejects.not.toThrow("secret-token");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
+describe("downloadProviderMediaBytes", () => {
+  it("rejects unsafe redirect targets and redacts URL secrets", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn(async () => {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          location: "http://127.0.0.1/internal?token=secret-token#frag"
+        }
+      });
+    });
+
+    try {
+      await expect(
+        downloadProviderMediaBytes(
+          "https://93.184.216.34/file?signature=secret-token#private-fragment",
+          "Test provider"
+        )
+      ).rejects.toThrow(
+        "Test provider returned unsafe media URL: http://127.0.0.1/internal"
+      );
+      await expect(
+        downloadProviderMediaBytes(
+          "https://93.184.216.34/file?signature=secret-token#private-fragment",
+          "Test provider"
         )
       ).rejects.not.toThrow("secret-token");
     } finally {

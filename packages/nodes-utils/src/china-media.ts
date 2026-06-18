@@ -1,3 +1,6 @@
+import { lookup as dnsLookup } from "node:dns/promises";
+import { isIP } from "node:net";
+
 import { bytesToBase64 } from "./base64.js";
 
 export type PromptResourceType = "image" | "video" | "audio";
@@ -34,6 +37,7 @@ const DEFAULT_POLL_INTERVAL_MS = 1_000;
 const DEFAULT_POLL_TIMEOUT_MS = 60_000;
 const ALIAS_PATTERN = /@([A-Za-z0-9_-]+)/g;
 const OCTET_STREAM_MIME = "application/octet-stream";
+const MAX_PROVIDER_MEDIA_REDIRECTS = 5;
 
 export function compilePromptResources(
   prompt: string,
@@ -156,6 +160,76 @@ export async function downloadBytes(
   return new Uint8Array(await response.arrayBuffer());
 }
 
+export async function downloadProviderMediaBytes(
+  mediaUrl: string,
+  provider: string
+): Promise<Uint8Array> {
+  let currentUrl = assertSafeProviderMediaUrl(mediaUrl, provider);
+  if (currentUrl.startsWith("data:")) {
+    return downloadBytes(currentUrl);
+  }
+
+  for (
+    let redirectCount = 0;
+    redirectCount <= MAX_PROVIDER_MEDIA_REDIRECTS;
+    redirectCount++
+  ) {
+    await assertSafeProviderMediaDns(currentUrl, provider);
+
+    const response = await fetch(currentUrl, { redirect: "manual" });
+    const responseUrl = response.url;
+    if (responseUrl && responseUrl !== currentUrl) {
+      const validatedResponseUrl = assertSafeProviderMediaUrl(
+        responseUrl,
+        provider
+      );
+      await assertSafeProviderMediaDns(validatedResponseUrl, provider);
+    }
+
+    if (isRedirectResponse(response)) {
+      if (redirectCount === MAX_PROVIDER_MEDIA_REDIRECTS) {
+        throw new Error(
+          `${provider} returned too many media URL redirects: ${safeUrlLabel(
+            currentUrl
+          )}`
+        );
+      }
+
+      const location = response.headers.get("location");
+      if (!location) {
+        throw new Error(
+          `${provider} returned media URL redirect without Location: ${safeUrlLabel(
+            currentUrl
+          )}`
+        );
+      }
+      currentUrl = assertSafeProviderMediaUrl(
+        new URL(location, currentUrl).toString(),
+        provider
+      );
+      continue;
+    }
+
+    if (!response.ok) {
+      const statusText =
+        response.statusText.length > 0 ? ` ${response.statusText}` : "";
+      throw new Error(
+        `${provider} media URL download failed: ${safeUrlLabel(
+          currentUrl
+        )} HTTP ${response.status}${statusText}`
+      );
+    }
+
+    return new Uint8Array(await response.arrayBuffer());
+  }
+
+  throw new Error(
+    `${provider} returned too many media URL redirects: ${safeUrlLabel(
+      currentUrl
+    )}`
+  );
+}
+
 export async function pollTask<T>(options: PollTaskOptions<T>): Promise<T> {
   const intervalMs = options.intervalMs ?? DEFAULT_POLL_INTERVAL_MS;
   const timeoutMs = options.timeoutMs ?? DEFAULT_POLL_TIMEOUT_MS;
@@ -255,6 +329,270 @@ function formatDownloadTarget(url: string): string {
   }
 
   return "resource";
+}
+
+function assertSafeProviderMediaUrl(url: string, provider: string): string {
+  if (url.startsWith("data:")) {
+    return url;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error(
+      `${provider} returned invalid media URL: ${safeUrlLabel(url)}`
+    );
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(
+      `${provider} returned unsupported media URL: ${safeUrlLabel(parsed)}`
+    );
+  }
+
+  if (!isPublicProviderHost(parsed.hostname)) {
+    throw new Error(
+      `${provider} returned unsafe media URL: ${safeUrlLabel(parsed)}`
+    );
+  }
+
+  return url;
+}
+
+async function assertSafeProviderMediaDns(
+  url: string,
+  provider: string
+): Promise<void> {
+  const parsed = new URL(url);
+  const hostname = normalizeHostname(parsed.hostname);
+  if (isIP(hostname) !== 0) {
+    return;
+  }
+
+  let answers: Array<{ address: string; family: number }>;
+  try {
+    answers = await dnsLookup(hostname, { all: true, verbatim: true });
+  } catch {
+    throw new Error(
+      `${provider} returned unsafe media URL: ${safeUrlLabel(parsed)}`
+    );
+  }
+
+  if (
+    answers.length === 0 ||
+    answers.some((answer) => !isPublicIpAddress(answer.address))
+  ) {
+    throw new Error(
+      `${provider} returned unsafe media URL: ${safeUrlLabel(parsed)}`
+    );
+  }
+}
+
+function isRedirectResponse(response: Response): boolean {
+  return response.status >= 300 && response.status < 400;
+}
+
+function safeUrlLabel(url: string | URL): string {
+  try {
+    const parsed = typeof url === "string" ? new URL(url) : new URL(url.href);
+    parsed.username = "";
+    parsed.password = "";
+    parsed.search = "";
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    return String(url).split(/[?#]/, 1)[0] ?? "";
+  }
+}
+
+function isPublicProviderHost(rawHostname: string): boolean {
+  const hostname = normalizeHostname(rawHostname);
+  if (!hostname) {
+    return false;
+  }
+
+  if (isIP(hostname) === 6) {
+    return isPublicIpv6(hostname);
+  }
+
+  const ipv4 = parseIpv4InetAton(hostname);
+  if (ipv4) {
+    return isPublicIpv4(ipv4);
+  }
+
+  if (isBlockedIpv6(hostname)) {
+    return false;
+  }
+
+  return isPublicDnsName(hostname);
+}
+
+function isPublicIpAddress(address: string): boolean {
+  const normalizedAddress = normalizeHostname(address);
+  if (isIP(normalizedAddress) === 6) {
+    return isPublicIpv6(normalizedAddress);
+  }
+  const ipv4 = parseIpv4InetAton(normalizedAddress);
+  return ipv4 !== undefined && isPublicIpv4(ipv4);
+}
+
+function normalizeHostname(hostname: string): string {
+  return hostname
+    .trim()
+    .toLowerCase()
+    .replace(/^\[/, "")
+    .replace(/\]$/, "")
+    .replace(/\.$/, "");
+}
+
+function parseIpv4InetAton(hostname: string): number[] | undefined {
+  const parts = hostname.split(".");
+  if (parts.length < 1 || parts.length > 4) {
+    return undefined;
+  }
+  const parsed = parts.map(parseIpv4Part);
+  if (parsed.some((part) => part === undefined)) {
+    return undefined;
+  }
+  const nums = parsed.filter((part): part is number => part !== undefined);
+  let value: number;
+  if (nums.length === 1) {
+    if (nums[0] > 0xffffffff) return undefined;
+    value = nums[0];
+  } else if (nums.length === 2) {
+    if (nums[0] > 0xff || nums[1] > 0xffffff) return undefined;
+    value = nums[0] * 0x1000000 + nums[1];
+  } else if (nums.length === 3) {
+    if (nums[0] > 0xff || nums[1] > 0xff || nums[2] > 0xffff) {
+      return undefined;
+    }
+    value = nums[0] * 0x1000000 + nums[1] * 0x10000 + nums[2];
+  } else {
+    if (nums.some((part) => part > 0xff)) return undefined;
+    value = nums[0] * 0x1000000 + nums[1] * 0x10000 + nums[2] * 0x100 + nums[3];
+  }
+  return [
+    Math.floor(value / 0x1000000) % 0x100,
+    Math.floor(value / 0x10000) % 0x100,
+    Math.floor(value / 0x100) % 0x100,
+    value % 0x100
+  ];
+}
+
+function parseIpv4Part(part: string): number | undefined {
+  if (part.length === 0) {
+    return undefined;
+  }
+  let radix = 10;
+  let digits = part;
+  if (/^0x[0-9a-f]+$/i.test(part)) {
+    radix = 16;
+    digits = part.slice(2);
+  } else if (/^0[0-7]+$/.test(part) && part.length > 1) {
+    radix = 8;
+    digits = part.slice(1);
+  } else if (!/^\d+$/.test(part)) {
+    return undefined;
+  }
+  const value = Number.parseInt(digits, radix);
+  return Number.isSafeInteger(value) ? value : undefined;
+}
+
+function isPublicIpv4([first, second, third]: number[]): boolean {
+  if (first === 10 || first === 127 || first === 0) {
+    return false;
+  }
+  if (first === 172 && second >= 16 && second <= 31) {
+    return false;
+  }
+  if (first === 192 && second === 168) {
+    return false;
+  }
+  if (first === 169 && second === 254) {
+    return false;
+  }
+  if (first === 100 && second >= 64 && second <= 127) {
+    return false;
+  }
+  if (first === 192 && second === 0 && (third === 0 || third === 2)) {
+    return false;
+  }
+  if (first === 192 && second === 88 && third === 99) {
+    return false;
+  }
+  if (first === 198 && (second === 18 || second === 19)) {
+    return false;
+  }
+  if (first === 198 && second === 51 && third === 100) {
+    return false;
+  }
+  if (first === 203 && second === 0 && third === 113) {
+    return false;
+  }
+  if (first >= 224) {
+    return false;
+  }
+  return true;
+}
+
+function isBlockedIpv6(hostname: string): boolean {
+  if (!hostname.includes(":")) {
+    return false;
+  }
+  const mappedIpv4 = hostname.match(/^::ffff:(.+)$/);
+  if (mappedIpv4) {
+    const ipv4 = parseIpv4InetAton(mappedIpv4[1] ?? "");
+    return !ipv4 || !isPublicIpv4(ipv4);
+  }
+  const firstHextetText = hostname.split(":", 1)[0] ?? "";
+  const firstHextet =
+    firstHextetText.length > 0 ? Number.parseInt(firstHextetText, 16) : 0;
+  if (
+    Number.isFinite(firstHextet) &&
+    (((firstHextet & 0xffc0) === 0xfe80) ||
+      ((firstHextet & 0xfe00) === 0xfc00) ||
+      ((firstHextet & 0xff00) === 0xff00))
+  ) {
+    return true;
+  }
+  return hostname === "::" ||
+    hostname === "::1" ||
+    hostname.startsWith("2001:db8:");
+}
+
+function isPublicIpv6(hostname: string): boolean {
+  return !isBlockedIpv6(hostname);
+}
+
+function isPublicDnsName(hostname: string): boolean {
+  const blockedNames = new Set([
+    "localhost",
+    "localhost.localdomain",
+    "metadata",
+    "metadata.google.internal",
+    "metadata.azure.internal",
+    "instance-data"
+  ]);
+  if (blockedNames.has(hostname)) {
+    return false;
+  }
+  const firstLabel = hostname.split(".", 1)[0];
+  if (firstLabel === "metadata" || firstLabel === "instance-data") {
+    return false;
+  }
+  if (!hostname.includes(".")) {
+    return false;
+  }
+  return !(
+    hostname.endsWith(".localhost") ||
+    hostname.endsWith(".local") ||
+    hostname.endsWith(".internal") ||
+    hostname.endsWith(".home") ||
+    hostname.endsWith(".lan") ||
+    hostname.endsWith(".test") ||
+    hostname.endsWith(".invalid")
+  );
 }
 
 function formatAbortReason(reason: unknown): string {

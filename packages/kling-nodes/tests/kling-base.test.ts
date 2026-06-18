@@ -142,7 +142,7 @@ describe("Kling base helpers", () => {
             data: {
               task_id: "task-1",
               status: "succeeded",
-              outputs: [{ url: "https://cdn.example/video.mp4" }]
+              outputs: [{ url: "https://93.184.216.34/video.mp4" }]
             }
           }),
           { status: 200 }
@@ -163,7 +163,7 @@ describe("Kling base helpers", () => {
     expect(mockFetch.mock.calls[1][0]).toBe(
       "https://api-beijing.klingai.com/tasks?task_id=task-1"
     );
-    expect(mockFetch.mock.calls[2][0]).toBe("https://cdn.example/video.mp4");
+    expect(mockFetch.mock.calls[2][0]).toBe("https://93.184.216.34/video.mp4");
   });
 
   it("surfaces failed task status", async () => {

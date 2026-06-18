@@ -20,7 +20,7 @@ function queueSeedanceSuccess(): void {
         JSON.stringify({
           id: "task-1",
           status: "succeeded",
-          content: { video_url: { url: "https://cdn.example/video.mp4" } }
+          content: { video_url: { url: "https://93.184.216.34/video.mp4" } }
         }),
         { status: 200 }
       )
@@ -32,7 +32,7 @@ function queueSeedreamSuccess(): void {
   mockFetch
     .mockResolvedValueOnce(
       new Response(
-        JSON.stringify({ data: [{ url: "https://cdn.example/image.png" }] }),
+        JSON.stringify({ data: [{ url: "https://93.184.216.34/image.png" }] }),
         { status: 200 }
       )
     )

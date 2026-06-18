@@ -40,6 +40,7 @@ export { base64ToBytes, bytesToBase64 } from "./base64.js";
 export {
   compilePromptResources,
   createDataUrl,
+  downloadProviderMediaBytes,
   downloadBytes,
   inferImageMime,
   pollTask,
