@@ -21,6 +21,7 @@ import {
 import { isProviderVisibleForSurface } from "./model-surface.js";
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+const MAX_CUSTOM_ENDPOINT_REDIRECTS = 5;
 
 type CustomEndpointFetch = (
   input: unknown,
@@ -54,6 +55,20 @@ function urlFromFetchInput(input: unknown): URL {
   }
 
   throw new Error("Custom model endpoint request URL is invalid");
+}
+
+function fetchInputWithUrl(input: unknown, url: URL): Parameters<typeof fetch>[0] {
+  if (typeof input === "string") {
+    return url.toString();
+  }
+  if (input instanceof URL) {
+    return url;
+  }
+  if (input instanceof Request) {
+    return new Request(url, input);
+  }
+
+  return url.toString();
 }
 
 async function assertPublicEndpointDestination(url: URL): Promise<void> {
@@ -133,11 +148,8 @@ export function createProtectedCustomEndpointFetch(): CustomEndpointFetch {
   const dispatcher = createPinnedDispatcher(pinnedByHost);
 
   return async (input, init) => {
-    const requestUrl = urlFromFetchInput(input);
-    pinnedByHost.set(
-      requestUrl.hostname,
-      await resolvePublicEndpointAddresses(requestUrl)
-    );
+    let requestUrl = urlFromFetchInput(input);
+    let currentInput = input;
 
     const requestInit: DispatcherRequestInit = {
       ...init,
@@ -145,11 +157,20 @@ export function createProtectedCustomEndpointFetch(): CustomEndpointFetch {
       redirect: "manual"
     };
 
-    const response = await fetch(
-      input as Parameters<typeof fetch>[0],
-      requestInit
-    );
-    if (REDIRECT_STATUSES.has(response.status)) {
+    for (let redirectCount = 0; ; redirectCount++) {
+      pinnedByHost.set(
+        requestUrl.hostname,
+        await resolvePublicEndpointAddresses(requestUrl)
+      );
+
+      const response = await fetch(
+        fetchInputWithUrl(currentInput, requestUrl),
+        requestInit
+      );
+      if (!REDIRECT_STATUSES.has(response.status)) {
+        return response;
+      }
+
       const location = response.headers.get("location");
       if (!location) {
         return response;
@@ -160,13 +181,14 @@ export function createProtectedCustomEndpointFetch(): CustomEndpointFetch {
       if (redirectUrl.origin !== requestUrl.origin) {
         throw new Error("Custom model endpoint cross-host redirects are blocked");
       }
-      pinnedByHost.set(
-        redirectUrl.hostname,
-        await resolvePublicEndpointAddresses(redirectUrl)
-      );
-    }
 
-    return response;
+      if (redirectCount >= MAX_CUSTOM_ENDPOINT_REDIRECTS) {
+        throw new Error("Custom model endpoint redirected too many times");
+      }
+
+      requestUrl = redirectUrl;
+      currentInput = fetchInputWithUrl(currentInput, requestUrl);
+    }
   };
 }
 

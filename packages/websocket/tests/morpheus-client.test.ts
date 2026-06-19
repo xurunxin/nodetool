@@ -302,7 +302,7 @@ describe("MorpheusClient.streamPrompt", () => {
     ]);
   });
 
-  it("sends X-API-Key auth, agent-scoped query body, and signal", async () => {
+  it("sends X-API-Key auth, prompt query body, and signal", async () => {
     const controller = new AbortController();
     const { fetchFn, calls } = makeFetchMock([
       streamResponse(['data: {"event":"done","data":{}}\n\n']),
@@ -324,7 +324,7 @@ describe("MorpheusClient.streamPrompt", () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0].input).toBe(
-      "https://morpheus.example/api/v1/agents/canvas%2Fagent/prompt/stream",
+      "https://morpheus.example/api/v1/prompt/stream",
     );
     expect(calls[0].init?.method).toBe("POST");
     expect(calls[0].init?.headers).toEqual({
@@ -335,6 +335,7 @@ describe("MorpheusClient.streamPrompt", () => {
     expect(JSON.parse(String(calls[0].init?.body))).toEqual({
       sessionId: "s-1",
       query: "hello",
+      agentId: "canvas/agent",
     });
   });
 
@@ -367,6 +368,7 @@ describe("MorpheusClient.streamPrompt", () => {
     );
 
     expect(JSON.parse(String(calls[0].init?.body))).toEqual({
+      agentId: "canvas/agent",
       sessionId: "s-1",
       query: "hello",
       tools,

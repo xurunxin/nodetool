@@ -179,15 +179,15 @@ export class MorpheusClient {
   async *streamPrompt(
     options: StreamPromptOptions,
   ): AsyncGenerator<MorpheusStreamEvent> {
-    const agentId = encodeURIComponent(options.agentId);
     const response = await this.fetchFn(
-      `${this.baseUrl}/api/v1/agents/${agentId}/prompt/stream`,
+      `${this.baseUrl}/api/v1/prompt/stream`,
       {
         method: "POST",
         headers: jsonHeaders(this.apiKey),
         body: JSON.stringify({
           query: options.prompt,
           sessionId: options.sessionId,
+          agentId: options.agentId,
           ...(options.tools ? { tools: options.tools } : {}),
         }),
         signal: options.signal,

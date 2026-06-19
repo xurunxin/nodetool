@@ -96,6 +96,7 @@ import { appRouter } from "./trpc/router.js";
 import { createCallerFactory } from "./trpc/index.js";
 import type { HttpApiOptions } from "./http-api.js";
 import { resolveNodeToolProvider } from "./custom-provider-resolver.js";
+import { filterProviderIdsForSurface } from "./model-surface.js";
 
 const log = createLogger("nodetool.websocket.runner");
 const DATA_URI_PATTERN = /data:([^;,]+)?;base64,[A-Za-z0-9+/=\r\n]+/gi;
@@ -4430,7 +4431,9 @@ export class UnifiedWebSocketRunner {
     );
     const getSecret = (key: string) =>
       getStoredSecret(key, userId).then((v) => v ?? undefined);
-    const ids: string[] = providersMod.listRegisteredProviderIds();
+    const ids = filterProviderIdsForSurface(
+      providersMod.listRegisteredProviderIds()
+    );
     const result: Record<string, BaseProvider> = {};
     await Promise.all(
       ids.map(async (id) => {

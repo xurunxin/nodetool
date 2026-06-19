@@ -288,6 +288,38 @@ describe("resolveNodeToolProvider", () => {
     ).rejects.toThrow(/cross-host redirects/i);
   });
 
+  it("follows same-origin redirects from custom endpoint requests", async () => {
+    (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
+      endpoint()
+    ]);
+    const finalResponse = new Response("{}", { status: 200 });
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 307,
+          headers: { location: "/v1/chat/completions/" }
+        })
+      )
+      .mockResolvedValueOnce(finalResponse);
+
+    const provider = await resolveNodeToolProvider(
+      "custom:case-sensitive_1",
+      "user-1"
+    );
+    const client = (provider as { getClient: () => unknown }).getClient() as {
+      args: { fetch: typeof fetch };
+    };
+
+    await expect(
+      client.args.fetch("https://gateway.example.test/v1/chat/completions")
+    ).resolves.toBe(finalResponse);
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "https://gateway.example.test/v1/chat/completions/",
+      expect.objectContaining({ redirect: "manual" })
+    );
+  });
+
   it.each([
     ["missing", []],
     ["disabled", [endpoint({ enabled: false })]]

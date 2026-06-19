@@ -1,11 +1,26 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { initTestDb, Job } from "@nodetool-ai/models";
+import {
+  getProvider as getRuntimeProvider,
+  isProviderConfigured,
+  listRegisteredProviderIds
+} from "@nodetool-ai/runtime";
 import type {
   BaseProvider,
   NodeExecutor,
   ProcessingContext,
 } from "@nodetool-ai/runtime";
 import { UnifiedWebSocketRunner } from "../src/unified-websocket-runner.js";
+
+vi.mock("@nodetool-ai/runtime", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@nodetool-ai/runtime")>();
+  return {
+    ...actual,
+    getProvider: vi.fn(actual.getProvider),
+    isProviderConfigured: vi.fn(actual.isProviderConfigured),
+    listRegisteredProviderIds: vi.fn(actual.listRegisteredProviderIds)
+  };
+});
 
 function makeProvider(providerId: string): BaseProvider {
   return {
@@ -45,6 +60,10 @@ async function waitForFinishedJob(jobId: string): Promise<Job> {
 describe("UnifiedWebSocketRunner provider resolution", () => {
   beforeEach(() => {
     initTestDb();
+    vi.mocked(getRuntimeProvider).mockReset();
+    vi.mocked(isProviderConfigured).mockReset();
+    vi.mocked(listRegisteredProviderIds).mockReset();
+    delete process.env.NODETOOL_MODEL_SURFACE;
   });
 
   it("defaults fresh inference requests to an API-visible provider", () => {
@@ -124,5 +143,40 @@ describe("UnifiedWebSocketRunner provider resolution", () => {
 
     expect(job.status).toBe("completed");
     expect(resolveProvider).toHaveBeenCalledWith(customProviderId, "alice");
+  });
+
+  it("filters local-only providers from configured provider discovery", async () => {
+    vi.mocked(listRegisteredProviderIds).mockReturnValue(["openai", "ollama"]);
+    vi.mocked(isProviderConfigured).mockResolvedValue(true);
+    vi.mocked(getRuntimeProvider).mockImplementation(
+      async (providerId: string) => makeProvider(providerId)
+    );
+    const runner = new UnifiedWebSocketRunner({
+      userId: "alice"
+    });
+
+    const providers = await (
+      runner as unknown as {
+        getConfiguredProviders(userId: string): Promise<Record<string, BaseProvider>>;
+      }
+    ).getConfiguredProviders("alice");
+
+    expect(Object.keys(providers)).toEqual(["openai"]);
+    expect(isProviderConfigured).toHaveBeenCalledWith(
+      "openai",
+      expect.any(Function)
+    );
+    expect(isProviderConfigured).not.toHaveBeenCalledWith(
+      "ollama",
+      expect.any(Function)
+    );
+    expect(getRuntimeProvider).toHaveBeenCalledWith(
+      "openai",
+      expect.any(Function)
+    );
+    expect(getRuntimeProvider).not.toHaveBeenCalledWith(
+      "ollama",
+      expect.any(Function)
+    );
   });
 });
