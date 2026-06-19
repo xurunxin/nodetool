@@ -101,6 +101,27 @@ export const BUILTIN_NODE_PACKS: readonly BuiltinNodePack[] = [
     namespaces: ["kie"]
   },
   {
+    id: "kling",
+    name: "Kling",
+    description: "Kling image-to-video generation models.",
+    defaultEnabled: true,
+    namespaces: ["kling"]
+  },
+  {
+    id: "dashscope",
+    name: "DashScope",
+    description: "Wanxiang image and video generation on Alibaba Model Studio.",
+    defaultEnabled: true,
+    namespaces: ["dashscope"]
+  },
+  {
+    id: "volcengine",
+    name: "Volcengine Ark",
+    description: "Doubao Seedance video and Seedream image generation on Volcengine Ark.",
+    defaultEnabled: true,
+    namespaces: ["volcengine"]
+  },
+  {
     id: "topaz",
     name: "Topaz Labs",
     description: "Image and video upscaling and enhancement via Topaz Labs.",

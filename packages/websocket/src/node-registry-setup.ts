@@ -25,6 +25,9 @@ import { registerMinimaxNodes } from "@nodetool-ai/minimax-nodes";
 import { registerTransformersJsNodes } from "@nodetool-ai/transformers-js-nodes";
 import { registerFalNodes } from "@nodetool-ai/fal-nodes";
 import { registerKieNodes } from "@nodetool-ai/kie-nodes";
+import { registerKlingNodes } from "@nodetool-ai/kling-nodes";
+import { registerDashScopeNodes } from "@nodetool-ai/dashscope-nodes";
+import { registerVolcengineNodes } from "@nodetool-ai/volcengine-nodes";
 import { registerTopazNodes } from "@nodetool-ai/topaz-nodes";
 import { registerReveNodes } from "@nodetool-ai/reve-nodes";
 import { registerAtlasCloudNodes } from "@nodetool-ai/atlascloud-nodes";
@@ -71,6 +74,9 @@ const BUILTIN_PACK_REGISTRARS: Record<string, (registry: NodeRegistry) => void> 
     "transformers-js": registerTransformersJsNodes,
     fal: registerFalNodes,
     kie: registerKieNodes,
+    kling: registerKlingNodes,
+    dashscope: registerDashScopeNodes,
+    volcengine: registerVolcengineNodes,
     topaz: registerTopazNodes,
     reve: registerReveNodes,
     atlascloud: registerAtlasCloudNodes,

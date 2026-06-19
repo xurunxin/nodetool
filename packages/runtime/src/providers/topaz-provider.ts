@@ -149,6 +149,10 @@ export class TopazProvider extends BaseProvider {
     return { TOPAZ_API_KEY: this.apiKey };
   }
 
+  override supportsChatGeneration(): boolean {
+    return false;
+  }
+
   private requireApiKey(): string {
     if (!this.apiKey || !this.apiKey.trim()) {
       throw new Error("TOPAZ_API_KEY is not configured");

@@ -35,6 +35,11 @@ describe("registerBuiltInNodes", () => {
     }
     // …while default-enabled packs (e.g. FAL) are present.
     expect(defaults.list().some((t) => t.startsWith("fal."))).toBe(true);
+    expect(defaults.list().some((t) => t.startsWith("dashscope."))).toBe(true);
+    expect(defaults.list().some((t) => t.startsWith("kling."))).toBe(true);
+    expect(defaults.list().some((t) => t.startsWith("volcengine."))).toBe(
+      true
+    );
     expect(defaults.list().length).toBeLessThan(everything.list().length);
   });
 

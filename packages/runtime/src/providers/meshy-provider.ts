@@ -138,6 +138,10 @@ export class MeshyProvider extends BaseProvider {
     return ["MESHY_API_KEY"];
   }
 
+  override supportsChatGeneration(): boolean {
+    return false;
+  }
+
   async generateMessage(
     _args: Parameters<BaseProvider["generateMessage"]>[0]
   ): Promise<Message> {

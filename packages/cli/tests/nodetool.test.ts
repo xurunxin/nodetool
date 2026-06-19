@@ -76,6 +76,10 @@ vi.mock("@nodetool-ai/replicate-nodes", () => ({
   registerReplicateNodes: vi.fn()
 }));
 
+vi.mock("@nodetool-ai/volcengine-nodes", () => ({
+  registerVolcengineNodes: vi.fn()
+}));
+
 vi.mock("@nodetool-ai/reve-nodes", () => ({
   registerReveNodes: vi.fn()
 }));

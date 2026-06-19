@@ -318,6 +318,10 @@ export class FalProvider extends BaseProvider {
     this.apiKey = (secrets["FAL_API_KEY"] as string) ?? "";
   }
 
+  override supportsChatGeneration(): boolean {
+    return false;
+  }
+
   /** Build an onQueueUpdate callback that forwards progress via emitMessage. */
   private makeQueueUpdateHandler(): (update: FalQueueUpdate) => void {
     let tick = 0;

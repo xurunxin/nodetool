@@ -194,6 +194,27 @@ const PROVIDER_META: ProviderMeta[] = [
     note: "For exact cost tracking, use an admin key (fal.ai dashboard → Keys → scope “Admin”). NodeTool reads each request's actual billing from FAL; a standard key only yields estimates."
   },
   {
+    key: "DASHSCOPE_API_KEY",
+    name: "Alibaba DashScope",
+    description: "Wanxiang image and video generation for China-region workflows.",
+    category: "other",
+    docsUrl: "https://help.aliyun.com/zh/model-studio/model-api-reference/"
+  },
+  {
+    key: "ARK_API_KEY",
+    name: "Volcengine Ark",
+    description: "Doubao Seedance video and Seedream image generation.",
+    category: "other",
+    docsUrl: "https://www.volcengine.com/docs/82379"
+  },
+  {
+    key: "KLING_API_KEY",
+    name: "Kling",
+    description: "Kling China-region image and video generation.",
+    category: "other",
+    docsUrl: "https://klingai.com/document-api/guides/get-started/overview"
+  },
+  {
     key: "ELEVENLABS_API_KEY",
     name: "ElevenLabs",
     description: "High-quality text-to-speech services.",

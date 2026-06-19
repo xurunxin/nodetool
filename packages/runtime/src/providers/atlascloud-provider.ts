@@ -337,6 +337,10 @@ export class AtlasCloudProvider extends BaseProvider {
     return { ATLASCLOUD_API_KEY: this.apiKey };
   }
 
+  override supportsChatGeneration(): boolean {
+    return false;
+  }
+
   async generateMessage(
     _args: Parameters<BaseProvider["generateMessage"]>[0]
   ): Promise<Message> {

@@ -12,7 +12,6 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@nodetool-ai/node-sdk": "*",
     "@nodetool-ai/protocol": "*"
   },
   "devDependencies": {
@@ -26,6 +25,30 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./dashscope": {
+      "nodetool-dev": "./src/providers/dashscope.ts",
+      "types": "./dist/providers/dashscope.d.ts",
+      "import": "./dist/providers/dashscope.js",
+      "default": "./dist/providers/dashscope.js"
+    },
+    "./china-media": {
+      "nodetool-dev": "./src/china-media.ts",
+      "types": "./dist/china-media.d.ts",
+      "import": "./dist/china-media.js",
+      "default": "./dist/china-media.js"
+    },
+    "./kling": {
+      "nodetool-dev": "./src/providers/kling.ts",
+      "types": "./dist/providers/kling.d.ts",
+      "import": "./dist/providers/kling.js",
+      "default": "./dist/providers/kling.js"
+    },
+    "./volcengine": {
+      "nodetool-dev": "./src/providers/volcengine.ts",
+      "types": "./dist/providers/volcengine.d.ts",
+      "import": "./dist/providers/volcengine.js",
+      "default": "./dist/providers/volcengine.js"
     }
   },
   "license": "MIT",

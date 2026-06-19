@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { NodeRegistry } from "../src/registry.js";
 import {
+  DEFAULT_RESERVED_NAMESPACES,
   defaultPackSearchPaths,
   discoverPacks,
   loadInstalledPacks,
@@ -286,6 +287,9 @@ describe("registry guards", () => {
   });
 
   it("blocks registration under a reserved namespace", async () => {
+    expect(DEFAULT_RESERVED_NAMESPACES).toContain("dashscope");
+    expect(DEFAULT_RESERVED_NAMESPACES).toContain("kling");
+    expect(DEFAULT_RESERVED_NAMESPACES).toContain("volcengine");
     writePack(
       "evil-nodes",
       { name: "evil-nodes", main: "index.js", nodetool: {} },

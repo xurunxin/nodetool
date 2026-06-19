@@ -330,6 +330,21 @@ sec(
   "FAL API key for accessing FAL.ai's serverless AI infrastructure. Get yours at https://fal.ai/dashboard/keys"
 );
 sec(
+  "DASHSCOPE_API_KEY",
+  "DashScope",
+  "Alibaba Model Studio / DashScope API key for Wanxiang image and video generation. Get yours at https://bailian.console.aliyun.com/"
+);
+sec(
+  "ARK_API_KEY",
+  "Volcengine Ark",
+  "Volcengine Ark API key for Doubao Seedance and Seedream media generation. Get yours at https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey"
+);
+sec(
+  "KLING_API_KEY",
+  "Kling",
+  "Kling AI Open Platform API key for Kling video and image generation. Get yours at https://klingai.com/dev/api-key"
+);
+sec(
   "SERPAPI_API_KEY",
   "Search",
   "SerpAPI API key for web search. Get yours at https://serpapi.com/manage-api-key"

@@ -17,7 +17,15 @@ describe("BUILTIN_NODE_PACKS catalog", () => {
   it("base is required; the essentials are enabled by default", () => {
     const byId = new Map(BUILTIN_NODE_PACKS.map((p) => [p.id, p]));
     expect(byId.get("base")?.required).toBe(true);
-    for (const id of ["huggingface", "fal", "replicate", "kie"]) {
+    for (const id of [
+      "huggingface",
+      "fal",
+      "replicate",
+      "kie",
+      "kling",
+      "dashscope",
+      "volcengine"
+    ]) {
       expect(byId.get(id)?.defaultEnabled).toBe(true);
     }
   });
@@ -60,6 +68,21 @@ describe("findBuiltinPackForNodeType", () => {
     // base-nodes also registers under `kie.`, but base is required, so the
     // optional kie pack is the only enable-able candidate.
     expect(findBuiltinPackForNodeType("kie.image.Imagen4")?.id).toBe("kie");
+  });
+
+  it("maps Kling image-to-video nodes to the Kling pack", () => {
+    expect(findBuiltinPackForNodeType("kling.ImageToVideo")?.id).toBe("kling");
+  });
+
+  it("maps DashScope Wanxiang media nodes to the DashScope pack", () => {
+    expect(findBuiltinPackForNodeType("dashscope.WanxImageToVideo")?.id).toBe(
+      "dashscope"
+    );
+  });
+
+  it("maps Volcengine Ark media nodes to the Volcengine pack", () => {
+    expect(findBuiltinPackForNodeType("volcengine.SeedanceTextToVideo")?.id)
+      .toBe("volcengine");
   });
 
   it("returns undefined for unknown namespaces", () => {
