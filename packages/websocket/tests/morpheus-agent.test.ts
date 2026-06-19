@@ -242,6 +242,79 @@ describe("MorpheusAgentSdkProvider", () => {
     expect(toolResult?.uuid).not.toBe("tool-1");
   });
 
+  it("routes direct Morpheus manifest tool calls to renderer tools", async () => {
+    const client = makeClient([
+      {
+        type: "tool_call",
+        id: "direct-tool-1",
+        name: "ui_get_graph",
+        arguments: { includeSelection: true },
+      },
+      { type: "done" },
+    ]);
+    const provider = new MorpheusAgentSdkProvider({
+      baseUrl: "https://morpheus.example",
+      clientFactory: () => client,
+    });
+    const session = provider.createSession({
+      model: "nodetool-canvas",
+      workspacePath: "",
+      userId: "alice",
+    });
+    const transport = makeTransport();
+    vi.mocked(transport.executeTool).mockResolvedValueOnce({
+      nodes: [{ id: "n1" }],
+    });
+    const manifest: FrontendToolManifest[] = [
+      {
+        name: "ui_get_graph",
+        description: "Read the current graph",
+        parameters: {
+          type: "object",
+          properties: { includeSelection: { type: "boolean" } },
+        },
+      },
+    ];
+
+    const messages = await session.send(
+      "inspect graph",
+      transport,
+      "ui-session-1",
+      manifest,
+    );
+
+    expect(transport.executeTool).toHaveBeenCalledWith(
+      "ui-session-1",
+      "direct-tool-1",
+      "ui_get_graph",
+      { includeSelection: true },
+    );
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        type: "assistant",
+        uuid: "direct-tool-1",
+        tool_calls: [
+          {
+            id: "direct-tool-1",
+            type: "function",
+            function: {
+              name: "ui_get_graph",
+              arguments: JSON.stringify({ includeSelection: true }),
+            },
+          },
+        ],
+      }),
+    );
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        type: "result",
+        subtype: "tool_result",
+        text: JSON.stringify({ nodes: [{ id: "n1" }] }),
+        is_error: false,
+      }),
+    );
+  });
+
   it("keeps streamed Morpheus transcripts available after the live turn", async () => {
     const client = makeClient([
       { type: "text_delta", text: "built" },

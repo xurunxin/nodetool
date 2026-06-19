@@ -7,8 +7,14 @@ import {
 } from "../src/custom-model-endpoints.js";
 import { resolveNodeToolProvider } from "../src/custom-provider-resolver.js";
 
-const { anthropicConstructor, fetchMock, lookupMock, openAIConstructor } =
-  vi.hoisted(() => ({
+const {
+  agentConstructor,
+  anthropicConstructor,
+  fetchMock,
+  lookupMock,
+  openAIConstructor
+} = vi.hoisted(() => ({
+    agentConstructor: vi.fn(),
     anthropicConstructor: vi.fn(),
     fetchMock: vi.fn(),
     lookupMock: vi.fn(),
@@ -52,6 +58,10 @@ vi.mock("openai", () => ({
   toFile: vi.fn()
 }));
 
+vi.mock("undici", () => ({
+  Agent: agentConstructor
+}));
+
 vi.mock("@anthropic-ai/sdk", () => ({
   default: anthropicConstructor
 }));
@@ -85,6 +95,9 @@ describe("resolveNodeToolProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal("fetch", fetchMock);
+    agentConstructor.mockImplementation(function AgentMock(options) {
+      return { kind: "agent", options };
+    });
     lookupMock.mockResolvedValue([{ address: "203.0.113.10", family: 4 }]);
     fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
     openAIConstructor.mockImplementation(function OpenAIMock(args) {
@@ -206,8 +219,29 @@ describe("resolveNodeToolProvider", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "https://gateway.example.test/v1/chat/completions",
-      { redirect: "manual" }
+      expect.objectContaining({
+        dispatcher: expect.objectContaining({ kind: "agent" }),
+        redirect: "manual"
+      })
     );
+    const agent = agentConstructor.mock.results[0].value as {
+      options: {
+        connect: {
+          lookup: (
+            hostname: string,
+            options: { all?: boolean },
+            callback: (
+              err: Error | null,
+              address: string,
+              family: number
+            ) => void
+          ) => void;
+        };
+      };
+    };
+    const callback = vi.fn();
+    agent.options.connect.lookup("gateway.example.test", {}, callback);
+    expect(callback).toHaveBeenCalledWith(null, "203.0.113.10", 4);
   });
 
   it("rejects custom endpoint requests that resolve to private addresses", async () => {

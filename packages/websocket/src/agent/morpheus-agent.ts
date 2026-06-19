@@ -139,8 +139,16 @@ const parseForwardPayload = (payload: unknown): unknown => {
 
 const resolveRendererToolDispatch = (
   event: Extract<MorpheusStreamEvent, { type: "tool_call" }>,
+  manifest: FrontendToolManifest[],
 ): { name: string; args: unknown } => {
   if (event.name !== FORWARD_TO_FRONTEND_TOOL_NAME) {
+    const directTool = manifest.find((tool) => tool.name === event.name);
+    if (directTool) {
+      return {
+        name: event.name,
+        args: event.arguments ?? {},
+      };
+    }
     throw new Error(`Unsupported Morpheus tool call "${event.name}"`);
   }
 
@@ -345,6 +353,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
           this.abortController.signal,
           emit,
           textState,
+          manifest,
         );
       }
     } catch (error) {
@@ -386,6 +395,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
       uuid: string | null;
       buffer: string;
     },
+    manifest: FrontendToolManifest[],
   ): Promise<void> {
     switch (event.type) {
       case "text_delta": {
@@ -432,7 +442,13 @@ export class MorpheusQuerySession implements AgentQuerySession {
           ],
         });
 
-        if (event.name !== FORWARD_TO_FRONTEND_TOOL_NAME) {
+        const isDirectManifestTool = manifest.some(
+          (tool) => tool.name === event.name,
+        );
+        if (
+          event.name !== FORWARD_TO_FRONTEND_TOOL_NAME &&
+          !isDirectManifestTool
+        ) {
           return;
         }
 
@@ -441,6 +457,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
             transport,
             sessionId,
             event,
+            manifest,
             signal,
           );
           emit({
@@ -475,11 +492,12 @@ export class MorpheusQuerySession implements AgentQuerySession {
     transport: AgentTransport,
     sessionId: string,
     event: Extract<MorpheusStreamEvent, { type: "tool_call" }>,
+    manifest: FrontendToolManifest[],
     signal: AbortSignal,
   ): Promise<unknown> {
     this.activeToolCall = true;
     try {
-      const dispatch = resolveRendererToolDispatch(event);
+      const dispatch = resolveRendererToolDispatch(event, manifest);
       return await raceWithAbort(
         Promise.resolve().then(() =>
           transport.executeTool(

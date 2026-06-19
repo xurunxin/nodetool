@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Fetch as AnthropicFetch } from "@anthropic-ai/sdk/core.js";
 import { lookup } from "node:dns/promises";
+import type { LookupAddress } from "node:dns";
 import { getSecret as getStoredSecret } from "@nodetool-ai/models";
 import { isDisallowedEndpointHost } from "@nodetool-ai/protocol/api-schemas/custom-model-endpoints.js";
 import {
@@ -11,6 +12,7 @@ import {
   type LanguageModel
 } from "@nodetool-ai/runtime";
 import OpenAI from "openai";
+import { Agent as UndiciAgent, type Dispatcher } from "undici";
 import {
   customEndpointProviderId,
   customEndpointSecretKey,
@@ -24,6 +26,14 @@ type CustomEndpointFetch = (
   input: unknown,
   init?: RequestInit
 ) => Promise<Response>;
+
+type PinnedLookupCallback =
+  | ((err: NodeJS.ErrnoException | null, address: string, family: number) => void)
+  | ((err: NodeJS.ErrnoException | null, addresses: LookupAddress[]) => void);
+
+interface DispatcherRequestInit extends RequestInit {
+  dispatcher: Dispatcher;
+}
 
 function secretResolverFor(userId: string) {
   return (key: string) =>
@@ -51,6 +61,16 @@ async function assertPublicEndpointDestination(url: URL): Promise<void> {
     throw new Error("Custom model endpoint request target is not allowed");
   }
 
+  await resolvePublicEndpointAddresses(url);
+}
+
+async function resolvePublicEndpointAddresses(
+  url: URL
+): Promise<LookupAddress[]> {
+  if (url.protocol !== "https:" || isDisallowedEndpointHost(url.hostname)) {
+    throw new Error("Custom model endpoint request target is not allowed");
+  }
+
   const addresses = await lookup(url.hostname, { all: true, verbatim: true });
   if (addresses.length === 0) {
     throw new Error("Custom model endpoint host did not resolve");
@@ -63,17 +83,72 @@ async function assertPublicEndpointDestination(url: URL): Promise<void> {
       );
     }
   }
+
+  return addresses;
+}
+
+function createPinnedDispatcher(
+  pinnedByHost: Map<string, LookupAddress[]>
+): Dispatcher {
+  return new UndiciAgent({
+    connect: {
+      lookup: (
+        hostname: string,
+        options: { all?: boolean },
+        callback: PinnedLookupCallback
+      ) => {
+        const addresses = pinnedByHost.get(hostname);
+        if (!addresses?.length) {
+          (callback as (err: NodeJS.ErrnoException) => void)(
+            new Error(`Custom model endpoint host "${hostname}" was not pinned`)
+          );
+          return;
+        }
+
+        if (options.all) {
+          (
+            callback as (
+              err: NodeJS.ErrnoException | null,
+              addresses: LookupAddress[]
+            ) => void
+          )(null, addresses);
+          return;
+        }
+
+        const address = addresses[0];
+        (
+          callback as (
+            err: NodeJS.ErrnoException | null,
+            address: string,
+            family: number
+          ) => void
+        )(null, address.address, address.family);
+      }
+    }
+  });
 }
 
 export function createProtectedCustomEndpointFetch(): CustomEndpointFetch {
+  const pinnedByHost = new Map<string, LookupAddress[]>();
+  const dispatcher = createPinnedDispatcher(pinnedByHost);
+
   return async (input, init) => {
     const requestUrl = urlFromFetchInput(input);
-    await assertPublicEndpointDestination(requestUrl);
+    pinnedByHost.set(
+      requestUrl.hostname,
+      await resolvePublicEndpointAddresses(requestUrl)
+    );
 
-    const response = await fetch(input as Parameters<typeof fetch>[0], {
+    const requestInit: DispatcherRequestInit = {
       ...init,
+      dispatcher,
       redirect: "manual"
-    });
+    };
+
+    const response = await fetch(
+      input as Parameters<typeof fetch>[0],
+      requestInit
+    );
     if (REDIRECT_STATUSES.has(response.status)) {
       const location = response.headers.get("location");
       if (!location) {
@@ -85,6 +160,10 @@ export function createProtectedCustomEndpointFetch(): CustomEndpointFetch {
       if (redirectUrl.origin !== requestUrl.origin) {
         throw new Error("Custom model endpoint cross-host redirects are blocked");
       }
+      pinnedByHost.set(
+        redirectUrl.hostname,
+        await resolvePublicEndpointAddresses(redirectUrl)
+      );
     }
 
     return response;
