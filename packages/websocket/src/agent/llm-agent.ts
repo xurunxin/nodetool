@@ -790,6 +790,31 @@ async function listAllToolCapableLanguageModels(
   const getSecret = (key: string) =>
     getStoredSecret(key, userId).then((v) => v ?? undefined);
 
+  let customModels: Awaited<ReturnType<typeof getCustomEndpointLanguageModels>>;
+  try {
+    customModels = await getCustomEndpointLanguageModels(userId);
+  } catch (error) {
+    log.warn("Custom model endpoint metadata unavailable", {
+      error: error instanceof Error ? error.message : String(error),
+      userId,
+    });
+    customModels = [];
+  }
+
+  for (const m of customModels) {
+    const chatProviderId = m.provider;
+    if (!chatProviderId) continue;
+    out.push({
+      id: m.id,
+      label: `${m.name || m.id} (${chatProviderId})`,
+      provider: "llm",
+      chatProviderId,
+    });
+    if (out.length >= MAX_AGGREGATED_MODELS) {
+      return withDefaultModel(out);
+    }
+  }
+
   for (const providerId of providerIds) {
     if (!(await isProviderConfigured(providerId, getSecret))) continue;
     let provider: BaseProvider;
@@ -827,31 +852,6 @@ async function listAllToolCapableLanguageModels(
       if (out.length >= MAX_AGGREGATED_MODELS) {
         return withDefaultModel(out);
       }
-    }
-  }
-
-  let customModels: Awaited<ReturnType<typeof getCustomEndpointLanguageModels>>;
-  try {
-    customModels = await getCustomEndpointLanguageModels(userId);
-  } catch (error) {
-    log.warn("Custom model endpoint metadata unavailable", {
-      error: error instanceof Error ? error.message : String(error),
-      userId,
-    });
-    customModels = [];
-  }
-
-  for (const m of customModels) {
-    const chatProviderId = m.provider;
-    if (!chatProviderId) continue;
-    out.push({
-      id: m.id,
-      label: `${m.name || m.id} (${chatProviderId})`,
-      provider: "llm",
-      chatProviderId,
-    });
-    if (out.length >= MAX_AGGREGATED_MODELS) {
-      return withDefaultModel(out);
     }
   }
   return withDefaultModel(out);

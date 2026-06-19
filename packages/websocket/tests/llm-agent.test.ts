@@ -420,6 +420,36 @@ describe("LlmAgentSdkProvider listModels", () => {
     expect(models.map((model) => model.id)).not.toContain("disabled-chat");
   });
 
+  it("includes custom endpoint models before truncating large provider catalogs", async () => {
+    const customProviderId = customEndpointProviderId("custom_gateway");
+    await saveCustomEndpoints("alice", [customEndpoint()]);
+    await saveCustomEndpointSecret("alice", "custom_gateway");
+    vi.mocked(getProvider).mockResolvedValueOnce({
+      provider: "anthropic",
+      hasToolSupport: async () => true,
+      getAvailableLanguageModels: async () =>
+        Array.from({ length: 220 }, (_value, index) => ({
+          id: `claude-${index}`,
+          name: `Claude ${index}`,
+          provider: "anthropic",
+        })),
+    } as never);
+
+    const models = await new LlmAgentSdkProvider().listModels("alice");
+
+    expect(models).toHaveLength(200);
+    expect(models[0]).toEqual(
+      expect.objectContaining({
+        id: "custom-chat",
+        label: `Custom Chat (${customProviderId})`,
+        provider: "llm",
+        chatProviderId: customProviderId,
+        isDefault: true,
+      }),
+    );
+    expect(models.map((model) => model.id)).not.toContain("claude-199");
+  });
+
   it("keeps standard provider models when custom endpoint metadata is invalid", async () => {
     vi.mocked(getProvider).mockResolvedValueOnce({
       provider: "anthropic",
