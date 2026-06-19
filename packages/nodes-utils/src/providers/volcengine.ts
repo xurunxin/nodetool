@@ -93,7 +93,8 @@ function seedanceReferenceContent(
     return {
       type: "image_url",
       image_url: { url },
-      role: "reference_image"
+      role:
+        reference.alias === "first_frame" ? "first_frame" : "reference_image"
     };
   }
   if (reference.type === "video") {

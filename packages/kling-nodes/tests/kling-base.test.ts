@@ -38,7 +38,7 @@ describe("Kling base helpers", () => {
 
   it("builds the confirmed Kling 3.0 Turbo image-to-video request body", () => {
     const body = buildKlingImageToVideoBody({
-      model: "kling-3.0-turbo",
+      model: "kling-v3-0-turbo",
       prompt: "make hero walk",
       firstFrameUrl: "data:image/png;base64,AAAA",
       resolution: "1080p",
@@ -49,8 +49,8 @@ describe("Kling base helpers", () => {
     });
 
     expect(body).toEqual({
-      model_name: "kling-3.0-turbo",
-      image: "data:image/png;base64,AAAA",
+      model_name: "kling-v3-0-turbo",
+      image: "AAAA",
       prompt: "make hero walk",
       mode: "pro",
       duration: 5,
@@ -63,7 +63,7 @@ describe("Kling base helpers", () => {
   it("rejects prompt image resources instead of silently dropping them", () => {
     expect(() =>
       buildKlingImageToVideoBody({
-        model: "kling-3.0-turbo",
+        model: "kling-v3-0-turbo",
         prompt: "make @hero walk",
         firstFrameUrl: "data:image/png;base64,AAAA",
         resolution: "1080p",
@@ -91,8 +91,8 @@ describe("Kling base helpers", () => {
         apiKey: "secret-key",
         path: "/v1/videos/image2video",
         body: {
-          model_name: "kling-3.0-turbo",
-          image: "data:image/png;base64,AAAA"
+          model_name: "kling-v3-0-turbo",
+          image: "AAAA"
         }
       })
     ).resolves.toBe("task-1");
@@ -106,8 +106,8 @@ describe("Kling base helpers", () => {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model_name: "kling-3.0-turbo",
-          image: "data:image/png;base64,AAAA"
+          model_name: "kling-v3-0-turbo",
+          image: "AAAA"
         })
       }
     );

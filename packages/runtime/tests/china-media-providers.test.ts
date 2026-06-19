@@ -411,11 +411,11 @@ describe("China media providers", () => {
     const imageBody = bodies[1];
     expect(imageBody.content[0]).toEqual({
       type: "text",
-      text: "animate the lantern [reference: image_1]"
+      text: "animate the lantern [reference: first_frame]"
     });
     expect(imageBody.content[1]).toMatchObject({
       type: "image_url",
-      role: "reference_image"
+      role: "first_frame"
     });
     expect(imageBody.content[1].image_url.url).toMatch(
       /^data:image\/jpeg;base64,/
@@ -440,7 +440,7 @@ describe("China media providers", () => {
 
     await expect(
       provider.imageToVideo([Uint8Array.from([0x89, 0x50, 0x4e, 0x47])], {
-        model: videoModel("kling-3.0-turbo", PROVIDER_IDS.KLING),
+        model: videoModel("kling-v3-0-turbo", PROVIDER_IDS.KLING),
         prompt: "make the character wave",
         resolution: "1080p",
         durationSeconds: 5
@@ -452,8 +452,8 @@ describe("China media providers", () => {
     );
     const body = JSON.parse(mockFetch.mock.calls[0][1].body as string);
     expect(body).toMatchObject({
-      model_name: "kling-3.0-turbo",
-      image: expect.stringMatching(/^data:image\/png;base64,/),
+      model_name: "kling-v3-0-turbo",
+      image: expect.not.stringMatching(/^data:/),
       prompt: "make the character wave",
       mode: "pro",
       duration: 5

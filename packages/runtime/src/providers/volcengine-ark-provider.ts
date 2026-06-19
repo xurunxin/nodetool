@@ -155,7 +155,7 @@ export class VolcengineArkProvider extends BaseProvider {
     }
     const resources = imageUrls.map((url, index) => ({
       type: "image" as const,
-      alias: `image_${index + 1}`,
+      alias: index === 0 ? "first_frame" : `image_${index + 1}`,
       url
     }));
     const prompt = [

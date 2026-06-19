@@ -20,7 +20,7 @@ function queueKlingVideoSuccess(): void {
             task_id: "task-1",
             task_status: "succeed",
             task_result: {
-              videos: [{ url: "https://cdn.klingai.com/video.mp4" }]
+              videos: [{ url: `data:video/mp4;base64,${videoB64}` }]
             }
           }
         }),
@@ -63,8 +63,8 @@ describe("KlingImageToVideoNode", () => {
       "https://api-beijing.klingai.com/v1/videos/image2video"
     );
     expect(submitBody).toMatchObject({
-      model_name: "kling-3.0-turbo",
-      image: "data:image/png;base64,iVBORw==",
+      model_name: "kling-v3-0-turbo",
+      image: "iVBORw==",
       prompt: "cinematic walk",
       mode: "pro",
       duration: 5

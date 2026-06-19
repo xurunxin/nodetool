@@ -259,7 +259,7 @@ export class KlingProvider extends BaseProvider {
 
   async getAvailableVideoModels(): Promise<VideoModel[]> {
     return [
-      { provider: this.provider, id: "kling-3.0-turbo", name: "Kling 3.0 Turbo", supported_tasks: ["text-to-video", "image-to-video"] },
+      { provider: this.provider, id: "kling-v3-0-turbo", name: "Kling 3.0 Turbo", supported_tasks: ["text-to-video", "image-to-video"] },
       { provider: this.provider, id: "kling-3.0-omni", name: "Kling 3.0 Omni", supported_tasks: ["text-to-video", "image-to-video"] }
     ];
   }
@@ -562,7 +562,7 @@ describe("Kling request builders", () => {
   });
 
   it("maps model ids to official create paths", () => {
-    expect(klingCreatePath("kling-3.0-turbo", "image-to-video")).toBe("/image-to-video/kling-3.0-turbo");
+    expect(klingCreatePath("/v1/videos/image2video")).toBe("https://api-beijing.klingai.com/v1/videos/image2video");
   });
 
   it("extracts generated media url from a succeeded task", () => {
@@ -583,7 +583,7 @@ Create `packages/kling-nodes/src/kling-base.ts` with these exported functions:
 import { downloadBytes, pollTask } from "@nodetool-ai/nodes-utils";
 
 export const KLING_BASE_URL = "https://api-beijing.klingai.com";
-export const KLING_VIDEO_MODELS = ["kling-3.0-turbo", "kling-3.0-omni"] as const;
+export const KLING_VIDEO_MODELS = ["kling-v3-0-turbo"] as const;
 export const KLING_RESOLUTIONS = ["720p", "1080p"] as const;
 export const KLING_DURATIONS = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] as const;
 

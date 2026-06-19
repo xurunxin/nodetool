@@ -8,7 +8,7 @@ import {
 } from "../china-media.js";
 
 export const KLING_BASE_URL = "https://api-beijing.klingai.com";
-export const KLING_IMAGE_TO_VIDEO_MODEL = "kling-3.0-turbo";
+export const KLING_IMAGE_TO_VIDEO_MODEL = "kling-v3-0-turbo";
 export const KLING_IMAGE_TO_VIDEO_MODELS = [KLING_IMAGE_TO_VIDEO_MODEL];
 export const KLING_IMAGE_TO_VIDEO_PATH = "/v1/videos/image2video";
 
@@ -82,7 +82,7 @@ export function buildKlingImageToVideoBody(
 
   return cleanBody({
     model_name: options.model,
-    image: options.firstFrameUrl,
+    image: klingImageValue(options.firstFrameUrl),
     prompt: compiled.text,
     mode: klingModeFromResolution(options.resolution),
     duration: options.duration,
@@ -90,6 +90,11 @@ export function buildKlingImageToVideoBody(
     external_task_id: options.externalTaskId,
     watermark_info: options.watermarkInfo
   });
+}
+
+function klingImageValue(value: string): string {
+  const match = /^data:[^,]*;base64,(.*)$/i.exec(value);
+  return match ? match[1] : value;
 }
 
 function assertKlingPromptReference(

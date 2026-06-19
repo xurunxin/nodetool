@@ -103,7 +103,7 @@ export class SeedanceImageToVideoNode extends BaseNode {
     const body: Record<string, unknown> = {
       model: String(this.model ?? "doubao-seedance-2-0-260128"),
       content: buildSeedanceContent(prompt, [
-        { type: "image", url: imageUrl }
+        { type: "image", alias: "first_frame", url: imageUrl }
       ]),
       ratio: String(this.ratio ?? "16:9"),
       duration: Number(this.duration ?? 5),

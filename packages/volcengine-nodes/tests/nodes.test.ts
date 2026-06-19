@@ -111,7 +111,7 @@ describe("Volcengine nodes", () => {
       {
         type: "image_url",
         image_url: { url: "data:image/png;base64,iVBORw==" },
-        role: "reference_image"
+        role: "first_frame"
       }
     ]);
   });
