@@ -108,7 +108,7 @@ Official docs:
 
 - https://klingai.com/document-api/guides/get-started/overview
 - https://klingai.com/document-api/api/get-started/authentication
-- https://klingai.com/document-api/api/video/3-0-turbo/image-to-video
+- https://klingai.com/document-api/apiReference/model/imageToVideo
 
 Relevant shape:
 
@@ -117,15 +117,12 @@ Relevant shape:
   models.
 - Older Access Key / Secret Key auth is only for 3.0 and earlier models and
   should not be the default for new NodeTool support.
-- Kling 3.0 Turbo image-to-video endpoint:
-  `POST /image-to-video/kling-3.0-turbo`.
-- Request body uses `contents[]`, `settings`, and `options`.
-- `contents[]` examples include:
-  - `{ type: "prompt", text: "..." }`
-  - `{ type: "first_frame", url: "..." }`
-- `settings` includes `resolution` and `duration`.
-- `options` includes `callback_url`, `external_task_id`, and `watermark_info`.
-- Tasks can be queried with `GET /tasks`.
+- Image-to-video endpoint: `POST /v1/videos/image2video`.
+- Request body uses top-level fields such as `model_name`, `image`, `prompt`,
+  `mode`, `duration`, `callback_url`, and `external_task_id`.
+- NodeTool maps generic resolution hints onto Kling's `mode` field
+  (`1080p`/`high` -> `pro`, `720p`/`standard` -> `std`).
+- Tasks can be queried with `GET /v1/videos/image2video/{task_id}`.
 - Output records include task status and generated media URLs. Generated media
   URLs are temporary and should be downloaded or persisted as NodeTool assets.
 

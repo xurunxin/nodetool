@@ -70,7 +70,7 @@ export interface WanxImageBodyOptions {
   size?: string;
   n?: number;
   watermark?: boolean;
-  thinkingMode?: string;
+  thinkingMode?: boolean | string;
 }
 
 export interface WanxImageBody extends Record<string, unknown> {
@@ -315,7 +315,7 @@ export function buildWanxImageBody(
     size: options.size,
     n: 1,
     watermark: options.watermark,
-    thinking_mode: options.thinkingMode
+    thinking_mode: wanxThinkingMode(options.thinkingMode)
   });
   if (Object.keys(parameters).length > 0) {
     body.parameters = parameters;
@@ -449,6 +449,23 @@ function cleanBody(body: Record<string, unknown>): Record<string, unknown> {
     out[key] = value;
   }
   return out;
+}
+
+function wanxThinkingMode(value: boolean | string | undefined): boolean | undefined {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (value === undefined || value.length === 0) {
+    return undefined;
+  }
+  const normalized = value.toLowerCase();
+  if (normalized === "enabled" || normalized === "true") {
+    return true;
+  }
+  if (normalized === "disabled" || normalized === "false") {
+    return false;
+  }
+  return undefined;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

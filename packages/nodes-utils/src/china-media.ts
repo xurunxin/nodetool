@@ -48,7 +48,8 @@ class TransientProviderRequestError extends Error {}
 class ProviderHttpError extends Error {
   constructor(
     message: string,
-    readonly status: number
+    readonly status: number,
+    readonly retryAfterMs?: number
   ) {
     super(message);
   }
@@ -247,13 +248,15 @@ async function downloadProviderMediaBytesOnce(
     }
 
     if (!response.ok) {
+      await drainResponseBody(response);
       const statusText =
         response.statusText.length > 0 ? ` ${response.statusText}` : "";
       throw new ProviderHttpError(
         `${provider} media URL download failed: ${safeUrlLabel(
           currentUrl
         )} HTTP ${response.status}${statusText}`,
-        response.status
+        response.status,
+        retryAfterMs(response)
       );
     }
 
@@ -281,13 +284,17 @@ export async function fetchProviderResponseWithRetries(
       if (!isTransientHttpStatus(response.status) || attempt >= retries) {
         return response;
       }
+      const delayMs = retryAfterMs(response) ?? retryDelayMs * (attempt + 1);
+      await drainResponseBody(response);
+      await delay(delayMs, undefined);
+      continue;
     } catch (error) {
       if (attempt >= retries) {
         throw error;
       }
+      await delay(retryDelayMs * (attempt + 1), undefined);
+      continue;
     }
-
-    await delay(retryDelayMs * (attempt + 1), undefined);
   }
 }
 
@@ -469,7 +476,7 @@ async function withTransientRetries<T>(
         throw error;
       }
       attempt += 1;
-      await delay(retryDelayMs * attempt, undefined);
+      await delay(retryDelayForError(error, retryDelayMs * attempt), undefined);
     }
   }
 }
@@ -486,6 +493,42 @@ function isTransientProviderError(error: unknown): boolean {
 
 function isTransientHttpStatus(status: number): boolean {
   return status === 408 || status === 429 || status >= 500;
+}
+
+function retryDelayForError(error: unknown, fallbackMs: number): number {
+  if (error instanceof ProviderHttpError && error.retryAfterMs !== undefined) {
+    return error.retryAfterMs;
+  }
+  return fallbackMs;
+}
+
+function retryAfterMs(response: Response): number | undefined {
+  const header = response.headers.get("retry-after");
+  if (!header) {
+    return undefined;
+  }
+
+  const seconds = Number(header);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return seconds * 1_000;
+  }
+
+  const dateMs = Date.parse(header);
+  if (Number.isFinite(dateMs)) {
+    return Math.max(0, dateMs - Date.now());
+  }
+
+  return undefined;
+}
+
+async function drainResponseBody(response: Response): Promise<void> {
+  try {
+    if (response.body) {
+      await response.arrayBuffer();
+    }
+  } catch {
+    // Best-effort drain so transient retries can reuse the connection.
+  }
 }
 
 function formatErrorMessage(error: unknown): string {

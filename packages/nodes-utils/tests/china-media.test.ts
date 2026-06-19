@@ -4,6 +4,7 @@ import {
   createDataUrl,
   downloadProviderMediaBytes,
   downloadBytes,
+  fetchProviderResponseWithRetries,
   inferImageMime,
   pollTask,
   type PromptResourceInput
@@ -198,6 +199,40 @@ describe("downloadProviderMediaBytes", () => {
     }
   });
 
+  it("honors Retry-After for transient result downloads", async () => {
+    vi.useFakeTimers();
+    const originalFetch = globalThis.fetch;
+    const output = new Uint8Array([7, 8, 9]);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("slow down", {
+          status: 429,
+          headers: { "retry-after": "1" }
+        })
+      )
+      .mockResolvedValueOnce(new Response(output, { status: 200 }));
+    globalThis.fetch = fetchMock;
+
+    try {
+      const result = downloadProviderMediaBytes(
+        "https://93.184.216.34/file.mp4",
+        "Test provider",
+        { retryDelayMs: 0 }
+      );
+
+      await vi.advanceTimersByTimeAsync(999);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+
+      await expect(result).resolves.toEqual(output);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      globalThis.fetch = originalFetch;
+      vi.useRealTimers();
+    }
+  });
+
   it("rejects unsafe redirect targets and redacts URL secrets", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = vi.fn(async () => {
@@ -227,6 +262,25 @@ describe("downloadProviderMediaBytes", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+});
+
+describe("fetchProviderResponseWithRetries", () => {
+  it("drains transient response bodies before retrying", async () => {
+    const transient = new Response("busy", { status: 500 });
+    const drainSpy = vi.spyOn(transient, "arrayBuffer");
+    const success = new Response("ok", { status: 200 });
+    const operation = vi
+      .fn()
+      .mockResolvedValueOnce(transient)
+      .mockResolvedValueOnce(success);
+
+    await expect(
+      fetchProviderResponseWithRetries(operation, { retryDelayMs: 0 })
+    ).resolves.toBe(success);
+
+    expect(drainSpy).toHaveBeenCalledOnce();
+    expect(operation).toHaveBeenCalledTimes(2);
   });
 });
 

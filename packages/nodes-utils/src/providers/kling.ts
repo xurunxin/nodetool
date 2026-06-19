@@ -84,6 +84,7 @@ export function buildKlingImageToVideoBody(
     model_name: options.model,
     image: options.firstFrameUrl,
     prompt: compiled.text,
+    mode: klingModeFromResolution(options.resolution),
     duration: options.duration,
     callback_url: options.callbackUrl,
     external_task_id: options.externalTaskId,
@@ -281,4 +282,18 @@ function cleanBody(body: Record<string, unknown>): Record<string, unknown> {
     out[key] = value;
   }
   return out;
+}
+
+function klingModeFromResolution(resolution: string | undefined): string | undefined {
+  const value = resolution?.trim().toLowerCase();
+  if (!value) {
+    return undefined;
+  }
+  if (value === "std" || value === "standard" || value.includes("720")) {
+    return "std";
+  }
+  if (value === "pro" || value === "high" || value.includes("1080")) {
+    return "pro";
+  }
+  return undefined;
 }

@@ -169,6 +169,40 @@ describe("Volcengine Ark base helpers", () => {
     expect(mockFetch.mock.calls[2][0]).toBe("https://93.184.216.34/video.mp4");
   });
 
+  it("retries transient Seedance task query responses", async () => {
+    const videoBytes = new Uint8Array([9, 10]);
+    mockFetch
+      .mockResolvedValueOnce(new Response("busy", { status: 500 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "task-1", status: "running" }), {
+          status: 200
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "task-1",
+            status: "succeeded",
+            content: { video_url: { url: "https://93.184.216.34/video.mp4" } }
+          }),
+          { status: 200 }
+        )
+      )
+      .mockResolvedValueOnce(new Response(videoBytes, { status: 200 }));
+
+    await expect(
+      waitForSeedanceResult("secret-key", "task-1", {
+        pollIntervalMs: 0,
+        timeoutMs: 2_000
+      })
+    ).resolves.toEqual(videoBytes);
+
+    expect(mockFetch.mock.calls[0][0]).toBe(
+      "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/task-1"
+    );
+    expect(mockFetch).toHaveBeenCalledTimes(4);
+  });
+
   it("rejects private Seedance media URLs before downloading", async () => {
     mockFetch.mockResolvedValueOnce(
       new Response(

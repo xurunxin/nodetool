@@ -109,10 +109,12 @@ function videoRefFromBytes(bytes: Uint8Array): { type: "video"; data: string } {
 }
 
 async function resolveFirstFrameUrl(
-  image: Record<string, unknown>,
+  image: unknown,
   context?: ProcessingContext
 ): Promise<string | null> {
-  const uri = typeof image?.uri === "string" ? image.uri : "";
+  const imageRef =
+    image && typeof image === "object" ? (image as Record<string, unknown>) : {};
+  const uri = typeof imageRef.uri === "string" ? imageRef.uri : "";
   if (
     uri.startsWith("http://") ||
     uri.startsWith("https://") ||
@@ -121,7 +123,7 @@ async function resolveFirstFrameUrl(
     return uri;
   }
 
-  const bytes = await loadMediaRefBytes(image, context);
+  const bytes = await loadMediaRefBytes(imageRef, context);
   if (!bytes || bytes.length === 0) {
     return null;
   }

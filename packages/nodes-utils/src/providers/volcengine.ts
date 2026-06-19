@@ -3,6 +3,7 @@ import {
   compilePromptResources,
   createDataUrl,
   downloadProviderMediaBytes,
+  fetchProviderResponseWithRetries,
   inferImageMime,
   pollTask,
   type CompiledPromptReference,
@@ -271,9 +272,12 @@ async function querySeedanceTask(
   apiKey: string,
   taskId: string
 ): Promise<SeedanceTaskResult> {
-  const response = await fetch(
-    arkCreatePath(`${SEEDANCE_TASKS_PATH}/${encodeURIComponent(taskId)}`),
-    { headers: arkHeaders(apiKey) }
+  const response = await fetchProviderResponseWithRetries(
+    () =>
+      fetch(
+        arkCreatePath(`${SEEDANCE_TASKS_PATH}/${encodeURIComponent(taskId)}`),
+        { headers: arkHeaders(apiKey) }
+      )
   );
   if (!response.ok) {
     throw new Error(

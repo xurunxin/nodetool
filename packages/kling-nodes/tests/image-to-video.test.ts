@@ -66,6 +66,7 @@ describe("KlingImageToVideoNode", () => {
       model_name: "kling-3.0-turbo",
       image: "data:image/png;base64,iVBORw==",
       prompt: "cinematic walk",
+      mode: "pro",
       duration: 5
     });
     expect(result.output).toEqual({ type: "video", data: videoB64 });
@@ -74,6 +75,15 @@ describe("KlingImageToVideoNode", () => {
   it("requires a first-frame image", async () => {
     const node = new KlingImageToVideoNode({
       image: { type: "image", data: null, uri: "" },
+      prompt: "cinematic walk"
+    });
+
+    await expect(node.process()).rejects.toThrow("first-frame image");
+  });
+
+  it("handles cleared image input with the first-frame validation error", async () => {
+    const node = new KlingImageToVideoNode({
+      image: null,
       prompt: "cinematic walk"
     });
 

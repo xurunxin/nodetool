@@ -52,6 +52,7 @@ describe("Kling base helpers", () => {
       model_name: "kling-3.0-turbo",
       image: "data:image/png;base64,AAAA",
       prompt: "make hero walk",
+      mode: "pro",
       duration: 5,
       callback_url: "https://callback.example/kling",
       external_task_id: "external-1",

@@ -198,7 +198,8 @@ describe("DashScope Wanxiang nodes", () => {
     ]);
     expect(submitBody()).toMatchObject({
       parameters: {
-        n: 1
+        n: 1,
+        thinking_mode: true
       }
     });
   });

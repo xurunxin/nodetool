@@ -158,7 +158,7 @@ describe("DashScope Wanxiang base helpers", () => {
         size: "1024*1024",
         n: 1,
         watermark: false,
-        thinking_mode: "enabled"
+        thinking_mode: true
       }
     });
   });

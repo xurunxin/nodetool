@@ -254,6 +254,7 @@ describe("China media providers", () => {
     expect(content[0].image).toMatch(/^data:image\/png;base64,/);
     expect(content[1]).toEqual({ text: "make it cinematic" });
     expect(body.parameters.size).toBe("1024*1024");
+    expect(body.parameters.thinking_mode).toBe(true);
   });
 
   it("DashScope imageToVideo uses first and last frame Wanxiang media references", async () => {
@@ -454,6 +455,7 @@ describe("China media providers", () => {
       model_name: "kling-3.0-turbo",
       image: expect.stringMatching(/^data:image\/png;base64,/),
       prompt: "make the character wave",
+      mode: "pro",
       duration: 5
     });
   });
