@@ -54,8 +54,7 @@ import {
   CUSTOM_MODEL_ENDPOINT_LANGUAGE_CAPABILITIES,
   customEndpointModelsToUnified,
   customEndpointProviderId,
-  enabledCustomModelEndpoints,
-  listCustomModelEndpoints
+  listEnabledCustomModelEndpoints
 } from "../../custom-model-endpoints.js";
 
 function assertLocalModelManagementEnabled(): void {
@@ -645,14 +644,14 @@ function toUnifiedLanguageModel(
 }
 
 type CustomModelEndpoint = Awaited<
-  ReturnType<typeof listCustomModelEndpoints>
+  ReturnType<typeof listEnabledCustomModelEndpoints>
 >[number];
 
 async function getCustomModelEndpointsForModels(
   userId: string
 ): Promise<CustomModelEndpoint[]> {
   try {
-    return await listCustomModelEndpoints(userId);
+    return await listEnabledCustomModelEndpoints(userId);
   } catch (error) {
     log.warn("Custom model endpoint metadata unavailable", {
       userId,
@@ -665,9 +664,7 @@ async function getCustomModelEndpointsForModels(
 async function getCustomEndpointLanguageModels(
   userId: string
 ): Promise<UnifiedModel[]> {
-  const endpoints = enabledCustomModelEndpoints(
-    await getCustomModelEndpointsForModels(userId)
-  );
+  const endpoints = await getCustomModelEndpointsForModels(userId);
   return endpoints.flatMap(customEndpointModelsToUnified);
 }
 
@@ -679,9 +676,7 @@ async function getCustomEndpointLanguageModelsByProvider(
     return [];
   }
   const endpointId = provider.slice("custom:".length);
-  const endpoints = enabledCustomModelEndpoints(
-    await getCustomModelEndpointsForModels(userId)
-  );
+  const endpoints = await getCustomModelEndpointsForModels(userId);
   const endpoint = endpoints.find((candidate) => candidate.id === endpointId);
   return endpoint ? customEndpointModelsToUnified(endpoint) : [];
 }
@@ -689,9 +684,7 @@ async function getCustomEndpointLanguageModelsByProvider(
 async function getCustomEndpointProviderInfos(
   userId: string
 ): Promise<Array<{ provider: string; capabilities: string[] }>> {
-  const endpoints = enabledCustomModelEndpoints(
-    await getCustomModelEndpointsForModels(userId)
-  );
+  const endpoints = await getCustomModelEndpointsForModels(userId);
   return endpoints.map((endpoint) => ({
     provider: customEndpointProviderId(endpoint.id),
     capabilities: [...CUSTOM_MODEL_ENDPOINT_LANGUAGE_CAPABILITIES]

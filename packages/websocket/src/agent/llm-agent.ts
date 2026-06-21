@@ -42,12 +42,19 @@ import {
 } from "@nodetool-ai/agents";
 import type { NodeRegistry } from "@nodetool-ai/node-sdk";
 import {
+  BaseProvider,
   ProcessingContext,
   getProvider as getRuntimeProvider,
   isProviderConfigured,
   listRegisteredProviderIds,
 } from "@nodetool-ai/runtime";
-import type { BaseProvider, Message, ToolCall } from "@nodetool-ai/runtime";
+import type {
+  LanguageModel,
+  Message,
+  ProviderId,
+  ProviderStreamItem,
+  ToolCall
+} from "@nodetool-ai/runtime";
 import type { GraphData, NodeDescriptor, ProcessingMessage } from "@nodetool-ai/protocol";
 import {
   Message as DbMessage,
@@ -71,7 +78,11 @@ import {
 } from "./sdk-provider.js";
 import type { AgentTransport } from "./transport.js";
 import { resolveNodeToolProvider } from "../custom-provider-resolver.js";
-import { getCustomEndpointLanguageModels } from "../custom-model-endpoints.js";
+import {
+  customEndpointProviderId,
+  getCustomEndpointLanguageModels,
+  listEnabledCustomModelEndpoints
+} from "../custom-model-endpoints.js";
 import {
   filterProviderIdsForSurface,
   isProviderVisibleForSurface,
@@ -80,6 +91,44 @@ import {
 const log = createLogger("nodetool.websocket.agent.llm");
 
 const MAX_AGGREGATED_MODELS = 200;
+
+type EnabledCustomModelEndpoint = Awaited<
+  ReturnType<typeof listEnabledCustomModelEndpoints>
+>[number];
+
+class CustomEndpointCatalogProvider extends BaseProvider {
+  private readonly models: LanguageModel[];
+
+  constructor(endpoint: EnabledCustomModelEndpoint) {
+    const providerId = customEndpointProviderId(endpoint.id);
+    super(providerId as ProviderId);
+    this.models = endpoint.models.map((model) => ({
+      id: model.id,
+      name: model.name,
+      provider: providerId as ProviderId
+    }));
+  }
+
+  override async hasToolSupport(): Promise<boolean> {
+    return true;
+  }
+
+  override async getAvailableLanguageModels(): Promise<LanguageModel[]> {
+    return this.models;
+  }
+
+  override async generateMessage(
+    _args: Parameters<BaseProvider["generateMessage"]>[0]
+  ): Promise<Message> {
+    throw new Error("Custom endpoint catalog providers are for model discovery only");
+  }
+
+  override async *generateMessages(
+    _args: Parameters<BaseProvider["generateMessages"]>[0]
+  ): AsyncGenerator<ProviderStreamItem> {
+    throw new Error("Custom endpoint catalog providers are for model discovery only");
+  }
+}
 
 function withDefaultModel(
   models: AgentModelDescriptor[],
@@ -770,6 +819,18 @@ async function getConfiguredProvidersForUser(
       }
     )
   );
+
+  try {
+    const customEndpoints = await listEnabledCustomModelEndpoints(userId);
+    for (const endpoint of customEndpoints) {
+      const providerId = customEndpointProviderId(endpoint.id);
+      providers[providerId] ??= new CustomEndpointCatalogProvider(endpoint);
+    }
+  } catch (error) {
+    log.debug("Skipping custom endpoints for graph-planner model lookup", {
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
 
   providers[fallbackProvider.provider] = fallbackProvider;
   return providers;

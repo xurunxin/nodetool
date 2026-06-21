@@ -37,9 +37,15 @@ import { ConnectionState } from "../lib/websocket/WebSocketManager";
 import { globalWebSocketManager } from "../lib/websocket/GlobalWebSocketManager";
 import { FrontendToolRegistry } from "../lib/tools/frontendTools";
 import { uuidv4 } from "./uuidv4";
-import { createChatAgentSlice, type ChatAgentSlice } from "./chatAgent";
+import {
+  createChatAgentSlice,
+  type ChatAgentSlice
+} from "./chatAgent";
 import { getAgentSocketClient } from "../lib/agent/AgentSocketClient";
-import type { AgentTranscriptMessage } from "../lib/agent/agentTypes";
+import type {
+  AgentProvider,
+  AgentTranscriptMessage
+} from "../lib/agent/agentTypes";
 import {
   handleChatWebSocketMessage,
   MsgpackData,
@@ -274,6 +280,154 @@ function extractMessageText(message: Message | ChatOutgoingMessage): string {
       .trim();
   }
   return "";
+}
+
+export const GLOBAL_CHAT_STORAGE_VERSION = 2;
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return isPlainRecord(value) ? value : {};
+}
+
+function asStringRecord(value: unknown): Record<string, string> {
+  return asRecord(value) as Record<string, string>;
+}
+
+function asNullableStringRecord(value: unknown): Record<string, string | null> {
+  return asRecord(value) as Record<string, string | null>;
+}
+
+function isAgentProvider(value: unknown): value is AgentProvider {
+  return value === "pi" || value === "llm" || value === "morpheus";
+}
+
+function shouldPreserveLegacyPiSelection(
+  state: Record<string, unknown>
+): boolean {
+  if (state.mode !== "pi") {
+    return false;
+  }
+  const hasLegacyPiSelection =
+    typeof state.piModel === "string" ||
+    typeof state.piWorkspaceId === "string" ||
+    typeof state.piWorkspacePath === "string" ||
+    Object.keys(asRecord(state.piSessionByThread)).length > 0;
+  if (!hasLegacyPiSelection) {
+    return false;
+  }
+  if (!isAgentProvider(state.agentProvider)) {
+    return true;
+  }
+  return state.agentProvider === "morpheus" && state.agentModel === "";
+}
+
+export function migrateGlobalChatPersistedState(
+  persistedState: unknown
+): Partial<GlobalChatState> {
+  const fallback = {
+    threads: {} as Record<string, Thread>,
+    lastUsedThreadId: null as string | null,
+    selectedModel: null as LanguageModel | null,
+    permissionMode: {} as Record<string, PermissionMode>
+  };
+  if (!isPlainRecord(persistedState)) {
+    return fallback as Partial<GlobalChatState>;
+  }
+
+  const state = persistedState;
+  const preserveLegacyPi = shouldPreserveLegacyPiSelection(state);
+  return {
+    threads: isPlainRecord(state.threads)
+      ? (state.threads as Record<string, Thread>)
+      : fallback.threads,
+    lastUsedThreadId:
+      typeof state.lastUsedThreadId === "string"
+        ? state.lastUsedThreadId
+        : fallback.lastUsedThreadId,
+    selectedModel: isPlainRecord(state.selectedModel)
+      ? (state.selectedModel as unknown as LanguageModel)
+      : undefined,
+    permissionMode: isPlainRecord(state.permissionMode)
+      ? (state.permissionMode as Record<string, PermissionMode>)
+      : fallback.permissionMode,
+    memoryEnabled:
+      typeof state.memoryEnabled === "boolean" ? state.memoryEnabled : false,
+    workflowThreadId: asStringRecord(state.workflowThreadId),
+    threadWorkflowId: asNullableStringRecord(state.threadWorkflowId),
+    agentProvider: preserveLegacyPi
+      ? "pi"
+      : isAgentProvider(state.agentProvider)
+        ? state.agentProvider
+        : "morpheus",
+    agentModel: preserveLegacyPi && typeof state.piModel === "string"
+      ? state.piModel
+      : typeof state.agentModel === "string"
+        ? state.agentModel
+        : typeof state.piModel === "string"
+          ? state.piModel
+          : "",
+    agentWorkspaceId:
+      preserveLegacyPi && typeof state.piWorkspaceId === "string"
+        ? state.piWorkspaceId
+        : typeof state.agentWorkspaceId === "string" ||
+            state.agentWorkspaceId === null
+          ? state.agentWorkspaceId
+          : typeof state.piWorkspaceId === "string"
+            ? state.piWorkspaceId
+            : null,
+    agentWorkspacePath:
+      preserveLegacyPi && typeof state.piWorkspacePath === "string"
+        ? state.piWorkspacePath
+        : typeof state.agentWorkspacePath === "string" ||
+            state.agentWorkspacePath === null
+          ? state.agentWorkspacePath
+          : typeof state.piWorkspacePath === "string"
+            ? state.piWorkspacePath
+            : null,
+    agentSessionByThread:
+      Object.keys(asRecord(state.agentSessionByThread)).length > 0
+        ? asStringRecord(state.agentSessionByThread)
+        : asStringRecord(state.piSessionByThread),
+    agentResumeSessionByThread: asStringRecord(
+      state.agentResumeSessionByThread
+    ),
+    agentSessionConfigByThread: asRecord(
+      state.agentSessionConfigByThread
+    ) as GlobalChatState["agentSessionConfigByThread"],
+    piModel:
+      preserveLegacyPi && typeof state.piModel === "string"
+        ? state.piModel
+        : typeof state.agentModel === "string"
+          ? state.agentModel
+          : typeof state.piModel === "string"
+            ? state.piModel
+            : "",
+    piWorkspaceId:
+      preserveLegacyPi && typeof state.piWorkspaceId === "string"
+        ? state.piWorkspaceId
+        : typeof state.agentWorkspaceId === "string" ||
+            state.agentWorkspaceId === null
+          ? state.agentWorkspaceId
+          : typeof state.piWorkspaceId === "string"
+            ? state.piWorkspaceId
+            : null,
+    piWorkspacePath:
+      preserveLegacyPi && typeof state.piWorkspacePath === "string"
+        ? state.piWorkspacePath
+        : typeof state.agentWorkspacePath === "string" ||
+            state.agentWorkspacePath === null
+          ? state.agentWorkspacePath
+          : typeof state.piWorkspacePath === "string"
+            ? state.piWorkspacePath
+            : null,
+    piSessionByThread:
+      Object.keys(asRecord(state.agentSessionByThread)).length > 0
+        ? asStringRecord(state.agentSessionByThread)
+        : asStringRecord(state.piSessionByThread)
+  };
 }
 
 // Concurrency guards (module-level so they never end up in persisted state):
@@ -1334,7 +1488,7 @@ const useGlobalChatStore = create<GlobalChatState>()(
     }),
     {
       name: "global-chat-storage",
-      version: 1,
+      version: GLOBAL_CHAT_STORAGE_VERSION,
       // Persist minimal subset incl. selections; do not persist message cache
       // Note: Return type cast needed due to zustand persist middleware type limitations
       partialize: (state) => ({
@@ -1360,95 +1514,10 @@ const useGlobalChatStore = create<GlobalChatState>()(
         piWorkspacePath: state.piWorkspacePath,
         piSessionByThread: state.piSessionByThread
       }) as GlobalChatState,
-      migrate: (persistedState, _version) => {
-        // Corrupt localStorage (string, null, etc.) must yield a usable
-        // default rather than passing the raw value through; selectors
-        // that read `threads`/`permissionMode` would otherwise see
-        // `undefined` and crash.
-        const fallback = {
-          threads: {} as Record<string, Thread>,
-          lastUsedThreadId: null as string | null,
-          selectedModel: null as LanguageModel | null,
-          permissionMode: {} as Record<string, PermissionMode>
-        };
-        if (!persistedState || typeof persistedState !== "object") {
-          return fallback as unknown as GlobalChatState;
-        }
-        const state = persistedState as Record<string, unknown>;
-        return {
-          threads:
-            state.threads &&
-            typeof state.threads === "object" &&
-            !Array.isArray(state.threads)
-              ? (state.threads as Record<string, Thread>)
-              : fallback.threads,
-          lastUsedThreadId:
-            typeof state.lastUsedThreadId === "string"
-              ? state.lastUsedThreadId
-              : fallback.lastUsedThreadId,
-          selectedModel:
-            state.selectedModel &&
-            typeof state.selectedModel === "object"
-              ? (state.selectedModel as LanguageModel)
-              : fallback.selectedModel,
-          permissionMode:
-            state.permissionMode &&
-            typeof state.permissionMode === "object" &&
-            !Array.isArray(state.permissionMode)
-              ? (state.permissionMode as Record<string, PermissionMode>)
-              : fallback.permissionMode,
-          agentProvider:
-            state.agentProvider === "pi" ||
-            state.agentProvider === "llm" ||
-            state.agentProvider === "morpheus"
-              ? state.agentProvider
-              : state.mode === "pi"
-                ? "pi"
-                : "morpheus",
-          agentModel:
-            typeof state.agentModel === "string"
-              ? state.agentModel
-              : typeof state.piModel === "string"
-                ? state.piModel
-                : "",
-          agentWorkspaceId:
-            typeof state.agentWorkspaceId === "string" ||
-            state.agentWorkspaceId === null
-              ? state.agentWorkspaceId
-              : typeof state.piWorkspaceId === "string"
-                ? state.piWorkspaceId
-                : null,
-          agentWorkspacePath:
-            typeof state.agentWorkspacePath === "string" ||
-            state.agentWorkspacePath === null
-              ? state.agentWorkspacePath
-              : typeof state.piWorkspacePath === "string"
-                ? state.piWorkspacePath
-                : null,
-          agentSessionByThread:
-            state.agentSessionByThread &&
-            typeof state.agentSessionByThread === "object" &&
-            !Array.isArray(state.agentSessionByThread)
-              ? (state.agentSessionByThread as Record<string, string>)
-              : state.piSessionByThread &&
-                  typeof state.piSessionByThread === "object" &&
-                  !Array.isArray(state.piSessionByThread)
-                ? (state.piSessionByThread as Record<string, string>)
-                : {},
-          agentResumeSessionByThread:
-            state.agentResumeSessionByThread &&
-            typeof state.agentResumeSessionByThread === "object" &&
-            !Array.isArray(state.agentResumeSessionByThread)
-              ? (state.agentResumeSessionByThread as Record<string, string>)
-              : {},
-          agentSessionConfigByThread:
-            state.agentSessionConfigByThread &&
-            typeof state.agentSessionConfigByThread === "object" &&
-            !Array.isArray(state.agentSessionConfigByThread)
-              ? (state.agentSessionConfigByThread as GlobalChatState["agentSessionConfigByThread"])
-              : {}
-        } as unknown as GlobalChatState;
-      },
+      migrate: (persistedState, _version) =>
+        migrateGlobalChatPersistedState(
+          persistedState
+        ) as unknown as GlobalChatState,
       onRehydrateStorage: () => (state) => {
         // State has been rehydrated from storage
         if (state) {
@@ -1462,18 +1531,22 @@ const useGlobalChatStore = create<GlobalChatState>()(
           state.isLoadingMessages = false;
           state.isLoadingThreads = false;
 
+          const preserveLegacyPi = shouldPreserveLegacyPiSelection(
+            state as unknown as Record<string, unknown>
+          );
+
           // Guard the per-workflow + agent maps against corrupt persisted values
           // (they're read with spreads, so a non-object would crash).
-          const asRecord = (value: unknown) =>
-            value && typeof value === "object" && !Array.isArray(value)
-              ? (value as Record<string, never>)
-              : {};
-          state.workflowThreadId = asRecord(state.workflowThreadId);
-          state.threadWorkflowId = asRecord(state.threadWorkflowId);
-          const legacyPiSessionByThread = asRecord(state.piSessionByThread);
+          state.workflowThreadId = asStringRecord(state.workflowThreadId);
+          state.threadWorkflowId = asNullableStringRecord(
+            state.threadWorkflowId
+          );
+          const legacyPiSessionByThread = asStringRecord(
+            state.piSessionByThread
+          );
           state.agentSessionByThread =
             Object.keys(asRecord(state.agentSessionByThread)).length > 0
-              ? asRecord(state.agentSessionByThread)
+              ? asStringRecord(state.agentSessionByThread)
               : legacyPiSessionByThread;
           state.agentThreadBySession = {};
           state.agentSessionConfigByThread = asRecord(
@@ -1500,11 +1573,24 @@ const useGlobalChatStore = create<GlobalChatState>()(
           ) {
             state.agentProvider = state.mode === "pi" ? "pi" : "morpheus";
           }
-          if (typeof state.agentModel !== "string") {
+          if (preserveLegacyPi) {
+            state.agentProvider = "pi";
+          }
+          if (
+            preserveLegacyPi &&
+            typeof state.piModel === "string"
+          ) {
+            state.agentModel = state.piModel;
+          } else if (typeof state.agentModel !== "string") {
             state.agentModel =
               typeof state.piModel === "string" ? state.piModel : "";
           }
           if (
+            preserveLegacyPi &&
+            typeof state.piWorkspaceId === "string"
+          ) {
+            state.agentWorkspaceId = state.piWorkspaceId;
+          } else if (
             typeof state.agentWorkspaceId !== "string" &&
             state.agentWorkspaceId !== null
           ) {
@@ -1514,6 +1600,11 @@ const useGlobalChatStore = create<GlobalChatState>()(
                 : null;
           }
           if (
+            preserveLegacyPi &&
+            typeof state.piWorkspacePath === "string"
+          ) {
+            state.agentWorkspacePath = state.piWorkspacePath;
+          } else if (
             typeof state.agentWorkspacePath !== "string" &&
             state.agentWorkspacePath !== null
           ) {

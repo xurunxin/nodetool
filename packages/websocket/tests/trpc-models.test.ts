@@ -67,13 +67,13 @@ vi.mock("../src/custom-model-endpoints.js", async (orig) => {
   const actual = await orig<typeof import("../src/custom-model-endpoints.js")>();
   return {
     ...actual,
-    listCustomModelEndpoints: vi.fn()
+    listEnabledCustomModelEndpoints: vi.fn()
   };
 });
 
 import {
   customEndpointProviderId,
-  listCustomModelEndpoints
+  listEnabledCustomModelEndpoints
 } from "../src/custom-model-endpoints.js";
 
 // ── Mock node:fs/promises & node:fs to avoid real disk I/O ────────────────
@@ -216,7 +216,7 @@ describe("models router", () => {
     (getModelsByHfType as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     (deleteCachedHfModel as ReturnType<typeof vi.fn>).mockResolvedValue(true);
     (getHuggingfaceFileInfos as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-    (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    (listEnabledCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     // Default: disk access returns ENOENT (nothing cached)
     (access as ReturnType<typeof vi.fn>).mockRejectedValue(
       Object.assign(new Error("ENOENT"), { code: "ENOENT" })
@@ -339,15 +339,10 @@ describe("models router", () => {
       ]);
     });
 
-    it("includes enabled custom endpoint providers and skips disabled endpoints", async () => {
+    it("includes enabled custom endpoint providers", async () => {
       (listRegisteredProviderIds as ReturnType<typeof vi.fn>).mockReturnValue([]);
-      (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
-        customEndpoint(),
-        customEndpoint({
-          id: "disabled_gateway",
-          name: "Disabled Gateway",
-          enabled: false
-        })
+      (listEnabledCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
+        customEndpoint()
       ]);
 
       const caller = createCaller(makeCtx());
@@ -568,14 +563,8 @@ describe("models router", () => {
 
     it("includes enabled custom endpoint language models from metadata without instantiating the custom provider", async () => {
       (listRegisteredProviderIds as ReturnType<typeof vi.fn>).mockReturnValue([]);
-      (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
-        customEndpoint(),
-        customEndpoint({
-          id: "disabled_gateway",
-          name: "Disabled Gateway",
-          enabled: false,
-          models: [{ id: "disabled-chat", name: "Disabled Chat" }]
-        })
+      (listEnabledCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
+        customEndpoint()
       ]);
 
       const caller = createCaller(makeCtx());
@@ -601,7 +590,7 @@ describe("models router", () => {
     });
 
     it("keeps listing models when custom endpoint metadata cannot be read", async () => {
-      (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockRejectedValue(
+      (listEnabledCustomModelEndpoints as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error("bad custom endpoint metadata")
       );
 
@@ -645,16 +634,10 @@ describe("models router", () => {
       }
     });
 
-    it("includes enabled custom endpoint models for text generation and skips disabled endpoints", async () => {
+    it("includes enabled custom endpoint models for text generation", async () => {
       (listRegisteredProviderIds as ReturnType<typeof vi.fn>).mockReturnValue([]);
-      (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
-        customEndpoint(),
-        customEndpoint({
-          id: "disabled_gateway",
-          name: "Disabled Gateway",
-          enabled: false,
-          models: [{ id: "disabled-chat", name: "Disabled Chat" }]
-        })
+      (listEnabledCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
+        customEndpoint()
       ]);
 
       const caller = createCaller(makeCtx());
@@ -675,7 +658,7 @@ describe("models router", () => {
     });
 
     it("keeps text generation listing available when custom endpoint metadata cannot be read", async () => {
-      (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockRejectedValue(
+      (listEnabledCustomModelEndpoints as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error("bad custom endpoint metadata")
       );
 
@@ -1109,14 +1092,8 @@ describe("models router", () => {
 
     it("returns metadata models for enabled custom endpoint providers without instantiating a runtime provider", async () => {
       (isProviderConfigured as ReturnType<typeof vi.fn>).mockResolvedValue(false);
-      (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
-        customEndpoint(),
-        customEndpoint({
-          id: "disabled_gateway",
-          name: "Disabled Gateway",
-          enabled: false,
-          models: [{ id: "disabled-chat", name: "Disabled Chat" }]
-        })
+      (listEnabledCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
+        customEndpoint()
       ]);
 
       const caller = createCaller(makeCtx());
@@ -1140,14 +1117,7 @@ describe("models router", () => {
     });
 
     it("returns no metadata models for disabled custom endpoint providers", async () => {
-      (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
-        customEndpoint({
-          id: "disabled_gateway",
-          name: "Disabled Gateway",
-          enabled: false,
-          models: [{ id: "disabled-chat", name: "Disabled Chat" }]
-        })
-      ]);
+      (listEnabledCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       const caller = createCaller(makeCtx());
       const result = await caller.models.llmByProvider({

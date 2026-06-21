@@ -74,7 +74,10 @@ jest.mock("../../lib/agent/AgentSocketClient", () => ({
 
 import { encode } from "@msgpack/msgpack";
 import { Server } from "mock-socket";
-import useGlobalChatStore from "../GlobalChatStore";
+import useGlobalChatStore, {
+  GLOBAL_CHAT_STORAGE_VERSION,
+  migrateGlobalChatPersistedState
+} from "../GlobalChatStore";
 import {
   Message,
   JobUpdate,
@@ -1315,6 +1318,58 @@ describe("GlobalChatStore", () => {
   });
 
   describe("State Persistence", () => {
+    it("uses a new storage version for agent provider migration", () => {
+      expect(GLOBAL_CHAT_STORAGE_VERSION).toBe(2);
+    });
+
+    it("preserves legacy Pi selections during storage migration", () => {
+      const migrated = migrateGlobalChatPersistedState({
+        mode: "pi",
+        piModel: "pi/claude",
+        piWorkspaceId: "workspace-1",
+        piWorkspacePath: "G:/Projects/sample",
+        piSessionByThread: {
+          "thread-pi": "legacy-pi-session"
+        }
+      });
+
+      expect(migrated).toMatchObject({
+        agentProvider: "pi",
+        agentModel: "pi/claude",
+        agentWorkspaceId: "workspace-1",
+        agentWorkspacePath: "G:/Projects/sample",
+        agentSessionByThread: {
+          "thread-pi": "legacy-pi-session"
+        },
+        piModel: "pi/claude",
+        piWorkspaceId: "workspace-1",
+        piWorkspacePath: "G:/Projects/sample",
+        piSessionByThread: {
+          "thread-pi": "legacy-pi-session"
+        }
+      });
+    });
+
+    it("keeps explicit migrated agent selections over legacy mirrors", () => {
+      const migrated = migrateGlobalChatPersistedState({
+        mode: "pi",
+        agentProvider: "llm",
+        agentModel: "claude-sonnet",
+        agentWorkspaceId: null,
+        agentWorkspacePath: null,
+        piModel: "pi/claude",
+        piWorkspaceId: "workspace-1",
+        piWorkspacePath: "G:/Projects/sample"
+      });
+
+      expect(migrated).toMatchObject({
+        agentProvider: "llm",
+        agentModel: "claude-sonnet",
+        agentWorkspaceId: null,
+        agentWorkspacePath: null
+      });
+    });
+
     it("partialize function returns only threads and currentThreadId", () => {
       const mockState = {
         status: "connected" as const,

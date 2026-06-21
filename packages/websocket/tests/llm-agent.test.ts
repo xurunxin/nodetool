@@ -41,7 +41,11 @@ import {
 // declare the spy via vi.hoisted() and reference it from the factory.
 // Mimics the real processChat shape: append the user message first
 // (just like message-processor.ts line 110), then a fake assistant reply.
-const { processChatSpy, resolveNodeToolProviderSpy } = vi.hoisted(() => ({
+const {
+  processChatSpy,
+  resolveNodeToolProviderSpy,
+  graphPlannerOptions,
+} = vi.hoisted(() => ({
   processChatSpy: vi.fn(
     async (opts: { messages: any[]; userInput: string }) => {
       opts.messages.push({ role: "user", content: opts.userInput });
@@ -54,11 +58,28 @@ const { processChatSpy, resolveNodeToolProviderSpy } = vi.hoisted(() => ({
     hasToolSupport: async () => true,
     getAvailableLanguageModels: async () => [],
   })),
+  graphPlannerOptions: [] as any[],
 }));
 
 vi.mock("@nodetool-ai/chat", () => ({
   processChat: processChatSpy,
 }));
+
+vi.mock("@nodetool-ai/agents", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@nodetool-ai/agents")>();
+  return {
+    ...actual,
+    GraphPlanner: class {
+      constructor(options: any) {
+        graphPlannerOptions.push(options);
+      }
+
+      async *plan() {
+        return { nodes: [], edges: [] };
+      }
+    },
+  };
+});
 
 vi.mock("../src/agent/pi-agent.js", () => ({
   PiQuerySession: class {},
@@ -85,7 +106,10 @@ vi.mock("@nodetool-ai/runtime", async (importOriginal) => {
   };
 });
 
-import { LlmAgentSdkProvider } from "../src/agent/llm-agent.js";
+import {
+  LlmAgentSdkProvider,
+  setLlmAgentGraphPlannerRegistry,
+} from "../src/agent/llm-agent.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -171,6 +195,7 @@ describe("LlmAgentSession persistence", () => {
     delete process.env.NODETOOL_MODEL_SURFACE;
     processChatSpy.mockClear();
     resolveNodeToolProviderSpy.mockClear();
+    graphPlannerOptions.length = 0;
   });
 
   afterEach(() => {
@@ -330,6 +355,53 @@ describe("LlmAgentSession persistence", () => {
       customProviderId,
       "alice",
     );
+  });
+
+  it("adds custom endpoints to graph planner model lookup", async () => {
+    const customProviderId = customEndpointProviderId("custom_gateway");
+    await saveCustomEndpoints("alice", [customEndpoint()]);
+    await saveCustomEndpointSecret("alice", "custom_gateway");
+    setLlmAgentGraphPlannerRegistry({} as never);
+    processChatSpy.mockImplementationOnce(
+      async (opts: {
+        context: unknown;
+        messages: any[];
+        tools: Array<{ name: string; process: (...args: any[]) => Promise<unknown> }>;
+        userInput: string;
+      }) => {
+        const plannerTool = opts.tools.find(
+          (tool) => tool.name === "plan_workflow_graph",
+        );
+        await plannerTool?.process(opts.context, {
+          objective: "build a graph",
+          apply_to_canvas: false,
+        });
+        opts.messages.push({ role: "user", content: opts.userInput });
+        opts.messages.push({ role: "assistant", content: "ok" });
+        return opts.messages;
+      },
+    );
+    const provider = new LlmAgentSdkProvider();
+    const session = provider.createSession({
+      model: "claude-sonnet",
+      workspacePath: "",
+      userId: "alice",
+      chatProviderId: "anthropic",
+    });
+
+    await session.send("plan", makeTransport(), "tmp-id-1", []);
+
+    const plannerProviders = graphPlannerOptions[0]?.providers;
+    expect(plannerProviders).toHaveProperty(customProviderId);
+    await expect(
+      plannerProviders[customProviderId].getAvailableLanguageModels(),
+    ).resolves.toEqual([
+      {
+        id: "custom-chat",
+        name: "Custom Chat",
+        provider: customProviderId,
+      },
+    ]);
   });
 
   it("rejects local-only chatProviderId in API-first mode before resolving the provider", async () => {

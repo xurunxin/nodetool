@@ -16,13 +16,13 @@ vi.mock("../src/custom-model-endpoints.js", async (orig) => {
   const actual = await orig<typeof import("../src/custom-model-endpoints.js")>();
   return {
     ...actual,
-    listCustomModelEndpoints: vi.fn()
+    listEnabledCustomModelEndpoints: vi.fn()
   };
 });
 
 import {
   customEndpointProviderId,
-  listCustomModelEndpoints
+  listEnabledCustomModelEndpoints
 } from "../src/custom-model-endpoints.js";
 
 describe("REST models Fastify route", () => {
@@ -30,7 +30,7 @@ describe("REST models Fastify route", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    vi.mocked(listCustomModelEndpoints).mockResolvedValue([
+    vi.mocked(listEnabledCustomModelEndpoints).mockResolvedValue([
       {
         id: "custom_gateway",
         name: "Custom Gateway",
@@ -70,6 +70,6 @@ describe("REST models Fastify route", () => {
         capabilities: ["generate_message", "generate_messages"]
       }
     ]);
-    expect(listCustomModelEndpoints).toHaveBeenCalledWith("user-42");
+    expect(listEnabledCustomModelEndpoints).toHaveBeenCalledWith("user-42");
   });
 });

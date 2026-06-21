@@ -40,8 +40,7 @@ import {
   CUSTOM_MODEL_ENDPOINT_LANGUAGE_CAPABILITIES,
   customEndpointModelsToUnified,
   customEndpointProviderId,
-  enabledCustomModelEndpoints,
-  listCustomModelEndpoints
+  listEnabledCustomModelEndpoints
 } from "./custom-model-endpoints.js";
 
 export type { UnifiedModel };
@@ -365,14 +364,14 @@ async function instantiateProvider(
 }
 
 type CustomModelEndpoint = Awaited<
-  ReturnType<typeof listCustomModelEndpoints>
+  ReturnType<typeof listEnabledCustomModelEndpoints>
 >[number];
 
 async function getCustomModelEndpointsForRest(
   userId: string
 ): Promise<CustomModelEndpoint[]> {
   try {
-    return await listCustomModelEndpoints(userId);
+    return await listEnabledCustomModelEndpoints(userId);
   } catch {
     return [];
   }
@@ -381,9 +380,7 @@ async function getCustomModelEndpointsForRest(
 async function getCustomEndpointLanguageModelsForRest(
   userId: string
 ): Promise<UnifiedModel[]> {
-  const endpoints = enabledCustomModelEndpoints(
-    await getCustomModelEndpointsForRest(userId)
-  );
+  const endpoints = await getCustomModelEndpointsForRest(userId);
   return endpoints.flatMap(customEndpointModelsToUnified);
 }
 
@@ -395,9 +392,7 @@ async function getCustomEndpointLanguageModelsByProviderForRest(
     return [];
   }
   const endpointId = provider.slice("custom:".length);
-  const endpoints = enabledCustomModelEndpoints(
-    await getCustomModelEndpointsForRest(userId)
-  );
+  const endpoints = await getCustomModelEndpointsForRest(userId);
   const endpoint = endpoints.find((candidate) => candidate.id === endpointId);
   return endpoint ? customEndpointModelsToUnified(endpoint) : [];
 }
@@ -405,9 +400,7 @@ async function getCustomEndpointLanguageModelsByProviderForRest(
 async function getCustomEndpointProviderInfosForRest(
   userId: string
 ): Promise<ProviderInfo[]> {
-  const endpoints = enabledCustomModelEndpoints(
-    await getCustomModelEndpointsForRest(userId)
-  );
+  const endpoints = await getCustomModelEndpointsForRest(userId);
   return endpoints.map((endpoint) => ({
     provider: customEndpointProviderId(endpoint.id),
     capabilities: [...CUSTOM_MODEL_ENDPOINT_LANGUAGE_CAPABILITIES]

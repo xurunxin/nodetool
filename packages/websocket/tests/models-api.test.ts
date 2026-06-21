@@ -22,13 +22,13 @@ vi.mock("../src/custom-model-endpoints.js", async (orig) => {
   const actual = await orig<typeof import("../src/custom-model-endpoints.js")>();
   return {
     ...actual,
-    listCustomModelEndpoints: vi.fn()
+    listEnabledCustomModelEndpoints: vi.fn()
   };
 });
 
 import {
   customEndpointProviderId,
-  listCustomModelEndpoints
+  listEnabledCustomModelEndpoints
 } from "../src/custom-model-endpoints.js";
 
 vi.mock("@nodetool-ai/runtime", async (orig) => {
@@ -180,7 +180,7 @@ describe("REST models API surface", () => {
     vi.mocked(getModelsByHfType).mockResolvedValue([]);
     vi.mocked(readCachedHfModels).mockResolvedValue([]);
     vi.mocked(searchCachedHfModels).mockResolvedValue([]);
-    vi.mocked(listCustomModelEndpoints).mockResolvedValue([]);
+    vi.mocked(listEnabledCustomModelEndpoints).mockResolvedValue([]);
     vi.mocked(access).mockRejectedValue(
       Object.assign(new Error("ENOENT"), { code: "ENOENT" })
     );
@@ -251,13 +251,8 @@ describe("REST models API surface", () => {
   });
 
   it("includes enabled custom endpoints in REST provider lists", async () => {
-    vi.mocked(listCustomModelEndpoints).mockResolvedValue([
-      customEndpoint(),
-      customEndpoint({
-        id: "disabled_gateway",
-        name: "Disabled Gateway",
-        enabled: false
-      })
+    vi.mocked(listEnabledCustomModelEndpoints).mockResolvedValue([
+      customEndpoint()
     ]);
 
     const { body, status } = await requestJson("/api/models/providers");
@@ -625,14 +620,8 @@ describe("REST models API surface", () => {
   });
 
   it("includes enabled custom endpoint metadata models in all-model responses", async () => {
-    vi.mocked(listCustomModelEndpoints).mockResolvedValue([
-      customEndpoint(),
-      customEndpoint({
-        id: "disabled_gateway",
-        name: "Disabled Gateway",
-        enabled: false,
-        models: [{ id: "disabled-chat", name: "Disabled Chat" }]
-      })
+    vi.mocked(listEnabledCustomModelEndpoints).mockResolvedValue([
+      customEndpoint()
     ]);
 
     const { body, status } = await requestJson("/api/models/all");
@@ -652,14 +641,8 @@ describe("REST models API surface", () => {
   });
 
   it("returns enabled custom endpoint metadata models from encoded direct LLM routes", async () => {
-    vi.mocked(listCustomModelEndpoints).mockResolvedValue([
-      customEndpoint(),
-      customEndpoint({
-        id: "disabled_gateway",
-        name: "Disabled Gateway",
-        enabled: false,
-        models: [{ id: "disabled-chat", name: "Disabled Chat" }]
-      })
+    vi.mocked(listEnabledCustomModelEndpoints).mockResolvedValue([
+      customEndpoint()
     ]);
 
     const { body, status } = await requestJson(
