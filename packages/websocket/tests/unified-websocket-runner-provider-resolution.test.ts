@@ -213,4 +213,48 @@ describe("UnifiedWebSocketRunner provider resolution", () => {
       { id: "gateway-chat", name: "Gateway Chat", provider: providerId }
     ]);
   });
+
+  it("refreshes custom endpoint providers without rebuilding runtime cache", async () => {
+    vi.mocked(listRegisteredProviderIds).mockReturnValue([]);
+    await upsertCustomModelEndpoint("alice", {
+      id: "custom_gateway",
+      name: "Custom Gateway",
+      kind: "openai",
+      baseUrl: "https://gateway.example.test/v1",
+      enabled: true,
+      models: [{ id: "gateway-chat", name: "Gateway Chat" }],
+      apiKey: "secret"
+    });
+    const runner = new UnifiedWebSocketRunner({
+      userId: "alice"
+    });
+    const providerId = customEndpointProviderId("custom_gateway");
+    const getConfiguredProviders = () =>
+      (
+        runner as unknown as {
+          getConfiguredProviders(
+            userId: string
+          ): Promise<Record<string, BaseProvider>>;
+        }
+      ).getConfiguredProviders("alice");
+
+    await expect(getConfiguredProviders()).resolves.toEqual(
+      expect.objectContaining({
+        [providerId]: expect.any(Object)
+      })
+    );
+
+    await upsertCustomModelEndpoint("alice", {
+      id: "custom_gateway",
+      name: "Custom Gateway",
+      kind: "openai",
+      baseUrl: "https://gateway.example.test/v1",
+      enabled: false,
+      models: [{ id: "gateway-chat", name: "Gateway Chat" }],
+      apiKey: "secret"
+    });
+
+    await expect(getConfiguredProviders()).resolves.toEqual({});
+    expect(listRegisteredProviderIds).toHaveBeenCalledTimes(1);
+  });
 });

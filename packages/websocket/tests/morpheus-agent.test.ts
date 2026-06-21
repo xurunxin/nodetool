@@ -63,6 +63,7 @@ import { MorpheusAgentSdkProvider } from "../src/agent/morpheus-agent.js";
 interface FakeMorpheusClient {
   createSession: ReturnType<typeof vi.fn>;
   streamPrompt: ReturnType<typeof vi.fn>;
+  submitToolResult: ReturnType<typeof vi.fn>;
 }
 
 const makeTransport = (): AgentTransport => ({
@@ -83,6 +84,7 @@ const makeClient = (
   }) => void | Promise<void>,
 ): FakeMorpheusClient => ({
   createSession: vi.fn(async () => ({ id: "remote-session-1" })),
+  submitToolResult: vi.fn(async () => undefined),
   streamPrompt: vi.fn((options) =>
     (async function* () {
       await onStream?.(options);
@@ -173,7 +175,7 @@ describe("MorpheusAgentSdkProvider", () => {
     );
   });
 
-  it("routes forward_to_frontend nodetool calls to renderer tools and records local-only tool results", async () => {
+  it("routes forward_to_frontend nodetool calls to renderer tools and returns tool results", async () => {
     const client = makeClient([
       {
         type: "tool_call",
@@ -207,6 +209,16 @@ describe("MorpheusAgentSdkProvider", () => {
       "ui_add_node",
       { type: "nodetool.text.Text" },
     );
+    expect(client.submitToolResult).toHaveBeenCalledWith({
+      agentId: "nodetool-canvas",
+      sessionId: "remote-session-1",
+      toolCallId: "tool-1",
+      name: "forward_to_frontend",
+      result: { nodeId: "n1" },
+      isError: false,
+      error: undefined,
+      signal: expect.any(AbortSignal),
+    });
     expect(messages).toContainEqual(
       expect.objectContaining({
         type: "assistant",
@@ -289,6 +301,16 @@ describe("MorpheusAgentSdkProvider", () => {
       "ui_get_graph",
       { includeSelection: true },
     );
+    expect(client.submitToolResult).toHaveBeenCalledWith({
+      agentId: "nodetool-canvas",
+      sessionId: "remote-session-1",
+      toolCallId: "direct-tool-1",
+      name: "ui_get_graph",
+      result: { nodes: [{ id: "n1" }] },
+      isError: false,
+      error: undefined,
+      signal: expect.any(AbortSignal),
+    });
     expect(messages).toContainEqual(
       expect.objectContaining({
         type: "assistant",
@@ -434,6 +456,16 @@ describe("MorpheusAgentSdkProvider", () => {
     const messages = await session.send("open panel", transport, "ui-session-1", []);
 
     expect(transport.executeTool).not.toHaveBeenCalled();
+    expect(client.submitToolResult).toHaveBeenCalledWith({
+      agentId: "nodetool-canvas",
+      sessionId: "remote-session-1",
+      toolCallId: "tool-unsupported",
+      name: "forward_to_frontend",
+      result: undefined,
+      isError: true,
+      error: expect.stringContaining("Unsupported forward_to_frontend"),
+      signal: expect.any(AbortSignal),
+    });
     const toolResult = messages.find(
       (message) =>
         message.type === "result" &&

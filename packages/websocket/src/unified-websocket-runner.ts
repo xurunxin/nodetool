@@ -4460,40 +4460,51 @@ export class UnifiedWebSocketRunner {
 
   /**
    * Build the map of configured BaseProvider instances for the given user.
-   * Cached per user — invalidate by clearing `configuredProvidersCache`.
+   * Runtime providers are cached per user; custom endpoint providers are
+   * refreshed on every call so find_model observes endpoint changes.
    * Used by MCP tools (`find_model`, media generation) that need provider
    * access.
    */
   private async getConfiguredProviders(
     userId: string
   ): Promise<Record<string, BaseProvider>> {
-    const cached = this.configuredProvidersCache.get(userId);
-    if (cached) return cached;
-
-    const providersMod = await import("@nodetool-ai/runtime");
-    const { getSecret: getStoredSecret } = await import(
-      "@nodetool-ai/models"
-    );
-    const getSecret = (key: string) =>
-      getStoredSecret(key, userId).then((v) => v ?? undefined);
-    const ids = filterProviderIdsForSurface(
-      providersMod.listRegisteredProviderIds()
-    );
-    const result: Record<string, BaseProvider> = {};
-    await Promise.all(
-      ids.map(async (id) => {
-        try {
-          if (await providersMod.isProviderConfigured(id, getSecret)) {
-            result[id] = await providersMod.getProvider(id, getSecret);
+    const cachedRuntimeProviders = this.configuredProvidersCache.get(userId);
+    let runtimeProviders: Record<string, BaseProvider>;
+    if (cachedRuntimeProviders) {
+      runtimeProviders = cachedRuntimeProviders;
+    } else {
+      const providersMod = await import("@nodetool-ai/runtime");
+      const { getSecret: getStoredSecret } = await import(
+        "@nodetool-ai/models"
+      );
+      const getSecret = (key: string) =>
+        getStoredSecret(key, userId).then((v) => v ?? undefined);
+      const ids = filterProviderIdsForSurface(
+        providersMod.listRegisteredProviderIds()
+      );
+      const discoveredRuntimeProviders: Record<string, BaseProvider> = {};
+      await Promise.all(
+        ids.map(async (id) => {
+          try {
+            if (await providersMod.isProviderConfigured(id, getSecret)) {
+              discoveredRuntimeProviders[id] = await providersMod.getProvider(
+                id,
+                getSecret
+              );
+            }
+          } catch (err) {
+            log.debug("Skipping provider for find_model", {
+              provider: id,
+              error: err instanceof Error ? err.message : String(err)
+            });
           }
-        } catch (err) {
-          log.debug("Skipping provider for find_model", {
-            provider: id,
-            error: err instanceof Error ? err.message : String(err)
-          });
-        }
-      })
-    );
+        })
+      );
+      runtimeProviders = discoveredRuntimeProviders;
+      this.configuredProvidersCache.set(userId, runtimeProviders);
+    }
+
+    const result: Record<string, BaseProvider> = { ...runtimeProviders };
     try {
       const customEndpoints = await listEnabledCustomModelEndpoints(userId);
       for (const endpoint of customEndpoints) {
@@ -4505,7 +4516,6 @@ export class UnifiedWebSocketRunner {
         error: err instanceof Error ? err.message : String(err)
       });
     }
-    this.configuredProvidersCache.set(userId, result);
     return result;
   }
 

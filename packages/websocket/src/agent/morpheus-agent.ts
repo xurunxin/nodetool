@@ -46,6 +46,16 @@ export interface MorpheusClientLike {
     tools?: FrontendToolManifest[];
     signal?: AbortSignal;
   }): AsyncIterable<MorpheusStreamEvent>;
+  submitToolResult(options: {
+    agentId: string;
+    sessionId: string;
+    toolCallId: string;
+    name: string;
+    result?: unknown;
+    isError?: boolean;
+    error?: string;
+    signal?: AbortSignal;
+  }): Promise<void>;
 }
 
 export interface MorpheusAgentSdkProviderOptions {
@@ -349,6 +359,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
         await this.handleStreamEvent(
           event,
           transport,
+          remoteSessionId,
           sessionId,
           this.abortController.signal,
           emit,
@@ -388,6 +399,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
   private async handleStreamEvent(
     event: MorpheusStreamEvent,
     transport: AgentTransport,
+    remoteSessionId: string,
     sessionId: string,
     signal: AbortSignal,
     emit: (message: AgentMessage) => void,
@@ -460,6 +472,14 @@ export class MorpheusQuerySession implements AgentQuerySession {
             manifest,
             signal,
           );
+          await this.submitMorpheusToolResult({
+            remoteSessionId,
+            toolCallId: event.id,
+            name: event.name,
+            result,
+            isError: false,
+            signal,
+          });
           emit({
             type: "result",
             uuid: randomUUID(),
@@ -470,6 +490,14 @@ export class MorpheusQuerySession implements AgentQuerySession {
           });
         } catch (error) {
           const errMsg = error instanceof Error ? error.message : String(error);
+          await this.submitMorpheusToolResult({
+            remoteSessionId,
+            toolCallId: event.id,
+            name: event.name,
+            isError: true,
+            error: errMsg,
+            signal,
+          });
           emit({
             type: "result",
             uuid: randomUUID(),
@@ -485,6 +513,35 @@ export class MorpheusQuerySession implements AgentQuerySession {
       case "done":
       case "error":
         return;
+    }
+  }
+
+  private async submitMorpheusToolResult(options: {
+    remoteSessionId: string;
+    toolCallId: string;
+    name: string;
+    result?: unknown;
+    isError: boolean;
+    error?: string;
+    signal: AbortSignal;
+  }): Promise<void> {
+    try {
+      await this.options.client.submitToolResult({
+        agentId: this.options.agentId,
+        sessionId: options.remoteSessionId,
+        toolCallId: options.toolCallId,
+        name: options.name,
+        result: options.result,
+        isError: options.isError,
+        error: options.error,
+        signal: options.signal,
+      });
+    } catch (error) {
+      log.warn(
+        `Failed to submit Morpheus tool result: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
     }
   }
 

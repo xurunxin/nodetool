@@ -1046,12 +1046,16 @@ const useGlobalChatStore = create<GlobalChatState>()(
         const load = (async (): Promise<Message[]> => {
           try {
             const state = get();
-            const agentTranscriptSessionId =
-              !cursor &&
-              state.agentSessionConfigByThread[threadId]?.provider ===
-                "llm"
-                ? state.agentResumeSessionByThread[threadId]
-                : undefined;
+            const agentSessionConfig =
+              state.agentSessionConfigByThread[threadId];
+            let agentTranscriptSessionId: string | undefined;
+            if (!cursor && agentSessionConfig?.provider === "llm") {
+              agentTranscriptSessionId =
+                state.agentResumeSessionByThread[threadId];
+            }
+            if (!cursor && agentSessionConfig?.provider === "morpheus") {
+              agentTranscriptSessionId = state.agentSessionByThread[threadId];
+            }
             if (agentTranscriptSessionId) {
               const transcript =
                 await getAgentSocketClient().getSessionMessages({

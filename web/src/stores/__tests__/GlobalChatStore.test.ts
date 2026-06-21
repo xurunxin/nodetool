@@ -218,6 +218,59 @@ describe("GlobalChatStore", () => {
     expect(store.getState().messageCache["visible-thread"]).toBe(messages);
   });
 
+  it("loads Morpheus agent transcripts through the UI session id", async () => {
+    mockAgentClient.getSessionMessages.mockResolvedValue([
+      {
+        type: "user",
+        uuid: "user-message-1",
+        session_id: "visible-thread",
+        text: "build a graph"
+      },
+      {
+        type: "assistant",
+        uuid: "assistant-message-1",
+        session_id: "visible-thread",
+        text: "done"
+      }
+    ]);
+    store.setState({
+      agentSessionConfigByThread: {
+        "visible-thread": {
+          provider: "morpheus",
+          model: "nodetool-canvas",
+          workspacePath: null,
+          chatProviderId: null
+        }
+      },
+      agentSessionByThread: {
+        "visible-thread": "morpheus-ui-session"
+      },
+      agentResumeSessionByThread: {},
+      messageCache: {}
+    } as any);
+
+    const messages = await store.getState().loadMessages("visible-thread");
+
+    expect(mockAgentClient.getSessionMessages).toHaveBeenCalledWith({
+      sessionId: "morpheus-ui-session"
+    });
+    expect(messages).toEqual([
+      expect.objectContaining({
+        id: "user-message-1",
+        role: "user",
+        thread_id: "visible-thread",
+        content: [{ type: "text", text: "build a graph" }]
+      }),
+      expect.objectContaining({
+        id: "assistant-message-1",
+        role: "assistant",
+        thread_id: "visible-thread",
+        content: [{ type: "text", text: "done" }]
+      })
+    ]);
+    expect(store.getState().messageCache["visible-thread"]).toBe(messages);
+  });
+
   it("sendMessage adds message to thread and sends via socket", async () => {
     mockServer = new Server("ws://test/ws");
     mockGlobalWebSocketManager.isConnectionOpen.mockReturnValue(true);

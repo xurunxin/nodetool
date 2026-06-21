@@ -272,6 +272,69 @@ describe("MorpheusClient.createSession", () => {
   });
 });
 
+describe("MorpheusClient.submitToolResult", () => {
+  it("posts tool results with JSON auth headers and signal", async () => {
+    const controller = new AbortController();
+    const { fetchFn, calls } = makeFetchMock([jsonResponse({ ok: true })]);
+    const client = new MorpheusClient({
+      baseUrl: "https://morpheus.example/",
+      apiKey: "secret",
+      fetchFn,
+    });
+
+    await expect(
+      client.submitToolResult({
+        agentId: "canvas-agent",
+        sessionId: "s-1",
+        toolCallId: "tool-1",
+        name: "ui_get_graph",
+        result: { nodes: [] },
+        isError: false,
+        signal: controller.signal,
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].input).toBe(
+      "https://morpheus.example/api/v1/tool-results",
+    );
+    expect(calls[0].init?.method).toBe("POST");
+    expect(calls[0].init?.headers).toEqual({
+      "content-type": "application/json",
+      "X-API-Key": "secret",
+    });
+    expect(calls[0].init?.signal).toBe(controller.signal);
+    expect(JSON.parse(String(calls[0].init?.body))).toEqual({
+      agentId: "canvas-agent",
+      sessionId: "s-1",
+      toolCallId: "tool-1",
+      name: "ui_get_graph",
+      result: { nodes: [] },
+      isError: false,
+    });
+  });
+
+  it("throws on failed tool result submissions", async () => {
+    const client = new MorpheusClient({
+      baseUrl: "https://morpheus.example",
+      fetchFn: makeFetchMock([
+        jsonResponse({ message: "missing" }, { status: 404 }),
+      ]).fetchFn,
+    });
+
+    await expect(
+      client.submitToolResult({
+        agentId: "canvas-agent",
+        sessionId: "s-1",
+        toolCallId: "tool-1",
+        name: "ui_get_graph",
+        isError: true,
+        error: "boom",
+      }),
+    ).rejects.toThrow(/submit Morpheus tool result failed/i);
+  });
+});
+
 describe("MorpheusClient.streamPrompt", () => {
   it("streams split chunks and multiple frames per chunk", async () => {
     const { fetchFn } = makeFetchMock([

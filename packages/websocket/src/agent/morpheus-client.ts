@@ -30,6 +30,17 @@ export interface StreamPromptOptions {
   signal?: AbortSignal;
 }
 
+export interface SubmitToolResultOptions {
+  agentId: string;
+  sessionId: string;
+  toolCallId: string;
+  name: string;
+  result?: unknown;
+  isError?: boolean;
+  error?: string;
+  signal?: AbortSignal;
+}
+
 interface MorpheusEnvelope {
   event?: unknown;
   type?: unknown;
@@ -174,6 +185,30 @@ export class MorpheusClient {
     }
 
     return { id };
+  }
+
+  async submitToolResult(options: SubmitToolResultOptions): Promise<void> {
+    const response = await this.fetchFn(`${this.baseUrl}/api/v1/tool-results`, {
+      method: "POST",
+      headers: jsonHeaders(this.apiKey),
+      body: JSON.stringify({
+        agentId: options.agentId,
+        sessionId: options.sessionId,
+        toolCallId: options.toolCallId,
+        name: options.name,
+        result: options.result,
+        isError: options.isError === true,
+        ...(options.error ? { error: options.error } : {}),
+      }),
+      signal: options.signal,
+    });
+
+    if (!response.ok) {
+      const body = await responseText(response);
+      throw new Error(
+        `Submit Morpheus tool result failed: ${response.status} ${body}`,
+      );
+    }
   }
 
   async *streamPrompt(
