@@ -95,6 +95,12 @@ const responseText = async (response: Response) => {
 export const parseMorpheusSseFrame = (
   frame: string,
 ): MorpheusStreamEvent | null => {
+  const eventLine = frame
+    .split(/\r?\n/)
+    .find((line) => line.startsWith("event:"));
+  const frameEventType = eventLine
+    ? eventLine.slice("event:".length).trim()
+    : undefined;
   const dataLines = frame
     .split(/\r?\n/)
     .filter((line) => line.startsWith("data:"))
@@ -111,7 +117,11 @@ export const parseMorpheusSseFrame = (
   const payloadRecord = payload as Record<string, unknown>;
   const data = isRecord(payload.data) ? payload.data : payloadRecord;
   const eventType =
-    typeof payload.event === "string" ? payload.event : payload.type;
+    typeof payload.event === "string"
+      ? payload.event
+      : typeof payload.type === "string"
+        ? payload.type
+        : frameEventType;
 
   switch (eventType) {
     case "text_delta":

@@ -1350,6 +1350,27 @@ describe("GlobalChatStore", () => {
       });
     });
 
+    it("preserves legacy Pi selections when old storage omitted mode", () => {
+      const migrated = migrateGlobalChatPersistedState({
+        piModel: "pi/claude",
+        piWorkspaceId: "workspace-1",
+        piWorkspacePath: "G:/Projects/sample",
+        piSessionByThread: {
+          "thread-pi": "legacy-pi-session"
+        }
+      });
+
+      expect(migrated).toMatchObject({
+        agentProvider: "pi",
+        agentModel: "pi/claude",
+        agentWorkspaceId: "workspace-1",
+        agentWorkspacePath: "G:/Projects/sample",
+        agentSessionByThread: {
+          "thread-pi": "legacy-pi-session"
+        }
+      });
+    });
+
     it("keeps explicit migrated agent selections over legacy mirrors", () => {
       const migrated = migrateGlobalChatPersistedState({
         mode: "pi",

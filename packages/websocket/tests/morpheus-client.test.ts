@@ -121,6 +121,30 @@ describe("parseMorpheusSseFrame", () => {
     });
   });
 
+  it("uses standard SSE event names when payloads omit event fields", () => {
+    expect(
+      parseMorpheusSseFrame('event: text_delta\ndata: {"delta":"hello"}'),
+    ).toEqual({ type: "text_delta", text: "hello" });
+    expect(
+      parseMorpheusSseFrame(
+        'event: thinking_delta\ndata: {"text":"working"}',
+      ),
+    ).toEqual({ type: "thinking_delta", text: "working" });
+    expect(
+      parseMorpheusSseFrame(
+        'event: tool_call\ndata: {"id":"tool-6","name":"ui_get_graph","arguments":{"includeSelection":true}}',
+      ),
+    ).toEqual({
+      type: "tool_call",
+      id: "tool-6",
+      name: "ui_get_graph",
+      arguments: { includeSelection: true },
+    });
+    expect(parseMorpheusSseFrame("event: done\ndata: {}")).toEqual({
+      type: "done",
+    });
+  });
+
   it("maps top-level MorpheusCore tool_call payloads", () => {
     expect(
       parseMorpheusSseFrame(

@@ -307,9 +307,6 @@ function isAgentProvider(value: unknown): value is AgentProvider {
 function shouldPreserveLegacyPiSelection(
   state: Record<string, unknown>
 ): boolean {
-  if (state.mode !== "pi") {
-    return false;
-  }
   const hasLegacyPiSelection =
     typeof state.piModel === "string" ||
     typeof state.piWorkspaceId === "string" ||

@@ -73,6 +73,41 @@ function isIpv6LinkLocal(host: string): boolean {
   return value >= 0xfe80 && value <= 0xfebf;
 }
 
+function ipv6Segment(host: string, index: number): number | null {
+  const segment = host.split(":")[index];
+  if (!segment || !/^[0-9a-f]{1,4}$/.test(segment)) {
+    return null;
+  }
+  return Number.parseInt(segment, 16);
+}
+
+function isIpv6Unspecified(host: string): boolean {
+  return host === "::" || host === "::0" || host === "0:0:0:0:0:0:0:0";
+}
+
+function isNonGlobalIpv6(host: string): boolean {
+  if (isIpv6Unspecified(host) || host === "::1") {
+    return true;
+  }
+
+  const first = ipv6Segment(host, 0);
+  if (first === null) {
+    return false;
+  }
+  const second = ipv6Segment(host, 1);
+
+  if (
+    first === 0x100 ||
+    (first === 0x2001 && second === 0xdb8) ||
+    first >= 0xfc00 ||
+    first >= 0xff00
+  ) {
+    return true;
+  }
+
+  return isIpv6LinkLocal(host);
+}
+
 export function isDisallowedEndpointHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
   if (
@@ -96,13 +131,7 @@ export function isDisallowedEndpointHost(hostname: string): boolean {
   }
 
   const isIpv6Literal = host.includes(":");
-  if (
-    isIpv6Literal &&
-    (host === "::1" ||
-      host.startsWith("fc") ||
-      host.startsWith("fd") ||
-      isIpv6LinkLocal(host))
-  ) {
+  if (isIpv6Literal && isNonGlobalIpv6(host)) {
     return true;
   }
 
