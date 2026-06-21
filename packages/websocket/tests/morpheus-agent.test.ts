@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { initTestDb } from "@nodetool-ai/models";
 import type { AgentTransport } from "../src/agent/transport.js";
 import type { FrontendToolManifest } from "../src/agent/types.js";
 import type { MorpheusStreamEvent } from "../src/agent/morpheus-client.js";
@@ -114,6 +115,10 @@ const settleWithin = async <T>(
   ]);
 
 describe("MorpheusAgentSdkProvider", () => {
+  beforeEach(() => {
+    initTestDb();
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
   });
@@ -254,6 +259,63 @@ describe("MorpheusAgentSdkProvider", () => {
     expect(toolResult?.uuid).not.toBe("tool-1");
   });
 
+  it("surfaces Morpheus tool-result delivery failures as local tool errors", async () => {
+    const client = makeClient([
+      {
+        type: "tool_call",
+        id: "tool-1",
+        name: "forward_to_frontend",
+        arguments: {
+          forwardType: "nodetool:ui_add_node",
+          payload: JSON.stringify({ type: "nodetool.text.Text" }),
+        },
+      },
+      { type: "done" },
+    ]);
+    client.submitToolResult.mockRejectedValueOnce(new Error("delivery failed"));
+    const provider = new MorpheusAgentSdkProvider({
+      baseUrl: "https://morpheus.example",
+      clientFactory: () => client,
+    });
+    const session = provider.createSession({
+      model: "nodetool-canvas",
+      workspacePath: "",
+      userId: "alice",
+    });
+    const transport = makeTransport();
+    vi.mocked(transport.executeTool).mockResolvedValueOnce({ nodeId: "n1" });
+
+    const messages = await session.send("add node", transport, "ui-session-1", []);
+
+    expect(client.submitToolResult).toHaveBeenCalledTimes(2);
+    expect(client.submitToolResult).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        toolCallId: "tool-1",
+        isError: true,
+        error: "delivery failed",
+      }),
+    );
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        type: "result",
+        subtype: "tool_result",
+        text: "Error: delivery failed",
+        is_error: true,
+        errors: ["delivery failed"],
+      }),
+    );
+    expect(
+      messages.some(
+        (message) =>
+          message.type === "result" &&
+          message.subtype === "tool_result" &&
+          message.text === JSON.stringify({ nodeId: "n1" }) &&
+          !message.is_error,
+      ),
+    ).toBe(false);
+  });
+
   it("routes direct Morpheus manifest tool calls to renderer tools", async () => {
     const client = makeClient([
       {
@@ -375,6 +437,89 @@ describe("MorpheusAgentSdkProvider", () => {
         provider: "morpheus",
         firstPrompt: "build a graph",
         summary: "built graph",
+      }),
+    );
+  });
+
+  it("persists Morpheus transcript history outside the provider instance", async () => {
+    const client = makeClient([
+      { type: "text_delta", text: "built" },
+      { type: "done" },
+    ]);
+    const provider = new MorpheusAgentSdkProvider({
+      baseUrl: "https://morpheus.example",
+      clientFactory: () => client,
+    });
+    const session = provider.createSession({
+      model: "nodetool-canvas",
+      workspacePath: "",
+      userId: "alice",
+    });
+
+    await session.send("build a graph", makeTransport(), "ui-session-history", []);
+
+    const reloadedProvider = new MorpheusAgentSdkProvider({
+      baseUrl: "https://morpheus.example",
+      clientFactory: () => makeClient([]),
+    });
+    await expect(
+      reloadedProvider.getSessionMessages(
+        { sessionId: "ui-session-history" },
+        "alice",
+      ),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        type: "user",
+        session_id: "ui-session-history",
+        text: "build a graph",
+      }),
+      expect.objectContaining({
+        type: "assistant",
+        session_id: "ui-session-history",
+        text: "built",
+      }),
+    ]);
+    await expect(reloadedProvider.listSessions({}, "alice")).resolves.toContainEqual(
+      expect.objectContaining({
+        sessionId: "ui-session-history",
+        provider: "morpheus",
+        firstPrompt: "build a graph",
+      }),
+    );
+  });
+
+  it("resumes persisted Morpheus history with the stored remote session id", async () => {
+    const firstClient = makeClient([{ type: "done" }]);
+    const firstProvider = new MorpheusAgentSdkProvider({
+      baseUrl: "https://morpheus.example",
+      clientFactory: () => firstClient,
+    });
+    const firstSession = firstProvider.createSession({
+      model: "nodetool-canvas",
+      workspacePath: "",
+      userId: "alice",
+    });
+    await firstSession.send("start", makeTransport(), "ui-session-history", []);
+
+    const resumedClient = makeClient([{ type: "done" }]);
+    const resumedProvider = new MorpheusAgentSdkProvider({
+      baseUrl: "https://morpheus.example",
+      clientFactory: () => resumedClient,
+    });
+    const resumedSession = resumedProvider.createSession({
+      model: "nodetool-canvas",
+      workspacePath: "",
+      userId: "alice",
+      resumeSessionId: "ui-session-history",
+    });
+
+    await resumedSession.send("continue", makeTransport(), "ui-session-history", []);
+
+    expect(resumedClient.createSession).not.toHaveBeenCalled();
+    expect(resumedClient.streamPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "remote-session-1",
+        prompt: "continue",
       }),
     );
   });
@@ -641,6 +786,31 @@ describe("AgentRuntime Morpheus provider selection", () => {
         "alice",
       ),
     ).resolves.toMatch(/^morpheus-session-/);
+  });
+
+  it("keeps the requested Morpheus resume session id as the socket session id", async () => {
+    vi.stubEnv("MORPHEUS_BASE_URL", "https://morpheus.example");
+
+    await expect(
+      getAgentRuntime().createSession(
+        {
+          provider: "morpheus",
+          model: "nodetool-canvas",
+          resumeSessionId: "ui-session-history",
+        },
+        "alice",
+      ),
+    ).resolves.toBe("ui-session-history");
+    await expect(
+      getAgentRuntime().createSession(
+        {
+          provider: "morpheus",
+          model: "nodetool-canvas",
+          resumeSessionId: "ui-session-history",
+        },
+        "alice",
+      ),
+    ).resolves.toBe("ui-session-history");
   });
 
   it("uses Morpheus by default when configured and falls back to llm otherwise", async () => {

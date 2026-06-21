@@ -244,6 +244,48 @@ describe("resolveNodeToolProvider", () => {
     expect(callback).toHaveBeenCalledWith(null, "203.0.113.10", 4);
   });
 
+  it("resolves IPv6 endpoint literals without URL brackets", async () => {
+    (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
+      endpoint({ baseUrl: "https://[2606:4700:4700::1111]/v1" })
+    ]);
+    lookupMock.mockResolvedValue([
+      { address: "2606:4700:4700::1111", family: 6 }
+    ]);
+
+    const provider = await resolveNodeToolProvider(
+      "custom:case-sensitive_1",
+      "user-1"
+    );
+    const client = (provider as { getClient: () => unknown }).getClient() as {
+      args: { fetch: typeof fetch };
+    };
+
+    await client.args.fetch("https://[2606:4700:4700::1111]/v1/chat/completions");
+
+    expect(lookupMock).toHaveBeenCalledWith("2606:4700:4700::1111", {
+      all: true,
+      verbatim: true
+    });
+    const agent = agentConstructor.mock.results[0].value as {
+      options: {
+        connect: {
+          lookup: (
+            hostname: string,
+            options: { all?: boolean },
+            callback: (
+              err: Error | null,
+              address: string,
+              family: number
+            ) => void
+          ) => void;
+        };
+      };
+    };
+    const callback = vi.fn();
+    agent.options.connect.lookup("[2606:4700:4700::1111]", {}, callback);
+    expect(callback).toHaveBeenCalledWith(null, "2606:4700:4700::1111", 6);
+  });
+
   it("rejects custom endpoint requests that resolve to private addresses", async () => {
     (listCustomModelEndpoints as ReturnType<typeof vi.fn>).mockResolvedValue([
       endpoint()

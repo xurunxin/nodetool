@@ -71,8 +71,17 @@ function fetchInputWithUrl(input: unknown, url: URL): Parameters<typeof fetch>[0
   return url.toString();
 }
 
+function hostnameForLookup(urlOrHostname: URL | string): string {
+  const hostname =
+    typeof urlOrHostname === "string" ? urlOrHostname : urlOrHostname.hostname;
+  return hostname.startsWith("[") && hostname.endsWith("]")
+    ? hostname.slice(1, -1)
+    : hostname;
+}
+
 async function assertPublicEndpointDestination(url: URL): Promise<void> {
-  if (url.protocol !== "https:" || isDisallowedEndpointHost(url.hostname)) {
+  const hostname = hostnameForLookup(url);
+  if (url.protocol !== "https:" || isDisallowedEndpointHost(hostname)) {
     throw new Error("Custom model endpoint request target is not allowed");
   }
 
@@ -82,11 +91,12 @@ async function assertPublicEndpointDestination(url: URL): Promise<void> {
 async function resolvePublicEndpointAddresses(
   url: URL
 ): Promise<LookupAddress[]> {
-  if (url.protocol !== "https:" || isDisallowedEndpointHost(url.hostname)) {
+  const hostname = hostnameForLookup(url);
+  if (url.protocol !== "https:" || isDisallowedEndpointHost(hostname)) {
     throw new Error("Custom model endpoint request target is not allowed");
   }
 
-  const addresses = await lookup(url.hostname, { all: true, verbatim: true });
+  const addresses = await lookup(hostname, { all: true, verbatim: true });
   if (addresses.length === 0) {
     throw new Error("Custom model endpoint host did not resolve");
   }
@@ -112,7 +122,8 @@ function createPinnedDispatcher(
         options: { all?: boolean },
         callback: PinnedLookupCallback
       ) => {
-        const addresses = pinnedByHost.get(hostname);
+        const addresses =
+          pinnedByHost.get(hostname) ?? pinnedByHost.get(hostnameForLookup(hostname));
         if (!addresses?.length) {
           (callback as (err: NodeJS.ErrnoException) => void)(
             new Error(`Custom model endpoint host "${hostname}" was not pinned`)
@@ -158,10 +169,9 @@ export function createProtectedCustomEndpointFetch(): CustomEndpointFetch {
     };
 
     for (let redirectCount = 0; ; redirectCount++) {
-      pinnedByHost.set(
-        requestUrl.hostname,
-        await resolvePublicEndpointAddresses(requestUrl)
-      );
+      const addresses = await resolvePublicEndpointAddresses(requestUrl);
+      pinnedByHost.set(requestUrl.hostname, addresses);
+      pinnedByHost.set(hostnameForLookup(requestUrl), addresses);
 
       const response = await fetch(
         fetchInputWithUrl(currentInput, requestUrl),

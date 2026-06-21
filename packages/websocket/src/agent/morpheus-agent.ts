@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createLogger } from "@nodetool-ai/config";
+import { Setting } from "@nodetool-ai/models";
 
 import {
   MorpheusClient,
@@ -23,11 +24,13 @@ const log = createLogger("nodetool.websocket.agent.morpheus");
 const DEFAULT_MORPHEUS_AGENT_ID = "nodetool-canvas";
 const FORWARD_TO_FRONTEND_TOOL_NAME = "forward_to_frontend";
 const NODETOOL_FORWARD_TYPE_PREFIX = "nodetool:";
+const MORPHEUS_TRANSCRIPTS_SETTING = "morpheus_agent_transcripts";
 
 interface MorpheusTranscriptEntry {
   userId: string;
   agentId: string;
   sessionId: string;
+  remoteSessionId?: string;
   messages: AgentTranscriptMessage[];
   summary: string;
   firstPrompt?: string;
@@ -36,6 +39,10 @@ interface MorpheusTranscriptEntry {
 }
 
 type MorpheusTranscriptStore = Map<string, MorpheusTranscriptEntry>;
+
+interface MorpheusTranscriptPersistence {
+  entries: MorpheusTranscriptEntry[];
+}
 
 export interface MorpheusClientLike {
   createSession(agentId: string, userId: string): Promise<{ id: string }>;
@@ -86,6 +93,136 @@ const stringifyToolResult = (value: unknown): string => {
 
 const morpheusTranscriptKey = (userId: string, sessionId: string): string =>
   `${userId}:${sessionId}`;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isTranscriptMessage = (
+  value: unknown,
+): value is AgentTranscriptMessage =>
+  isRecord(value) &&
+  (value.type === "user" || value.type === "assistant") &&
+  typeof value.uuid === "string" &&
+  typeof value.session_id === "string" &&
+  typeof value.text === "string";
+
+const normalizeTranscriptEntry = (
+  value: unknown,
+  userId: string,
+): MorpheusTranscriptEntry | null => {
+  if (!isRecord(value) || value.userId !== userId) {
+    return null;
+  }
+  if (
+    typeof value.agentId !== "string" ||
+    typeof value.sessionId !== "string" ||
+    !Array.isArray(value.messages) ||
+    typeof value.summary !== "string" ||
+    typeof value.createdAt !== "number" ||
+    typeof value.lastModified !== "number"
+  ) {
+    return null;
+  }
+  const remoteSessionId =
+    typeof value.remoteSessionId === "string" && value.remoteSessionId.length > 0
+      ? value.remoteSessionId
+      : undefined;
+  const firstPrompt =
+    typeof value.firstPrompt === "string" ? value.firstPrompt : undefined;
+  return {
+    userId,
+    agentId: value.agentId,
+    sessionId: value.sessionId,
+    remoteSessionId,
+    messages: value.messages.filter(isTranscriptMessage),
+    summary: value.summary,
+    firstPrompt,
+    createdAt: value.createdAt,
+    lastModified: value.lastModified,
+  };
+};
+
+const loadPersistedMorpheusTranscripts = async (
+  transcripts: MorpheusTranscriptStore,
+  userId: string,
+): Promise<void> => {
+  try {
+    const setting = await Setting.find(userId, MORPHEUS_TRANSCRIPTS_SETTING);
+    if (!setting) {
+      return;
+    }
+    const parsed = JSON.parse(setting.getValue()) as unknown;
+    const entries = Array.isArray(parsed)
+      ? parsed
+      : isRecord(parsed) && Array.isArray(parsed.entries)
+        ? parsed.entries
+        : [];
+    for (const value of entries) {
+      const entry = normalizeTranscriptEntry(value, userId);
+      if (entry) {
+        transcripts.set(morpheusTranscriptKey(userId, entry.sessionId), entry);
+      }
+    }
+  } catch (error) {
+    log.warn(
+      `Failed to load Morpheus transcript history: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+};
+
+const loadPersistedMorpheusTranscriptEntry = async (
+  transcripts: MorpheusTranscriptStore,
+  userId: string,
+  sessionId: string,
+): Promise<MorpheusTranscriptEntry | null> => {
+  await loadPersistedMorpheusTranscripts(transcripts, userId);
+  return transcripts.get(morpheusTranscriptKey(userId, sessionId)) ?? null;
+};
+
+const persistMorpheusTranscripts = async (
+  transcripts: MorpheusTranscriptStore,
+  userId: string,
+): Promise<void> => {
+  try {
+    const setting = await Setting.find(userId, MORPHEUS_TRANSCRIPTS_SETTING);
+    if (setting) {
+      const parsed = JSON.parse(setting.getValue()) as unknown;
+      const entries = Array.isArray(parsed)
+        ? parsed
+        : isRecord(parsed) && Array.isArray(parsed.entries)
+          ? parsed.entries
+          : [];
+      for (const value of entries) {
+        const entry = normalizeTranscriptEntry(value, userId);
+        const key = entry
+          ? morpheusTranscriptKey(userId, entry.sessionId)
+          : undefined;
+        if (entry && key && !transcripts.has(key)) {
+          transcripts.set(key, entry);
+        }
+      }
+    }
+    const value: MorpheusTranscriptPersistence = {
+      entries: [...transcripts.values()].filter(
+        (entry) => entry.userId === userId,
+      ),
+    };
+    await Setting.upsert({
+      userId,
+      key: MORPHEUS_TRANSCRIPTS_SETTING,
+      value: JSON.stringify(value),
+      description: "Morpheus agent transcript mirror",
+    });
+  } catch (error) {
+    log.warn(
+      `Failed to persist Morpheus transcript history: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+};
 
 const extractTranscriptText = (message: AgentMessage): string => {
   if (typeof message.text === "string" && message.text.trim().length > 0) {
@@ -199,18 +336,34 @@ export class MorpheusQuerySession implements AgentQuerySession {
       resumeSessionId?: string;
     },
   ) {
-    this.remoteSessionId = options.resumeSessionId ?? null;
+    this.remoteSessionId = null;
   }
 
   private async ensureRemoteSession(): Promise<string> {
     if (this.remoteSessionId) {
       return this.remoteSessionId;
     }
+    if (this.options.resumeSessionId) {
+      const entry = await loadPersistedMorpheusTranscriptEntry(
+        this.options.transcripts,
+        this.options.userId,
+        this.options.resumeSessionId,
+      );
+      if (entry?.remoteSessionId) {
+        this.remoteSessionId = entry.remoteSessionId;
+        return entry.remoteSessionId;
+      }
+    }
     const session = await this.options.client.createSession(
       this.options.agentId,
       this.options.userId,
     );
     this.remoteSessionId = session.id;
+    if (this.activeUiSessionId) {
+      const entry = this.ensureTranscriptEntry(this.activeUiSessionId);
+      entry.remoteSessionId = session.id;
+      await this.persistTranscripts();
+    }
     return session.id;
   }
 
@@ -225,6 +378,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
       if (!existing.firstPrompt && firstPrompt) {
         existing.firstPrompt = firstPrompt;
       }
+      existing.remoteSessionId = this.remoteSessionId ?? existing.remoteSessionId;
       existing.lastModified = now;
       return existing;
     }
@@ -233,6 +387,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
       userId: this.options.userId,
       agentId: this.options.agentId,
       sessionId,
+      remoteSessionId: this.remoteSessionId ?? undefined,
       messages: [],
       summary: firstPrompt ?? sessionId,
       firstPrompt,
@@ -243,9 +398,16 @@ export class MorpheusQuerySession implements AgentQuerySession {
     return entry;
   }
 
-  private recordUserTranscriptMessage(sessionId: string, text: string): void {
+  private async persistTranscripts(): Promise<void> {
+    await persistMorpheusTranscripts(
+      this.options.transcripts,
+      this.options.userId,
+    );
+  }
+
+  private recordUserTranscriptMessage(sessionId: string, text: string): boolean {
     if (text.trim().length === 0) {
-      return;
+      return false;
     }
     const entry = this.ensureTranscriptEntry(sessionId, text);
     entry.messages.push({
@@ -255,15 +417,19 @@ export class MorpheusQuerySession implements AgentQuerySession {
       text,
     });
     entry.lastModified = Date.now();
+    return true;
   }
 
-  private recordTranscriptMessage(sessionId: string, message: AgentMessage): void {
+  private recordTranscriptMessage(
+    sessionId: string,
+    message: AgentMessage,
+  ): boolean {
     if (message.type !== "assistant" && message.type !== "result") {
-      return;
+      return false;
     }
     const text = extractTranscriptText(message);
     if (text.trim().length === 0) {
-      return;
+      return false;
     }
 
     const entry = this.ensureTranscriptEntry(sessionId);
@@ -283,6 +449,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
     }
     entry.summary = text;
     entry.lastModified = Date.now();
+    return true;
   }
 
   async send(
@@ -308,8 +475,9 @@ export class MorpheusQuerySession implements AgentQuerySession {
     this.activeTransport = transport;
     this.activeUiSessionId = sessionId;
     const out: AgentMessage[] = [];
+    let transcriptDirty = false;
     const emit = (msg: AgentMessage) => {
-      this.recordTranscriptMessage(sessionId, msg);
+      transcriptDirty = this.recordTranscriptMessage(sessionId, msg) || transcriptDirty;
       out.push(msg);
       onMessage?.(msg);
     };
@@ -321,7 +489,8 @@ export class MorpheusQuerySession implements AgentQuerySession {
 
     try {
       const remoteSessionId = await this.ensureRemoteSession();
-      this.recordUserTranscriptMessage(sessionId, message);
+      transcriptDirty =
+        this.recordUserTranscriptMessage(sessionId, message) || transcriptDirty;
       const signal = this.abortController.signal;
       const stream = this.options.client.streamPrompt({
         agentId: this.options.agentId,
@@ -386,6 +555,9 @@ export class MorpheusQuerySession implements AgentQuerySession {
         errors: [errMsg],
       });
     } finally {
+      if (transcriptDirty) {
+        await this.persistTranscripts();
+      }
       this.inFlight = false;
       this.abortController = null;
       this.activeTransport = null;
@@ -490,14 +662,24 @@ export class MorpheusQuerySession implements AgentQuerySession {
           });
         } catch (error) {
           const errMsg = error instanceof Error ? error.message : String(error);
-          await this.submitMorpheusToolResult({
-            remoteSessionId,
-            toolCallId: event.id,
-            name: event.name,
-            isError: true,
-            error: errMsg,
-            signal,
-          });
+          try {
+            await this.submitMorpheusToolResult({
+              remoteSessionId,
+              toolCallId: event.id,
+              name: event.name,
+              isError: true,
+              error: errMsg,
+              signal,
+            });
+          } catch (submitError) {
+            log.warn(
+              `Failed to submit Morpheus tool error result: ${
+                submitError instanceof Error
+                  ? submitError.message
+                  : String(submitError)
+              }`,
+            );
+          }
           emit({
             type: "result",
             uuid: randomUUID(),
@@ -525,24 +707,16 @@ export class MorpheusQuerySession implements AgentQuerySession {
     error?: string;
     signal: AbortSignal;
   }): Promise<void> {
-    try {
-      await this.options.client.submitToolResult({
-        agentId: this.options.agentId,
-        sessionId: options.remoteSessionId,
-        toolCallId: options.toolCallId,
-        name: options.name,
-        result: options.result,
-        isError: options.isError,
-        error: options.error,
-        signal: options.signal,
-      });
-    } catch (error) {
-      log.warn(
-        `Failed to submit Morpheus tool result: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-    }
+    await this.options.client.submitToolResult({
+      agentId: this.options.agentId,
+      sessionId: options.remoteSessionId,
+      toolCallId: options.toolCallId,
+      name: options.name,
+      result: options.result,
+      isError: options.isError,
+      error: options.error,
+      signal: options.signal,
+    });
   }
 
   private async executeToolWithAbort(
@@ -688,6 +862,7 @@ export class MorpheusAgentSdkProvider implements AgentSdkProvider {
     options: AgentListSessionsRequest,
     userId: string,
   ): Promise<AgentSessionInfoEntry[]> {
+    await loadPersistedMorpheusTranscripts(this.transcripts, userId);
     const offset = options.offset ?? 0;
     const limit = options.limit ?? 50;
     return [...this.transcripts.values()]
@@ -708,6 +883,7 @@ export class MorpheusAgentSdkProvider implements AgentSdkProvider {
     options: AgentGetSessionMessagesRequest,
     userId: string,
   ): Promise<AgentTranscriptMessage[]> {
+    await loadPersistedMorpheusTranscripts(this.transcripts, userId);
     const entry = this.transcripts.get(
       morpheusTranscriptKey(userId, options.sessionId),
     );

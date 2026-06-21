@@ -445,7 +445,7 @@ async function ensureAgentSession(
     provider: agentProvider,
     model: config.model
   };
-  if (canResumeExisting && agentProvider !== "morpheus") {
+  if (canResumeExisting) {
     if (agentProvider === "llm") {
       if (llmResumeSessionId) {
         options.resumeSessionId = llmResumeSessionId;

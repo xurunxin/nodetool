@@ -188,7 +188,23 @@ class AgentRuntime {
     }
 
     const provider = getProvider(options.provider);
-    const tempId = `${provider.name}-session-${++this.sessionCounter}`;
+    if (options.resumeSessionId) {
+      const existingSession = this.activeSessions.get(options.resumeSessionId);
+      const existingOwner = this.sessionOwners.get(options.resumeSessionId);
+      if (existingSession && existingOwner === userId) {
+        return options.resumeSessionId;
+      }
+      if (existingSession) {
+        throw new Error(
+          `No active agent session with ID: ${options.resumeSessionId}`,
+        );
+      }
+    }
+
+    const tempId =
+      provider.name === "morpheus" && options.resumeSessionId
+        ? options.resumeSessionId
+        : `${provider.name}-session-${++this.sessionCounter}`;
     const sessionMode = options.resumeSessionId ? "resuming" : "creating";
     log.info(
       `${sessionMode} ${provider.name} agent session for user ${userId} with model: ${options.model}${

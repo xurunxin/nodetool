@@ -816,8 +816,8 @@ describe("chatAgent store slice", () => {
     expect(payload).not.toHaveProperty("workspacePath");
   });
 
-  it("does not pass stale persisted session ids when creating Morpheus sessions", async () => {
-    mockAgentClient.createSession.mockResolvedValue("session-morpheus-new");
+  it("passes persisted Morpheus session ids when the config still matches", async () => {
+    mockAgentClient.createSession.mockResolvedValue("persisted-local-session");
     const store = createTestStore();
     store.setState({
       agentProvider: "morpheus",
@@ -830,6 +830,39 @@ describe("chatAgent store slice", () => {
         "thread-m": {
           provider: "morpheus",
           model: "morpheus/default",
+          workspacePath: null,
+          chatProviderId: null
+        }
+      }
+    });
+
+    await store.getState().sendAgentMessage("thread-m", "paint the graph");
+
+    expect(mockAgentClient.createSession).toHaveBeenCalledWith({
+      provider: "morpheus",
+      model: "morpheus/default",
+      resumeSessionId: "persisted-local-session"
+    });
+    expect(mockAgentClient.sendMessage).toHaveBeenCalledWith(
+      "persisted-local-session",
+      "paint the graph"
+    );
+  });
+
+  it("does not pass mismatched persisted Morpheus session ids", async () => {
+    mockAgentClient.createSession.mockResolvedValue("session-morpheus-new");
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "morpheus",
+      agentModel: "morpheus/default",
+      agentModels: [morpheusModel],
+      agentSessionByThread: {
+        "thread-m": "persisted-local-session"
+      },
+      agentSessionConfigByThread: {
+        "thread-m": {
+          provider: "morpheus",
+          model: "morpheus/old",
           workspacePath: null,
           chatProviderId: null
         }
