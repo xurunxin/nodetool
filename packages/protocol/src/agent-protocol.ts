@@ -49,8 +49,8 @@ export interface AgentSessionOptions {
    * Per-session opt-in for long-term memory. When `true`, the session
    * resolves a `LongTermMemory` instance on its first send and folds
    * recalled items into the prompt for every subsequent turn. When
-   * `false` or omitted, memory stays disabled regardless of any
-   * environment defaults.
+   * `false`, memory stays disabled regardless of environment defaults. When
+   * omitted, the server falls back to its environment-level default.
    */
   memoryEnabled?: boolean;
 }

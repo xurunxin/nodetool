@@ -41,7 +41,6 @@ import type {
   ProviderTool,
   Message as ProviderMessage,
   MessageContent,
-  BaseProvider,
   ProcessingContext,
   ToolCall as ProviderToolCall,
   ImageModel as ProviderImageModel,
@@ -49,9 +48,13 @@ import type {
   TextToImageParams,
   TextToVideoParams,
   ImageToImageParams,
-  ImageToVideoParams
+  ImageToVideoParams,
+  LanguageModel,
+  ProviderId,
+  ProviderStreamItem
 } from "@nodetool-ai/runtime";
 import {
+  BaseProvider,
   ProcessingContext as RuntimeProcessingContext,
   encodeRawRgbaToPng,
   getCostReconciler
@@ -97,10 +100,52 @@ import { createCallerFactory } from "./trpc/index.js";
 import type { HttpApiOptions } from "./http-api.js";
 import { resolveNodeToolProvider } from "./custom-provider-resolver.js";
 import { filterProviderIdsForSurface } from "./model-surface.js";
+import {
+  customEndpointProviderId,
+  listEnabledCustomModelEndpoints
+} from "./custom-model-endpoints.js";
 
 const log = createLogger("nodetool.websocket.runner");
 const DATA_URI_PATTERN = /data:([^;,]+)?;base64,[A-Za-z0-9+/=\r\n]+/gi;
 const MAX_ERROR_TEXT_LENGTH = 4000;
+
+type EnabledCustomModelEndpoint = Awaited<
+  ReturnType<typeof listEnabledCustomModelEndpoints>
+>[number];
+
+class CustomEndpointCatalogProvider extends BaseProvider {
+  private readonly models: LanguageModel[];
+
+  constructor(endpoint: EnabledCustomModelEndpoint) {
+    const providerId = customEndpointProviderId(endpoint.id);
+    super(providerId as ProviderId);
+    this.models = endpoint.models.map((model) => ({
+      id: model.id,
+      name: model.name,
+      provider: providerId as ProviderId
+    }));
+  }
+
+  override async hasToolSupport(): Promise<boolean> {
+    return true;
+  }
+
+  override async getAvailableLanguageModels(): Promise<LanguageModel[]> {
+    return this.models;
+  }
+
+  override async generateMessage(
+    _args: Parameters<BaseProvider["generateMessage"]>[0]
+  ): Promise<ProviderMessage> {
+    throw new Error("Custom endpoint catalog providers are for model discovery only");
+  }
+
+  override async *generateMessages(
+    _args: Parameters<BaseProvider["generateMessages"]>[0]
+  ): AsyncGenerator<ProviderStreamItem> {
+    throw new Error("Custom endpoint catalog providers are for model discovery only");
+  }
+}
 
 /**
  * Return `true` when the given http(s) URL appears to point at a public
@@ -4449,6 +4494,17 @@ export class UnifiedWebSocketRunner {
         }
       })
     );
+    try {
+      const customEndpoints = await listEnabledCustomModelEndpoints(userId);
+      for (const endpoint of customEndpoints) {
+        const providerId = customEndpointProviderId(endpoint.id);
+        result[providerId] = new CustomEndpointCatalogProvider(endpoint);
+      }
+    } catch (err) {
+      log.debug("Skipping custom endpoints for find_model", {
+        error: err instanceof Error ? err.message : String(err)
+      });
+    }
     this.configuredProvidersCache.set(userId, result);
     return result;
   }

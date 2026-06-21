@@ -458,8 +458,8 @@ async function ensureAgentSession(
     options.workspacePath = agentWorkspacePath;
   }
   if (agentProvider === "llm") {
-    if (state.memoryEnabled === true) {
-      options.memoryEnabled = true;
+    if (typeof state.memoryEnabled === "boolean") {
+      options.memoryEnabled = state.memoryEnabled;
     }
     const descriptor = selectedAgentModelDescriptor(state);
     if (descriptor?.chatProviderId) {

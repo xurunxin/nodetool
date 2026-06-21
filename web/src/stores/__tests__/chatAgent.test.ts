@@ -398,6 +398,7 @@ describe("chatAgent store slice", () => {
     expect(mockAgentClient.createSession).toHaveBeenCalledWith({
       provider: "llm",
       model: "claude-sonnet",
+      memoryEnabled: false,
       chatProviderId: "anthropic",
       resumeSessionId: "db-thread-1"
     });
@@ -433,6 +434,7 @@ describe("chatAgent store slice", () => {
     expect(mockAgentClient.createSession).toHaveBeenCalledWith({
       provider: "llm",
       model: "gpt-4o",
+      memoryEnabled: false,
       chatProviderId: "custom:gateway"
     });
     expect(mockAgentClient.sendMessage).toHaveBeenCalledWith(
@@ -457,6 +459,26 @@ describe("chatAgent store slice", () => {
       provider: "llm",
       model: "claude-sonnet",
       memoryEnabled: true,
+      chatProviderId: "anthropic"
+    });
+  });
+
+  it("passes explicit memory opt-out when creating LLM agent sessions", async () => {
+    mockAgentClient.createSession.mockResolvedValue("llm-session-no-memory");
+    const store = createTestStore();
+    store.setState({
+      agentProvider: "llm",
+      agentModel: "claude-sonnet",
+      agentModels: [llmModel],
+      memoryEnabled: false
+    });
+
+    await store.getState().sendAgentMessage("thread-llm", "forget this");
+
+    expect(mockAgentClient.createSession).toHaveBeenCalledWith({
+      provider: "llm",
+      model: "claude-sonnet",
+      memoryEnabled: false,
       chatProviderId: "anthropic"
     });
   });
@@ -512,6 +534,7 @@ describe("chatAgent store slice", () => {
     expect(mockAgentClient.createSession).toHaveBeenCalledWith({
       provider: "llm",
       model: "claude-sonnet",
+      memoryEnabled: false,
       chatProviderId: "anthropic"
     });
   });

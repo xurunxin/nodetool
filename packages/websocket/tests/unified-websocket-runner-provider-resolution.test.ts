@@ -11,6 +11,10 @@ import type {
   ProcessingContext,
 } from "@nodetool-ai/runtime";
 import { UnifiedWebSocketRunner } from "../src/unified-websocket-runner.js";
+import {
+  customEndpointProviderId,
+  upsertCustomModelEndpoint
+} from "../src/custom-model-endpoints.js";
 
 vi.mock("@nodetool-ai/runtime", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@nodetool-ai/runtime")>();
@@ -178,5 +182,35 @@ describe("UnifiedWebSocketRunner provider resolution", () => {
       "ollama",
       expect.any(Function)
     );
+  });
+
+  it("includes enabled custom endpoint models in configured provider discovery", async () => {
+    vi.mocked(listRegisteredProviderIds).mockReturnValue([]);
+    await upsertCustomModelEndpoint("alice", {
+      id: "custom_gateway",
+      name: "Custom Gateway",
+      kind: "openai",
+      baseUrl: "https://gateway.example.test/v1",
+      enabled: true,
+      models: [{ id: "gateway-chat", name: "Gateway Chat" }],
+      apiKey: "secret"
+    });
+    const runner = new UnifiedWebSocketRunner({
+      userId: "alice"
+    });
+    const providerId = customEndpointProviderId("custom_gateway");
+
+    const providers = await (
+      runner as unknown as {
+        getConfiguredProviders(userId: string): Promise<Record<string, BaseProvider>>;
+      }
+    ).getConfiguredProviders("alice");
+
+    expect(Object.keys(providers)).toEqual([providerId]);
+    await expect(
+      providers[providerId].getAvailableLanguageModels()
+    ).resolves.toEqual([
+      { id: "gateway-chat", name: "Gateway Chat", provider: providerId }
+    ]);
   });
 });
