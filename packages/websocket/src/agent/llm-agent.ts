@@ -486,7 +486,6 @@ class LlmAgentSession implements AgentQuerySession {
         const msg = dbMessageToConversation(row);
         if (msg) this.conversation.push(msg);
       }
-      this.persistedCount = this.conversation.length;
     } else {
       const thread = await DbThread.create({
         user_id: this.userId,
@@ -495,16 +494,16 @@ class LlmAgentSession implements AgentQuerySession {
       this.threadId = thread.id;
     }
 
-    if (this.conversation.length === 0 && this.systemPrompt) {
-      // System prompt is part of the conversation but not persisted — it's
-      // a server-side configuration concern and doesn't belong in the user's
-      // transcript.
-      this.conversation.push({
+    if (this.systemPrompt && this.conversation[0]?.role !== "system") {
+      // System prompt is part of the runtime conversation but not persisted.
+      // Reinsert it before hydrated history so resumed sessions keep the
+      // workflow-builder/tool-use instructions without re-saving old rows.
+      this.conversation.unshift({
         role: "system",
         content: this.systemPrompt,
       } as Message);
-      this.persistedCount = this.conversation.length;
     }
+    this.persistedCount = this.conversation.length;
 
     this.hydrated = true;
   }

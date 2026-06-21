@@ -245,11 +245,13 @@ describe("LlmAgentSession persistence", () => {
     let lengthOnEntry = -1;
     let firstRoleOnEntry: string | undefined;
     let secondRoleOnEntry: string | undefined;
+    let thirdRoleOnEntry: string | undefined;
     processChatSpy.mockImplementationOnce(
       async (opts: { messages: any[]; userInput: string }) => {
         lengthOnEntry = opts.messages.length;
         firstRoleOnEntry = opts.messages[0]?.role;
         secondRoleOnEntry = opts.messages[1]?.role;
+        thirdRoleOnEntry = opts.messages[2]?.role;
         opts.messages.push({ role: "user", content: opts.userInput });
         opts.messages.push({ role: "assistant", content: "ok" });
         return opts.messages;
@@ -265,11 +267,16 @@ describe("LlmAgentSession persistence", () => {
     });
     await second.send("turn 3", makeTransport(), "tmp", []);
 
-    // Hydrated 4 prior messages (2 user + 2 assistant). System prompt is
-    // intentionally not persisted so it doesn't show up on resume.
-    expect(lengthOnEntry).toBe(4);
-    expect(firstRoleOnEntry).toBe("user");
-    expect(secondRoleOnEntry).toBe("assistant");
+    // Hydrated 4 prior messages (2 user + 2 assistant) plus the server-side
+    // system prompt, which is intentionally not persisted between sessions.
+    expect(lengthOnEntry).toBe(5);
+    expect(firstRoleOnEntry).toBe("system");
+    expect(secondRoleOnEntry).toBe("user");
+    expect(thirdRoleOnEntry).toBe("assistant");
+
+    const [rowsAfterResume] = await Message.paginate(threadId, { limit: 100 });
+    expect(rowsAfterResume).toHaveLength(6);
+    expect(rowsAfterResume.find((r) => r.role === "system")).toBeUndefined();
   });
 
   it("refuses to resume a thread that belongs to another user", async () => {
