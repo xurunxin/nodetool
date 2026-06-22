@@ -234,6 +234,7 @@ describe("parseMorpheusSseFrame", () => {
 
 describe("MorpheusClient.createSession", () => {
   it("trims the base URL and sends JSON headers and body", async () => {
+    const controller = new AbortController();
     const { fetchFn, calls } = makeFetchMock([jsonResponse({ id: "s-1" })]);
     const client = new MorpheusClient({
       baseUrl: "https://morpheus.example/",
@@ -241,7 +242,9 @@ describe("MorpheusClient.createSession", () => {
       fetchFn,
     });
 
-    await expect(client.createSession("agent-1", "user-1")).resolves.toEqual({
+    await expect(
+      client.createSession("agent-1", "user-1", controller.signal),
+    ).resolves.toEqual({
       id: "s-1",
     });
 
@@ -256,6 +259,7 @@ describe("MorpheusClient.createSession", () => {
       agentId: "agent-1",
       userId: "user-1",
     });
+    expect(calls[0].init?.signal).toBe(controller.signal);
   });
 
   it("accepts sessionId responses and omits authorization without an API key", async () => {

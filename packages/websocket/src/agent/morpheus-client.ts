@@ -170,11 +170,16 @@ export class MorpheusClient {
     this.fetchFn = options.fetchFn ?? fetch;
   }
 
-  async createSession(agentId: string, userId: string): Promise<MorpheusSession> {
+  async createSession(
+    agentId: string,
+    userId: string,
+    signal?: AbortSignal,
+  ): Promise<MorpheusSession> {
     const response = await this.fetchFn(`${this.baseUrl}/api/v1/sessions`, {
       method: "POST",
       headers: jsonHeaders(this.apiKey),
       body: JSON.stringify({ agentId, userId }),
+      signal,
     });
 
     if (!response.ok) {

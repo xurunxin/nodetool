@@ -168,7 +168,11 @@ describe("MorpheusAgentSdkProvider", () => {
 
     await session.send("build", makeTransport(), "ui-session-1", manifest);
 
-    expect(client.createSession).toHaveBeenCalledWith("canvas-agent", "alice");
+    expect(client.createSession).toHaveBeenCalledWith(
+      "canvas-agent",
+      "alice",
+      expect.any(AbortSignal),
+    );
     expect(client.streamPrompt).toHaveBeenCalledWith(
       {
         agentId: "canvas-agent",
@@ -811,6 +815,22 @@ describe("AgentRuntime Morpheus provider selection", () => {
         "alice",
       ),
     ).resolves.toBe("ui-session-history");
+  });
+
+  it("uses the documented Morpheus default agent id env var", async () => {
+    vi.stubEnv("MORPHEUS_BASE_URL", "https://morpheus.example");
+    vi.stubEnv("MORPHEUS_DEFAULT_AGENT_ID", "documented-agent");
+
+    const provider = new MorpheusAgentSdkProvider();
+
+    await expect(provider.listModels("alice")).resolves.toEqual([
+      {
+        id: "documented-agent",
+        label: "Morpheus Canvas Agent",
+        provider: "morpheus",
+        isDefault: true,
+      },
+    ]);
   });
 
   it("uses Morpheus by default when configured and falls back to llm otherwise", async () => {

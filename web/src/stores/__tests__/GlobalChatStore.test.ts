@@ -1371,6 +1371,38 @@ describe("GlobalChatStore", () => {
       });
     });
 
+    it("ignores empty legacy Pi mirrors during storage migration", () => {
+      const migrated = migrateGlobalChatPersistedState({
+        piModel: "",
+        piWorkspaceId: "",
+        piWorkspacePath: "",
+        piSessionByThread: {}
+      });
+
+      expect(migrated).toMatchObject({
+        agentProvider: "morpheus",
+        agentModel: "",
+        agentWorkspaceId: null,
+        agentWorkspacePath: null
+      });
+    });
+
+    it("resets hidden local chat model selections during storage migration", () => {
+      const migrated = migrateGlobalChatPersistedState({
+        selectedModel: {
+          type: "language_model",
+          provider: "ollama",
+          id: "llama3.2",
+          name: "llama3.2"
+        }
+      });
+
+      expect(migrated.selectedModel).toMatchObject({
+        type: "language_model",
+        provider: "openai"
+      });
+    });
+
     it("keeps explicit migrated agent selections over legacy mirrors", () => {
       const migrated = migrateGlobalChatPersistedState({
         mode: "pi",

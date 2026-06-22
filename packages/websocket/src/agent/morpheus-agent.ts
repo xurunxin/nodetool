@@ -45,7 +45,11 @@ interface MorpheusTranscriptPersistence {
 }
 
 export interface MorpheusClientLike {
-  createSession(agentId: string, userId: string): Promise<{ id: string }>;
+  createSession(
+    agentId: string,
+    userId: string,
+    signal?: AbortSignal,
+  ): Promise<{ id: string }>;
   streamPrompt(options: {
     agentId: string;
     sessionId: string;
@@ -339,7 +343,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
     this.remoteSessionId = null;
   }
 
-  private async ensureRemoteSession(): Promise<string> {
+  private async ensureRemoteSession(signal: AbortSignal): Promise<string> {
     if (this.remoteSessionId) {
       return this.remoteSessionId;
     }
@@ -357,6 +361,7 @@ export class MorpheusQuerySession implements AgentQuerySession {
     const session = await this.options.client.createSession(
       this.options.agentId,
       this.options.userId,
+      signal,
     );
     this.remoteSessionId = session.id;
     if (this.activeUiSessionId) {
@@ -488,10 +493,10 @@ export class MorpheusQuerySession implements AgentQuerySession {
     };
 
     try {
-      const remoteSessionId = await this.ensureRemoteSession();
+      const signal = this.abortController.signal;
+      const remoteSessionId = await this.ensureRemoteSession(signal);
       transcriptDirty =
         this.recordUserTranscriptMessage(sessionId, message) || transcriptDirty;
-      const signal = this.abortController.signal;
       const stream = this.options.client.streamPrompt({
         agentId: this.options.agentId,
         sessionId: remoteSessionId,
@@ -813,7 +818,9 @@ export class MorpheusAgentSdkProvider implements AgentSdkProvider {
 
   private resolveAgentId(model?: string): string {
     return (
-      cleanEnvValue(this.options.agentId ?? process.env.MORPHEUS_AGENT_ID) ??
+      cleanEnvValue(this.options.agentId) ??
+      cleanEnvValue(process.env.MORPHEUS_AGENT_ID) ??
+      cleanEnvValue(process.env.MORPHEUS_DEFAULT_AGENT_ID) ??
       cleanEnvValue(model) ??
       DEFAULT_MORPHEUS_AGENT_ID
     );

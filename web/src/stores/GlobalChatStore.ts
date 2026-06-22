@@ -304,14 +304,36 @@ function isAgentProvider(value: unknown): value is AgentProvider {
   return value === "pi" || value === "llm" || value === "morpheus";
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+const LOCAL_ONLY_MODEL_PROVIDERS = new Set([
+  "ollama",
+  "lmstudio",
+  "lm-studio",
+  "llama.cpp",
+  "llamacpp",
+  "llama-cpp",
+  "mlx"
+]);
+
+function isHiddenLocalModelSelection(value: unknown): boolean {
+  if (!isPlainRecord(value) || typeof value.provider !== "string") {
+    return false;
+  }
+  return LOCAL_ONLY_MODEL_PROVIDERS.has(value.provider.toLowerCase());
+}
+
 function shouldPreserveLegacyPiSelection(
   state: Record<string, unknown>
 ): boolean {
+  const piSessionByThread = asRecord(state.piSessionByThread);
   const hasLegacyPiSelection =
-    typeof state.piModel === "string" ||
-    typeof state.piWorkspaceId === "string" ||
-    typeof state.piWorkspacePath === "string" ||
-    Object.keys(asRecord(state.piSessionByThread)).length > 0;
+    isNonEmptyString(state.piModel) ||
+    isNonEmptyString(state.piWorkspaceId) ||
+    isNonEmptyString(state.piWorkspacePath) ||
+    Object.keys(piSessionByThread).length > 0;
   if (!hasLegacyPiSelection) {
     return false;
   }
@@ -336,6 +358,11 @@ export function migrateGlobalChatPersistedState(
 
   const state = persistedState;
   const preserveLegacyPi = shouldPreserveLegacyPiSelection(state);
+  const selectedModel = isPlainRecord(state.selectedModel)
+    ? isHiddenLocalModelSelection(state.selectedModel)
+      ? buildDefaultLanguageModel()
+      : (state.selectedModel as unknown as LanguageModel)
+    : undefined;
   return {
     threads: isPlainRecord(state.threads)
       ? (state.threads as Record<string, Thread>)
@@ -344,9 +371,7 @@ export function migrateGlobalChatPersistedState(
       typeof state.lastUsedThreadId === "string"
         ? state.lastUsedThreadId
         : fallback.lastUsedThreadId,
-    selectedModel: isPlainRecord(state.selectedModel)
-      ? (state.selectedModel as unknown as LanguageModel)
-      : undefined,
+    selectedModel,
     permissionMode: isPlainRecord(state.permissionMode)
       ? (state.permissionMode as Record<string, PermissionMode>)
       : fallback.permissionMode,
@@ -367,21 +392,21 @@ export function migrateGlobalChatPersistedState(
           ? state.piModel
           : "",
     agentWorkspaceId:
-      preserveLegacyPi && typeof state.piWorkspaceId === "string"
+      preserveLegacyPi && isNonEmptyString(state.piWorkspaceId)
         ? state.piWorkspaceId
-        : typeof state.agentWorkspaceId === "string" ||
+        : isNonEmptyString(state.agentWorkspaceId) ||
             state.agentWorkspaceId === null
           ? state.agentWorkspaceId
-          : typeof state.piWorkspaceId === "string"
+          : isNonEmptyString(state.piWorkspaceId)
             ? state.piWorkspaceId
             : null,
     agentWorkspacePath:
-      preserveLegacyPi && typeof state.piWorkspacePath === "string"
+      preserveLegacyPi && isNonEmptyString(state.piWorkspacePath)
         ? state.piWorkspacePath
-        : typeof state.agentWorkspacePath === "string" ||
+        : isNonEmptyString(state.agentWorkspacePath) ||
             state.agentWorkspacePath === null
           ? state.agentWorkspacePath
-          : typeof state.piWorkspacePath === "string"
+          : isNonEmptyString(state.piWorkspacePath)
             ? state.piWorkspacePath
             : null,
     agentSessionByThread:
@@ -403,21 +428,21 @@ export function migrateGlobalChatPersistedState(
             ? state.piModel
             : "",
     piWorkspaceId:
-      preserveLegacyPi && typeof state.piWorkspaceId === "string"
+      preserveLegacyPi && isNonEmptyString(state.piWorkspaceId)
         ? state.piWorkspaceId
-        : typeof state.agentWorkspaceId === "string" ||
+        : isNonEmptyString(state.agentWorkspaceId) ||
             state.agentWorkspaceId === null
           ? state.agentWorkspaceId
-          : typeof state.piWorkspaceId === "string"
+          : isNonEmptyString(state.piWorkspaceId)
             ? state.piWorkspaceId
             : null,
     piWorkspacePath:
-      preserveLegacyPi && typeof state.piWorkspacePath === "string"
+      preserveLegacyPi && isNonEmptyString(state.piWorkspacePath)
         ? state.piWorkspacePath
-        : typeof state.agentWorkspacePath === "string" ||
+        : isNonEmptyString(state.agentWorkspacePath) ||
             state.agentWorkspacePath === null
           ? state.agentWorkspacePath
-          : typeof state.piWorkspacePath === "string"
+          : isNonEmptyString(state.piWorkspacePath)
             ? state.piWorkspacePath
             : null,
     piSessionByThread:
