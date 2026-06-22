@@ -56,7 +56,9 @@ import type {
 } from "../../../stores/MediaGenerationStore";
 import MediaControlChip from "./MediaControlChip";
 import MediaModeMenu from "./MediaModeMenu";
-import PiComposerControls, { piModeAvailable } from "./PiComposerControls";
+import AgentComposerControls, {
+  agentModeAvailable
+} from "./AgentComposerControls";
 import SmartToyOutlinedIcon from "@mui/icons-material/SmartToyOutlined";
 import MediaOptionMenu, { MediaOption } from "./MediaOptionMenu";
 import MediaAspectRatioMenu from "./MediaAspectRatioMenu";
@@ -248,11 +250,11 @@ const MediaChatComposer: React.FC<MediaChatComposerProps> = ({
   // as provider/model for media calls when a media model is not picked).
   const languageModel = useGlobalChatStore((s) => s.selectedModel);
 
-  // Unified routing mode: "pi" swaps the chat-model controls for the
-  // workspace-aware Pi agent and routes sends through the agent socket.
+  // Unified routing mode: legacy literal "pi" swaps the chat-model controls
+  // for the generic agent controls and routes sends through `/ws/agent`.
   const globalMode = useGlobalChatStore((s) => s.mode);
   const setGlobalMode = useGlobalChatStore((s) => s.setMode);
-  const isPi = globalMode === "pi";
+  const isAgentMode = globalMode === "pi";
 
   const addRecentModel = useModelPreferencesStore((s) => s.addRecent);
 
@@ -451,8 +453,8 @@ const MediaChatComposer: React.FC<MediaChatComposerProps> = ({
     if (placeholderOverride) {
       return placeholderOverride;
     }
-    if (isPi) {
-      return t("chat:placeholderPi");
+    if (isAgentMode) {
+      return t("chat:placeholderAgent");
     }
     if (mode === "image") {
       return t("chat:placeholderImage");
@@ -482,7 +484,7 @@ const MediaChatComposer: React.FC<MediaChatComposerProps> = ({
       return t("chat:placeholderMotionControl");
     }
     return t("chat:continueThreadPlaceholder");
-  }, [mode, isPi, placeholderOverride, t]);
+  }, [mode, isAgentMode, placeholderOverride, t]);
 
   const isMediaMode =
     mode === "image" ||
@@ -552,7 +554,7 @@ const MediaChatComposer: React.FC<MediaChatComposerProps> = ({
 
   // Mode icon for the mode chip
   const modeIcon = useMemo(() => {
-    if (isPi) return <SmartToyOutlinedIcon fontSize="small" />;
+    if (isAgentMode) return <SmartToyOutlinedIcon fontSize="small" />;
     if (mode === "image") return <ImageIcon fontSize="small" />;
     if (mode === "image_edit") return <AutoFixHighIcon fontSize="small" />;
     if (mode === "video") return <VideocamIcon fontSize="small" />;
@@ -560,10 +562,10 @@ const MediaChatComposer: React.FC<MediaChatComposerProps> = ({
     if (mode === "audio") return <RecordVoiceOverIcon fontSize="small" />;
     if (mode === "chat") return <ChatBubbleOutlineIcon fontSize="small" />;
     return <AutoAwesomeIcon fontSize="small" />;
-  }, [mode, isPi]);
+  }, [mode, isAgentMode]);
 
   const modeLabel = useMemo(() => {
-    if (isPi) return "Pi";
+    if (isAgentMode) return t("chat:agent");
     if (mode === "image") return t("chat:modeImage");
     if (mode === "image_edit") return t("chat:modeImageEdit");
     if (mode === "video") return t("chat:modeVideo");
@@ -574,7 +576,7 @@ const MediaChatComposer: React.FC<MediaChatComposerProps> = ({
     if (mode === "retake") return t("chat:modeRetake");
     if (mode === "extend") return t("chat:modeExtend");
     return t("chat:modeMotionControl");
-  }, [mode, isPi, t]);
+  }, [mode, isAgentMode, t]);
 
   // Model dialog selection callbacks
   const handlePickImageModel = useCallback(
@@ -974,19 +976,19 @@ const MediaChatComposer: React.FC<MediaChatComposerProps> = ({
               setMode(m);
               setGlobalMode("chat");
             }}
-            showPi={piModeAvailable}
-            piSelected={isPi}
+            showPi={agentModeAvailable}
+            piSelected={isAgentMode}
             onSelectPi={() => {
               setMode("chat");
               setGlobalMode("pi");
             }}
           />
 
-          {/* Pi mode: workspace + model pickers instead of the chat model. */}
-          {isPi && <PiComposerControls disabled={isBusy} />}
+          {/* Agent mode: provider + model controls instead of the chat model. */}
+          {isAgentMode && <AgentComposerControls disabled={isBusy} />}
 
           {/* Model chip — changes based on mode */}
-          {!isPi && mode === "chat" && (
+          {!isAgentMode && mode === "chat" && (
             <>
               <MediaControlChip
                 ref={languageModelAnchorRef}

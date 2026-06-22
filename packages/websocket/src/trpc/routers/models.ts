@@ -13,6 +13,7 @@ import {
   type RecommendedUnifiedModel
 } from "@nodetool-ai/runtime";
 import { getSecret as getStoredSecret } from "@nodetool-ai/models";
+import { TRPCError } from "@trpc/server";
 
 function secretResolverFor(userId: string) {
   return (key: string) =>
@@ -43,6 +44,27 @@ import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { z } from "zod";
 import { getSecret } from "@nodetool-ai/models";
+import {
+  filterModelsForSurface,
+  filterProviderIdsForSurface,
+  isLocalModelManagementEnabled,
+  isProviderVisibleForSurface
+} from "../../model-surface.js";
+import {
+  CUSTOM_MODEL_ENDPOINT_LANGUAGE_CAPABILITIES,
+  customEndpointModelsToUnified,
+  customEndpointProviderId,
+  listEnabledCustomModelEndpoints
+} from "../../custom-model-endpoints.js";
+
+function assertLocalModelManagementEnabled(): void {
+  if (!isLocalModelManagementEnabled()) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Local model management is disabled"
+    });
+  }
+}
 
 // ── Local schemas (mirrored in packages/protocol/src/api-schemas/models.ts) ──
 
@@ -495,7 +517,7 @@ async function isServerReachable(url: string): Promise<boolean> {
 }
 
 async function getServerAvailability(): Promise<Record<string, boolean>> {
-  if (isProduction()) {
+  if (isProduction() || !isLocalModelManagementEnabled()) {
     return { ollama: false, llama_cpp: false, lmstudio: false, vllm: false };
   }
 
@@ -543,7 +565,7 @@ async function serverAllowsModel(
 async function getRecommendedModels(
   checkServers: boolean
 ): Promise<UnifiedModel[]> {
-  const models = [...RECOMMENDED_MODELS];
+  const models = filterModelsForSurface([...RECOMMENDED_MODELS]);
   if (!checkServers) return models;
   const servers = await getServerAvailability();
   const filtered: UnifiedModel[] = [];
@@ -559,8 +581,10 @@ function selectRecommended(
   modality: RecommendedUnifiedModel["modality"],
   task?: RecommendedUnifiedModel["task"]
 ): UnifiedModel[] {
-  return RECOMMENDED_MODELS.filter(
-    (model) => model.modality === modality && (!task || model.task === task)
+  return filterModelsForSurface(
+    RECOMMENDED_MODELS.filter(
+      (model) => model.modality === modality && (!task || model.task === task)
+    )
   );
 }
 
@@ -619,6 +643,54 @@ function toUnifiedLanguageModel(
   };
 }
 
+type CustomModelEndpoint = Awaited<
+  ReturnType<typeof listEnabledCustomModelEndpoints>
+>[number];
+
+async function getCustomModelEndpointsForModels(
+  userId: string
+): Promise<CustomModelEndpoint[]> {
+  try {
+    return await listEnabledCustomModelEndpoints(userId);
+  } catch (error) {
+    log.warn("Custom model endpoint metadata unavailable", {
+      userId,
+      error: summarizeError(error)
+    });
+    return [];
+  }
+}
+
+async function getCustomEndpointLanguageModels(
+  userId: string
+): Promise<UnifiedModel[]> {
+  const endpoints = await getCustomModelEndpointsForModels(userId);
+  return endpoints.flatMap(customEndpointModelsToUnified);
+}
+
+async function getCustomEndpointLanguageModelsByProvider(
+  userId: string,
+  provider: string
+): Promise<UnifiedModel[]> {
+  if (!provider.startsWith("custom:")) {
+    return [];
+  }
+  const endpointId = provider.slice("custom:".length);
+  const endpoints = await getCustomModelEndpointsForModels(userId);
+  const endpoint = endpoints.find((candidate) => candidate.id === endpointId);
+  return endpoint ? customEndpointModelsToUnified(endpoint) : [];
+}
+
+async function getCustomEndpointProviderInfos(
+  userId: string
+): Promise<Array<{ provider: string; capabilities: string[] }>> {
+  const endpoints = await getCustomModelEndpointsForModels(userId);
+  return endpoints.map((endpoint) => ({
+    provider: customEndpointProviderId(endpoint.id),
+    capabilities: [...CUSTOM_MODEL_ENDPOINT_LANGUAGE_CAPABILITIES]
+  }));
+}
+
 function toUnifiedModel(
   model: {
     id: string;
@@ -666,7 +738,9 @@ async function getAllModels(userId: string): Promise<UnifiedModel[]> {
 
   all.push(...RECOMMENDED_MODELS);
 
-  const availableIds = await getAvailableProviderIds(userId);
+  const availableIds = filterProviderIdsForSurface(
+    await getAvailableProviderIds(userId)
+  );
   const providerModelsPromises = availableIds.map(async (providerId) => {
     try {
       const instance = await instantiateProvider(providerId, userId);
@@ -691,7 +765,9 @@ async function getAllModels(userId: string): Promise<UnifiedModel[]> {
     all.push(...models);
   }
 
-  if (!isProduction()) {
+  all.push(...(await getCustomEndpointLanguageModels(userId)));
+
+  if (!isProduction() && isLocalModelManagementEnabled()) {
     try {
       const hfModels = await readCachedHfModels();
       all.push(...hfModels);
@@ -718,7 +794,7 @@ async function getAllModels(userId: string): Promise<UnifiedModel[]> {
     }
   }
 
-  return dedupeModels(all);
+  return filterModelsForSurface(dedupeModels(all));
 }
 
 async function checkHfCache(body: {
@@ -775,7 +851,12 @@ async function collectProviderModelsForKind(
   kind: ModelSearchKind
 ): Promise<UnifiedModel[]> {
   const out: UnifiedModel[] = [];
-  const providerIds = await getAvailableProviderIds(userId);
+  if (kind === "text_generation") {
+    out.push(...(await getCustomEndpointLanguageModels(userId)));
+  }
+  const providerIds = filterProviderIdsForSurface(
+    await getAvailableProviderIds(userId)
+  );
   for (const providerId of providerIds) {
     await safeProviderCall(
       "availableForKind",
@@ -860,7 +941,10 @@ export const modelsRouter = router({
     .query(async ({ ctx }) => {
       const userId = ctx.userId;
       const infos: Array<{ provider: string; capabilities: string[] }> = [];
-      for (const providerId of await getAvailableProviderIds(userId)) {
+      const providerIds = filterProviderIdsForSurface(
+        await getAvailableProviderIds(userId)
+      );
+      for (const providerId of providerIds) {
         const instance = await instantiateProvider(providerId, userId);
         if (!instance) continue;
         infos.push({
@@ -868,6 +952,7 @@ export const modelsRouter = router({
           capabilities: providerCapabilities(instance)
         });
       }
+      infos.push(...(await getCustomEndpointProviderInfos(userId)));
       return infos;
     }),
 
@@ -877,7 +962,9 @@ export const modelsRouter = router({
   recommended: protectedProcedure
     .input(recommendedInput)
     .query(async ({ input }) => {
-      return getRecommendedModels(input.check_servers ?? false);
+      return filterModelsForSurface(
+        await getRecommendedModels(input.check_servers ?? false)
+      );
     }),
 
   /**
@@ -962,7 +1049,7 @@ export const modelsRouter = router({
         seen.add(key);
         deduped.push(m);
       }
-      return deduped;
+      return filterModelsForSurface(deduped);
     }),
 
   /**
@@ -977,6 +1064,7 @@ export const modelsRouter = router({
   huggingfaceList: protectedProcedure
     .output(modelsListOutput)
     .query(async () => {
+      if (!isLocalModelManagementEnabled()) return [];
       if (isProduction()) return [];
       try {
         return await readCachedHfModels();
@@ -992,6 +1080,7 @@ export const modelsRouter = router({
     .input(hfDeleteInput)
     .output(z.boolean())
     .mutation(async ({ input }) => {
+      assertLocalModelManagementEnabled();
       if (isProduction()) return false;
       try {
         return await deleteCachedHfModel(input.repo_id);
@@ -1007,6 +1096,7 @@ export const modelsRouter = router({
     .input(hfSearchInput)
     .output(modelsListOutput)
     .query(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) return [];
       if (isProduction()) return [];
       const rawQuery = input.query;
       const type = input.type;
@@ -1029,6 +1119,7 @@ export const modelsRouter = router({
     .input(hfByTypeInput)
     .output(modelsListOutput)
     .query(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) return [];
       try {
         return await getModelsByHfType(input.model_type);
       } catch {
@@ -1042,6 +1133,7 @@ export const modelsRouter = router({
   transformersJsList: protectedProcedure
     .output(modelsListOutput)
     .query(async () => {
+      if (!isLocalModelManagementEnabled()) return [];
       if (isProduction()) return [];
       try {
         const cached = await scanTransformersJsCache(getTransformersJsCacheDir());
@@ -1071,6 +1163,7 @@ export const modelsRouter = router({
     .input(tjsByTypeInput)
     .output(modelsListOutput)
     .query(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) return [];
       if (isProduction()) return [];
       const modelType = input.model_type;
       const recs = recommendedFor(modelType);
@@ -1126,6 +1219,7 @@ export const modelsRouter = router({
     .input(tjsByTypeInput)
     .output(modelsListOutput)
     .query(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) return [];
       if (isProduction()) return [];
       const modelType = input.model_type;
       const recs = recommendedFor(modelType);
@@ -1152,6 +1246,7 @@ export const modelsRouter = router({
     .input(z.object({ repo_id: z.string().min(1) }))
     .output(z.boolean())
     .query(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) return false;
       if (isProduction()) return false;
       try {
         return await isRepoCached(getTransformersJsCacheDir(), input.repo_id);
@@ -1165,8 +1260,9 @@ export const modelsRouter = router({
    */
   ollama: protectedProcedure
     .output(ollamaModelsOutput)
-    .query(async ({ ctx }) =>
-      safeProviderCall(
+    .query(async ({ ctx }) => {
+      if (!isLocalModelManagementEnabled()) return [];
+      return safeProviderCall(
         "ollama models",
         { provider: "ollama", userId: ctx.userId },
         async () => {
@@ -1176,8 +1272,8 @@ export const modelsRouter = router({
           return models.map(toOllamaModel);
         },
         []
-      )
-    ),
+      );
+    }),
 
   /**
    * LLM models by provider.
@@ -1185,8 +1281,15 @@ export const modelsRouter = router({
   llmByProvider: protectedProcedure
     .input(providerInput)
     .output(modelsListOutput)
-    .query(async ({ ctx, input }) =>
-      safeProviderCall(
+    .query(async ({ ctx, input }) => {
+      if (!isProviderVisibleForSurface(input.provider)) return [];
+      if (input.provider.startsWith("custom:")) {
+        return getCustomEndpointLanguageModelsByProvider(
+          ctx.userId,
+          input.provider
+        );
+      }
+      return safeProviderCall(
         "llmByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
@@ -1208,8 +1311,8 @@ export const modelsRouter = router({
           );
         },
         []
-      )
-    ),
+      );
+    }),
 
   /**
    * Image models by provider.
@@ -1217,8 +1320,9 @@ export const modelsRouter = router({
   imageByProvider: protectedProcedure
     .input(providerInput)
     .output(modelsListOutput)
-    .query(async ({ ctx, input }) =>
-      safeProviderCall(
+    .query(async ({ ctx, input }) => {
+      if (!isProviderVisibleForSurface(input.provider)) return [];
+      return safeProviderCall(
         "imageByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
@@ -1231,14 +1335,16 @@ export const modelsRouter = router({
           return models.map((m) => toUnifiedModel(m, "image_model"));
         },
         []
-      )
-    ),
+      );
+    }),
 
   /**
    * All TTS models across all providers.
    */
   tts: protectedProcedure.query(async ({ ctx }) => {
-    const availableIds = await getAvailableProviderIds(ctx.userId);
+    const availableIds = filterProviderIdsForSurface(
+      await getAvailableProviderIds(ctx.userId)
+    );
     const results = await Promise.all(
       availableIds.map((providerId) =>
         safeProviderCall(
@@ -1263,8 +1369,9 @@ export const modelsRouter = router({
   ttsByProvider: protectedProcedure
     .input(providerInput)
     .output(modelsListOutput)
-    .query(async ({ ctx, input }) =>
-      safeProviderCall(
+    .query(async ({ ctx, input }) => {
+      if (!isProviderVisibleForSurface(input.provider)) return [];
+      return safeProviderCall(
         "ttsByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
@@ -1277,14 +1384,16 @@ export const modelsRouter = router({
           return models.map((m) => toUnifiedModel(m, "tts_model"));
         },
         []
-      )
-    ),
+      );
+    }),
 
   /**
    * All ASR models across all providers.
    */
   asr: protectedProcedure.query(async ({ ctx }) => {
-    const availableIds = await getAvailableProviderIds(ctx.userId);
+    const availableIds = filterProviderIdsForSurface(
+      await getAvailableProviderIds(ctx.userId)
+    );
     const results = await Promise.all(
       availableIds.map((providerId) =>
         safeProviderCall(
@@ -1309,8 +1418,9 @@ export const modelsRouter = router({
   asrByProvider: protectedProcedure
     .input(providerInput)
     .output(modelsListOutput)
-    .query(async ({ ctx, input }) =>
-      safeProviderCall(
+    .query(async ({ ctx, input }) => {
+      if (!isProviderVisibleForSurface(input.provider)) return [];
+      return safeProviderCall(
         "asrByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
@@ -1323,14 +1433,16 @@ export const modelsRouter = router({
           return models.map((m) => toUnifiedModel(m, "asr_model"));
         },
         []
-      )
-    ),
+      );
+    }),
 
   /**
    * All video models across all providers.
    */
   video: protectedProcedure.query(async ({ ctx }) => {
-    const availableIds = await getAvailableProviderIds(ctx.userId);
+    const availableIds = filterProviderIdsForSurface(
+      await getAvailableProviderIds(ctx.userId)
+    );
     const results = await Promise.all(
       availableIds.map((providerId) =>
         safeProviderCall(
@@ -1355,8 +1467,9 @@ export const modelsRouter = router({
   videoByProvider: protectedProcedure
     .input(providerInput)
     .output(modelsListOutput)
-    .query(async ({ ctx, input }) =>
-      safeProviderCall(
+    .query(async ({ ctx, input }) => {
+      if (!isProviderVisibleForSurface(input.provider)) return [];
+      return safeProviderCall(
         "videoByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
@@ -1369,8 +1482,8 @@ export const modelsRouter = router({
           return models.map((m) => toUnifiedModel(m, "video_model"));
         },
         []
-      )
-    ),
+      );
+    }),
 
   /**
    * Embedding models by provider.
@@ -1378,8 +1491,9 @@ export const modelsRouter = router({
   embeddingByProvider: protectedProcedure
     .input(providerInput)
     .output(modelsListOutput)
-    .query(async ({ ctx, input }) =>
-      safeProviderCall(
+    .query(async ({ ctx, input }) => {
+      if (!isProviderVisibleForSurface(input.provider)) return [];
+      return safeProviderCall(
         "embeddingByProvider",
         { provider: input.provider, userId: ctx.userId },
         async () => {
@@ -1392,13 +1506,16 @@ export const modelsRouter = router({
           return models.map((m) => toUnifiedModel(m, "embedding_model"));
         },
         []
-      )
-    ),
+      );
+    }),
 
   /**
    * Ollama model info (stub).
    */
-  ollamaModelInfo: protectedProcedure.output(z.null()).query(() => null),
+  ollamaModelInfo: protectedProcedure.output(z.null()).query(() => {
+    if (!isLocalModelManagementEnabled()) return null;
+    return null;
+  }),
 
   /**
    * Check whether specific files exist in the HuggingFace cache.
@@ -1407,6 +1524,17 @@ export const modelsRouter = router({
     .input(tryCacheFilesInput)
     .output(tryCacheFilesOutput)
     .mutation(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) {
+        return input.map((entry) => {
+          const repoId = entry.repo_id ?? "";
+          const repoPath = entry.path ?? "";
+          return {
+            repo_id: repoId,
+            path: repoPath,
+            downloaded: false
+          };
+        });
+      }
       return Promise.all(
         input.map(async (entry) => {
           const repoId = entry.repo_id ?? "";
@@ -1430,6 +1558,12 @@ export const modelsRouter = router({
     .input(tryCacheReposInput)
     .output(tryCacheReposOutput)
     .mutation(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) {
+        return input.map((repoId) => ({
+          repo_id: repoId,
+          downloaded: false
+        }));
+      }
       return Promise.all(
         input.map(async (repoId) => ({
           repo_id: repoId,
@@ -1444,7 +1578,17 @@ export const modelsRouter = router({
   huggingfaceCheckCache: protectedProcedure
     .input(hfCacheCheckInput)
     .output(hfCacheCheckOutput)
-    .mutation(async ({ input }) => checkHfCache(input)),
+    .mutation(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) {
+        return {
+          repo_id: input.repo_id,
+          all_present: false,
+          total_files: 0,
+          missing: normalizePatterns(input.allow_pattern) ?? []
+        };
+      }
+      return checkHfCache(input);
+    }),
 
   /**
    * Fast batch cache status check for multiple models.
@@ -1453,6 +1597,12 @@ export const modelsRouter = router({
     .input(hfFastCacheStatusInput)
     .output(hfFastCacheStatusOutput)
     .mutation(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) {
+        return input.map((item) => ({
+          key: item.key,
+          downloaded: false
+        }));
+      }
       return Promise.all(
         input.map(async (item) => {
           const allowPatterns = normalizePatterns(item.allow_patterns);
@@ -1497,11 +1647,14 @@ export const modelsRouter = router({
         message: z.string()
       })
     )
-    .mutation(() => ({
-      status: "unavailable",
-      message:
-        "Streaming Ollama model pulls are not available in the TS standalone server. Use the Ollama API directly or the Python backend."
-    })),
+    .mutation(() => {
+      assertLocalModelManagementEnabled();
+      return {
+        status: "unavailable",
+        message:
+          "Streaming Ollama model pulls are not available in the TS standalone server. Use the Ollama API directly or the Python backend."
+      };
+    }),
 
   /**
    * Get HuggingFace file info (size, sha256, etc.).
@@ -1510,6 +1663,7 @@ export const modelsRouter = router({
     .input(hfFileInfoInput)
     .output(z.array(z.record(z.string(), z.unknown())))
     .mutation(async ({ input }) => {
+      if (!isLocalModelManagementEnabled()) return [];
       if (isProduction()) return [];
       try {
         const token = (await getSecret("HF_TOKEN", "1")) ?? undefined;

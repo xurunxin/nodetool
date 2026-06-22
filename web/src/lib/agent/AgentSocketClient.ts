@@ -197,6 +197,13 @@ export class AgentSocketClient extends EventEmitter<AgentSocketEvents> {
     });
   }
 
+  async setMemoryEnabled(sessionId: string, enabled: boolean): Promise<void> {
+    await this.request<"set_memory_enabled", void>("set_memory_enabled", {
+      session_id: sessionId,
+      enabled,
+    });
+  }
+
   async closeSession(sessionId: string): Promise<void> {
     await this.request<"close_session", void>("close_session", {
       session_id: sessionId,

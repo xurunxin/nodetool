@@ -60,9 +60,24 @@ jest.mock("../../lib/websocket/GlobalWebSocketManager", () => ({
   globalWebSocketManager: mockGlobalWebSocketManager
 }));
 
+const mockAgentClient = {
+  getSessionMessages: jest.fn(),
+  on: jest.fn(),
+  off: jest.fn(),
+  sendToolsManifestResponse: jest.fn(),
+  sendToolCallResponse: jest.fn()
+};
+
+jest.mock("../../lib/agent/AgentSocketClient", () => ({
+  getAgentSocketClient: () => mockAgentClient
+}));
+
 import { encode } from "@msgpack/msgpack";
 import { Server } from "mock-socket";
-import useGlobalChatStore from "../GlobalChatStore";
+import useGlobalChatStore, {
+  GLOBAL_CHAT_STORAGE_VERSION,
+  migrateGlobalChatPersistedState
+} from "../GlobalChatStore";
 import {
   Message,
   JobUpdate,
@@ -117,6 +132,7 @@ describe("GlobalChatStore", () => {
     jest.clearAllMocks();
     jest.setTimeout(60000);
     uuidCounter = 0;
+    mockAgentClient.getSessionMessages.mockResolvedValue([]);
     (supabase.auth.getSession as jest.Mock).mockResolvedValue({
       data: { session: null }
     });
@@ -151,6 +167,111 @@ describe("GlobalChatStore", () => {
     const state = store.getState();
     expect(state.currentThreadId).toBe(id);
     expect(state.threads[id]).toBeDefined();
+  });
+
+  it("loads LLM agent transcripts through the real session id", async () => {
+    mockAgentClient.getSessionMessages.mockResolvedValue([
+      {
+        type: "user",
+        uuid: "user-message-1",
+        session_id: "db-thread-1",
+        text: "hello"
+      },
+      {
+        type: "assistant",
+        uuid: "assistant-message-1",
+        session_id: "db-thread-1",
+        text: "hi there"
+      }
+    ]);
+    store.setState({
+      agentSessionConfigByThread: {
+        "visible-thread": {
+          provider: "llm",
+          model: "claude-sonnet",
+          workspacePath: null,
+          chatProviderId: "anthropic"
+        }
+      },
+      agentResumeSessionByThread: {
+        "visible-thread": "db-thread-1"
+      },
+      messageCache: {}
+    } as any);
+
+    const messages = await store.getState().loadMessages("visible-thread");
+
+    expect(mockAgentClient.getSessionMessages).toHaveBeenCalledWith({
+      sessionId: "db-thread-1"
+    });
+    expect(messages).toEqual([
+      expect.objectContaining({
+        id: "user-message-1",
+        role: "user",
+        thread_id: "visible-thread",
+        content: [{ type: "text", text: "hello" }]
+      }),
+      expect.objectContaining({
+        id: "assistant-message-1",
+        role: "assistant",
+        thread_id: "visible-thread",
+        content: [{ type: "text", text: "hi there" }]
+      })
+    ]);
+    expect(store.getState().messageCache["visible-thread"]).toBe(messages);
+  });
+
+  it("loads Morpheus agent transcripts through the UI session id", async () => {
+    mockAgentClient.getSessionMessages.mockResolvedValue([
+      {
+        type: "user",
+        uuid: "user-message-1",
+        session_id: "visible-thread",
+        text: "build a graph"
+      },
+      {
+        type: "assistant",
+        uuid: "assistant-message-1",
+        session_id: "visible-thread",
+        text: "done"
+      }
+    ]);
+    store.setState({
+      agentSessionConfigByThread: {
+        "visible-thread": {
+          provider: "morpheus",
+          model: "nodetool-canvas",
+          workspacePath: null,
+          chatProviderId: null
+        }
+      },
+      agentSessionByThread: {
+        "visible-thread": "morpheus-ui-session"
+      },
+      agentResumeSessionByThread: {},
+      messageCache: {}
+    } as any);
+
+    const messages = await store.getState().loadMessages("visible-thread");
+
+    expect(mockAgentClient.getSessionMessages).toHaveBeenCalledWith({
+      sessionId: "morpheus-ui-session"
+    });
+    expect(messages).toEqual([
+      expect.objectContaining({
+        id: "user-message-1",
+        role: "user",
+        thread_id: "visible-thread",
+        content: [{ type: "text", text: "build a graph" }]
+      }),
+      expect.objectContaining({
+        id: "assistant-message-1",
+        role: "assistant",
+        thread_id: "visible-thread",
+        content: [{ type: "text", text: "done" }]
+      })
+    ]);
+    expect(store.getState().messageCache["visible-thread"]).toBe(messages);
   });
 
   it("sendMessage adds message to thread and sends via socket", async () => {
@@ -196,8 +317,8 @@ describe("GlobalChatStore", () => {
           workflow_id: null,
           thread_id: threadId,
           memory_enabled: false,
-          model: "gpt-oss:20b",
-          provider: "empty",
+          model: "gpt-4o",
+          provider: "openai",
           permission_mode: "default",
           media_generation: null
         }
@@ -805,8 +926,8 @@ describe("GlobalChatStore", () => {
           workflow_id: "test-workflow",
           thread_id: threadId,
           memory_enabled: false,
-          model: "gpt-oss:20b",
-          provider: "empty",
+          model: "gpt-4o",
+          provider: "openai",
           permission_mode: "default",
           media_generation: null
         }
@@ -1197,6 +1318,111 @@ describe("GlobalChatStore", () => {
   });
 
   describe("State Persistence", () => {
+    it("uses a new storage version for agent provider migration", () => {
+      expect(GLOBAL_CHAT_STORAGE_VERSION).toBe(2);
+    });
+
+    it("preserves legacy Pi selections during storage migration", () => {
+      const migrated = migrateGlobalChatPersistedState({
+        mode: "pi",
+        piModel: "pi/claude",
+        piWorkspaceId: "workspace-1",
+        piWorkspacePath: "G:/Projects/sample",
+        piSessionByThread: {
+          "thread-pi": "legacy-pi-session"
+        }
+      });
+
+      expect(migrated).toMatchObject({
+        agentProvider: "pi",
+        agentModel: "pi/claude",
+        agentWorkspaceId: "workspace-1",
+        agentWorkspacePath: "G:/Projects/sample",
+        agentSessionByThread: {
+          "thread-pi": "legacy-pi-session"
+        },
+        piModel: "pi/claude",
+        piWorkspaceId: "workspace-1",
+        piWorkspacePath: "G:/Projects/sample",
+        piSessionByThread: {
+          "thread-pi": "legacy-pi-session"
+        }
+      });
+    });
+
+    it("preserves legacy Pi selections when old storage omitted mode", () => {
+      const migrated = migrateGlobalChatPersistedState({
+        piModel: "pi/claude",
+        piWorkspaceId: "workspace-1",
+        piWorkspacePath: "G:/Projects/sample",
+        piSessionByThread: {
+          "thread-pi": "legacy-pi-session"
+        }
+      });
+
+      expect(migrated).toMatchObject({
+        agentProvider: "pi",
+        agentModel: "pi/claude",
+        agentWorkspaceId: "workspace-1",
+        agentWorkspacePath: "G:/Projects/sample",
+        agentSessionByThread: {
+          "thread-pi": "legacy-pi-session"
+        }
+      });
+    });
+
+    it("ignores empty legacy Pi mirrors during storage migration", () => {
+      const migrated = migrateGlobalChatPersistedState({
+        piModel: "",
+        piWorkspaceId: "",
+        piWorkspacePath: "",
+        piSessionByThread: {}
+      });
+
+      expect(migrated).toMatchObject({
+        agentProvider: "morpheus",
+        agentModel: "",
+        agentWorkspaceId: null,
+        agentWorkspacePath: null
+      });
+    });
+
+    it("resets hidden local chat model selections during storage migration", () => {
+      const migrated = migrateGlobalChatPersistedState({
+        selectedModel: {
+          type: "language_model",
+          provider: "ollama",
+          id: "llama3.2",
+          name: "llama3.2"
+        }
+      });
+
+      expect(migrated.selectedModel).toMatchObject({
+        type: "language_model",
+        provider: "openai"
+      });
+    });
+
+    it("keeps explicit migrated agent selections over legacy mirrors", () => {
+      const migrated = migrateGlobalChatPersistedState({
+        mode: "pi",
+        agentProvider: "llm",
+        agentModel: "claude-sonnet",
+        agentWorkspaceId: null,
+        agentWorkspacePath: null,
+        piModel: "pi/claude",
+        piWorkspaceId: "workspace-1",
+        piWorkspacePath: "G:/Projects/sample"
+      });
+
+      expect(migrated).toMatchObject({
+        agentProvider: "llm",
+        agentModel: "claude-sonnet",
+        agentWorkspaceId: null,
+        agentWorkspacePath: null
+      });
+    });
+
     it("partialize function returns only threads and currentThreadId", () => {
       const mockState = {
         status: "connected" as const,

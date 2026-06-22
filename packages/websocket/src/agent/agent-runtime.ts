@@ -20,6 +20,10 @@ import {
 } from "./mcp-tool-server.js";
 import { LlmAgentSdkProvider } from "./llm-agent.js";
 import {
+  isMorpheusAgentConfigured,
+  MorpheusAgentSdkProvider,
+} from "./morpheus-agent.js";
+import {
   getLocalMcpServerUrl,
   setMcpFrontendTransport,
 } from "../mcp-server.js";
@@ -115,10 +119,14 @@ class PiSdkProvider implements AgentSdkProvider {
 const providers: Record<string, AgentSdkProvider> = {
   pi: new PiSdkProvider(),
   llm: new LlmAgentSdkProvider(),
+  morpheus: new MorpheusAgentSdkProvider(),
 };
 
 function getProvider(name?: string): AgentSdkProvider {
-  return providers[name ?? "llm"] ?? providers.llm;
+  if (name) {
+    return providers[name] ?? providers.llm;
+  }
+  return isMorpheusAgentConfigured() ? providers.morpheus : providers.llm;
 }
 
 /**
@@ -165,10 +173,9 @@ class AgentRuntime {
         "createSession requires an authenticated userId — agent socket must be authenticated",
       );
     }
-    // The "llm" provider runs in-process with only ui_* tools — no file
-    // system access, so a workspace is irrelevant. The "pi" provider needs
-    // one for its file-system tools.
-    const requiresWorkspace = options.provider !== "llm";
+    // Only the Pi harness needs a local workspace for its filesystem-aware
+    // session store. LLM and Morpheus sessions are API-first/remote.
+    const requiresWorkspace = options.provider === "pi";
     if (requiresWorkspace) {
       if (!options.resumeSessionId && !options.workspacePath) {
         throw new Error(
@@ -181,7 +188,23 @@ class AgentRuntime {
     }
 
     const provider = getProvider(options.provider);
-    const tempId = `${provider.name}-session-${++this.sessionCounter}`;
+    if (options.resumeSessionId) {
+      const existingSession = this.activeSessions.get(options.resumeSessionId);
+      const existingOwner = this.sessionOwners.get(options.resumeSessionId);
+      if (existingSession && existingOwner === userId) {
+        return options.resumeSessionId;
+      }
+      if (existingSession) {
+        throw new Error(
+          `No active agent session with ID: ${options.resumeSessionId}`,
+        );
+      }
+    }
+
+    const tempId =
+      provider.name === "morpheus" && options.resumeSessionId
+        ? options.resumeSessionId
+        : `${provider.name}-session-${++this.sessionCounter}`;
     const sessionMode = options.resumeSessionId ? "resuming" : "creating";
     log.info(
       `${sessionMode} ${provider.name} agent session for user ${userId} with model: ${options.model}${

@@ -21,7 +21,9 @@ import {
   FlexRow,
   Popover,
   Text,
-  MOTION
+  MOTION,
+  BORDER_RADIUS,
+  SPACING
 } from "../../ui_primitives";
 import type { MediaMode } from "../../../stores/MediaGenerationStore";
 
@@ -31,11 +33,11 @@ interface MediaModeMenuProps {
   onClose: () => void;
   value: MediaMode;
   onChange: (mode: MediaMode) => void;
-  /** Show the workspace-aware Pi agent as a selectable mode. */
+  /** Show the generic agent as a selectable mode. */
   showPi?: boolean;
-  /** Whether Pi is the active mode (so media `value` is not highlighted). */
+  /** Whether Agent is the active mode (so media `value` is not highlighted). */
   piSelected?: boolean;
-  /** Called when the user picks Pi. */
+  /** Called when the user picks Agent. */
   onSelectPi?: () => void;
 }
 
@@ -112,10 +114,12 @@ const MODES: ModeItem[] = [
 
 const styles = (theme: Theme) =>
   css({
-    padding: "8px 0",
+    padding: `${theme.spacing(SPACING.md)} 0`,
     minWidth: 240,
     ".mode-menu-header": {
-      padding: "8px 16px 4px",
+      padding: `${theme.spacing(SPACING.md)} ${theme.spacing(
+        SPACING.xl
+      )} ${theme.spacing(SPACING.xs)}`,
       color: theme.vars.palette.grey[400],
       textTransform: "uppercase",
       letterSpacing: 1
@@ -123,8 +127,8 @@ const styles = (theme: Theme) =>
     ".mode-menu-item": {
       display: "flex",
       alignItems: "center",
-      gap: 8,
-      padding: "10px 16px",
+      gap: theme.spacing(SPACING.md),
+      padding: `${theme.spacing(SPACING.md)} ${theme.spacing(SPACING.xl)}`,
       cursor: "pointer",
       color: theme.vars.palette.grey[100],
       transition: MOTION.background,
@@ -177,7 +181,7 @@ const MediaModeMenu: React.FC<MediaModeMenuProps> = ({
       paperSx={{
         backgroundColor: theme.vars.palette.grey[900],
         border: `1px solid ${theme.vars.palette.grey[800]}`,
-        borderRadius: 2,
+        borderRadius: BORDER_RADIUS.lg,
         boxShadow: "0 12px 40px rgba(0,0,0,0.45)"
       }}
     >
@@ -273,10 +277,10 @@ const MediaModeMenu: React.FC<MediaModeMenuProps> = ({
               </span>
               <FlexRow gap={0.5} align="center" sx={{ flex: 1, minWidth: 0 }}>
                 <Text size="normal" weight={500} sx={{ color: "inherit" }}>
-                  {t("chat:piAgent")}
+                  {t("chat:agent")}
                 </Text>
                 <Caption size="tiny" color="secondary">
-                  {t("navigation:workspace")}
+                  {t("chat:agentProvider")}
                 </Caption>
               </FlexRow>
               {piSelected && (

@@ -93,7 +93,10 @@ export function agentMessageToNodeToolMessage(
     }
 
     case "result": {
-      if (msg.subtype === "success" && msg.text) {
+      if (
+        (msg.subtype === "success" || msg.subtype === "tool_result") &&
+        msg.text
+      ) {
         return {
           type: "message",
           id: msg.uuid,
@@ -112,6 +115,18 @@ export function agentMessageToNodeToolMessage(
           id: msg.uuid,
           role: "assistant",
           content: [{ type: "text", text: `Error: ${errorText}` }],
+          created_at: new Date().toISOString(),
+          thread_id: msg.session_id,
+          provider: "anthropic",
+          model: "agent"
+        };
+      }
+      if (msg.is_error && msg.text) {
+        return {
+          type: "message",
+          id: msg.uuid,
+          role: "assistant",
+          content: [{ type: "text", text: msg.text }],
           created_at: new Date().toISOString(),
           thread_id: msg.session_id,
           provider: "anthropic",
@@ -144,4 +159,3 @@ export function agentMessageToNodeToolMessage(
       return null;
   }
 }
-

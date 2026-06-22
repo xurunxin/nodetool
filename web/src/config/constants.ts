@@ -29,7 +29,7 @@ export const ZOOMED_OUT = 0.35;
 export const NODE_MENU_HOVER_INFO_DELAY_MS = 250;
 
 // MODEL
-export const DEFAULT_MODEL = "gpt-oss:20b";
+export const DEFAULT_MODEL = "gpt-4o";
 
 // SEARCH
 export const SEARCH_DEBOUNCE_MS = 500;

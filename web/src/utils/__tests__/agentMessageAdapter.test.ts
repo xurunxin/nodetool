@@ -241,6 +241,24 @@ describe("agentMessageAdapter", () => {
         ]);
       });
 
+      it("converts rendered tool result messages", () => {
+        const msg: AgentMessage = {
+          type: "result",
+          uuid: "tool-call-1",
+          session_id: "test-session-2",
+          subtype: "tool_result",
+          text: "frontend returned ok",
+        };
+
+        const result = agentMessageToNodeToolMessage(msg);
+
+        expect(result).not.toBeNull();
+        expect(result?.id).toBe("tool-call-1");
+        expect(result?.content).toEqual([
+          { type: "text", text: "frontend returned ok" },
+        ]);
+      });
+
       it("converts result message with error and errors array", () => {
         const msg: AgentMessage = {
           type: "result",
@@ -272,6 +290,23 @@ describe("agentMessageAdapter", () => {
         expect(result).not.toBeNull();
         expect(result?.content).toEqual([
           { type: "text", text: "Error: Something went wrong" },
+        ]);
+      });
+
+      it("converts result message with error text", () => {
+        const msg: AgentMessage = {
+          type: "result",
+          uuid: "test-uuid-error-text",
+          session_id: "test-session-error-text",
+          is_error: true,
+          text: "Tool manifest timed out",
+        };
+
+        const result = agentMessageToNodeToolMessage(msg);
+
+        expect(result).not.toBeNull();
+        expect(result?.content).toEqual([
+          { type: "text", text: "Tool manifest timed out" },
         ]);
       });
 

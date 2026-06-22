@@ -18,7 +18,7 @@
  *       ├── manifest := transport.requestToolManifest(sessionId)
  *       ├── tools    := manifest.map(UiBridgeTool)   (each delegates back to
  *       │                                              transport.executeTool)
- *       ├── provider := getProvider(chatProviderId)   (anthropic/openai/...)
+ *       ├── provider := resolveNodeToolProvider(chatProviderId)
  *       │
  *       └── processChat({ provider, model, tools, ... })
  *             ├── streams text chunks  ──► onMessage(AgentMessage{type:"assistant"})
@@ -42,12 +42,19 @@ import {
 } from "@nodetool-ai/agents";
 import type { NodeRegistry } from "@nodetool-ai/node-sdk";
 import {
+  BaseProvider,
   ProcessingContext,
   getProvider as getRuntimeProvider,
   isProviderConfigured,
   listRegisteredProviderIds,
 } from "@nodetool-ai/runtime";
-import type { BaseProvider, Message, ToolCall } from "@nodetool-ai/runtime";
+import type {
+  LanguageModel,
+  Message,
+  ProviderId,
+  ProviderStreamItem,
+  ToolCall
+} from "@nodetool-ai/runtime";
 import type { GraphData, NodeDescriptor, ProcessingMessage } from "@nodetool-ai/protocol";
 import {
   Message as DbMessage,
@@ -70,10 +77,68 @@ import {
   type AgentSdkProvider,
 } from "./sdk-provider.js";
 import type { AgentTransport } from "./transport.js";
+import { resolveNodeToolProvider } from "../custom-provider-resolver.js";
+import {
+  customEndpointProviderId,
+  getCustomEndpointLanguageModels,
+  listEnabledCustomModelEndpoints
+} from "../custom-model-endpoints.js";
+import {
+  filterProviderIdsForSurface,
+  isProviderVisibleForSurface,
+} from "../model-surface.js";
 
 const log = createLogger("nodetool.websocket.agent.llm");
 
 const MAX_AGGREGATED_MODELS = 200;
+
+type EnabledCustomModelEndpoint = Awaited<
+  ReturnType<typeof listEnabledCustomModelEndpoints>
+>[number];
+
+class CustomEndpointCatalogProvider extends BaseProvider {
+  private readonly models: LanguageModel[];
+
+  constructor(endpoint: EnabledCustomModelEndpoint) {
+    const providerId = customEndpointProviderId(endpoint.id);
+    super(providerId as ProviderId);
+    this.models = endpoint.models.map((model) => ({
+      id: model.id,
+      name: model.name,
+      provider: providerId as ProviderId
+    }));
+  }
+
+  override async hasToolSupport(): Promise<boolean> {
+    return true;
+  }
+
+  override async getAvailableLanguageModels(): Promise<LanguageModel[]> {
+    return this.models;
+  }
+
+  override async generateMessage(
+    _args: Parameters<BaseProvider["generateMessage"]>[0]
+  ): Promise<Message> {
+    throw new Error("Custom endpoint catalog providers are for model discovery only");
+  }
+
+  override async *generateMessages(
+    _args: Parameters<BaseProvider["generateMessages"]>[0]
+  ): AsyncGenerator<ProviderStreamItem> {
+    throw new Error("Custom endpoint catalog providers are for model discovery only");
+  }
+}
+
+function withDefaultModel(
+  models: AgentModelDescriptor[],
+): AgentModelDescriptor[] {
+  const first = models[0];
+  if (first) {
+    first.isDefault = true;
+  }
+  return models;
+}
 
 let graphPlannerRegistry: NodeRegistry | null = null;
 
@@ -470,7 +535,6 @@ class LlmAgentSession implements AgentQuerySession {
         const msg = dbMessageToConversation(row);
         if (msg) this.conversation.push(msg);
       }
-      this.persistedCount = this.conversation.length;
     } else {
       const thread = await DbThread.create({
         user_id: this.userId,
@@ -479,16 +543,16 @@ class LlmAgentSession implements AgentQuerySession {
       this.threadId = thread.id;
     }
 
-    if (this.conversation.length === 0 && this.systemPrompt) {
-      // System prompt is part of the conversation but not persisted — it's
-      // a server-side configuration concern and doesn't belong in the user's
-      // transcript.
-      this.conversation.push({
+    if (this.systemPrompt && this.conversation[0]?.role !== "system") {
+      // System prompt is part of the runtime conversation but not persisted.
+      // Reinsert it before hydrated history so resumed sessions keep the
+      // workflow-builder/tool-use instructions without re-saving old rows.
+      this.conversation.unshift({
         role: "system",
         content: this.systemPrompt,
       } as Message);
-      this.persistedCount = this.conversation.length;
     }
+    this.persistedCount = this.conversation.length;
 
     this.hydrated = true;
   }
@@ -566,9 +630,14 @@ class LlmAgentSession implements AgentQuerySession {
 
     try {
       await this.hydrate();
-      const provider = await getRuntimeProvider(
+      if (!isProviderVisibleForSurface(this.chatProviderId)) {
+        throw new Error(
+          `Provider "${this.chatProviderId}" is disabled by the current model surface`,
+        );
+      }
+      const provider = await resolveNodeToolProvider(
         this.chatProviderId,
-        (key) => getStoredSecret(key, this.userId).then((v) => v ?? undefined),
+        this.userId,
       );
       const tools = [
         new GraphPlannerUiTool({
@@ -735,19 +804,33 @@ async function getConfiguredProvidersForUser(
     getStoredSecret(key, userId).then((v) => v ?? undefined);
 
   await Promise.all(
-    listRegisteredProviderIds().map(async (providerId) => {
-      try {
-        if (await isProviderConfigured(providerId, getSecret)) {
-          providers[providerId] = await getRuntimeProvider(providerId, getSecret);
+    filterProviderIdsForSurface(listRegisteredProviderIds()).map(
+      async (providerId) => {
+        try {
+          if (await isProviderConfigured(providerId, getSecret)) {
+            providers[providerId] = await getRuntimeProvider(providerId, getSecret);
+          }
+        } catch (error) {
+          log.debug("Skipping provider for graph-planner model lookup", {
+            provider: providerId,
+            error: error instanceof Error ? error.message : String(error)
+          });
         }
-      } catch (error) {
-        log.debug("Skipping provider for graph-planner model lookup", {
-          provider: providerId,
-          error: error instanceof Error ? error.message : String(error)
-        });
       }
-    })
+    )
   );
+
+  try {
+    const customEndpoints = await listEnabledCustomModelEndpoints(userId);
+    for (const endpoint of customEndpoints) {
+      const providerId = customEndpointProviderId(endpoint.id);
+      providers[providerId] ??= new CustomEndpointCatalogProvider(endpoint);
+    }
+  } catch (error) {
+    log.debug("Skipping custom endpoints for graph-planner model lookup", {
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
 
   providers[fallbackProvider.provider] = fallbackProvider;
   return providers;
@@ -762,10 +845,35 @@ async function getConfiguredProvidersForUser(
 async function listAllToolCapableLanguageModels(
   userId: string,
 ): Promise<AgentModelDescriptor[]> {
-  const providerIds = listRegisteredProviderIds();
+  const providerIds = filterProviderIdsForSurface(listRegisteredProviderIds());
   const out: AgentModelDescriptor[] = [];
   const getSecret = (key: string) =>
     getStoredSecret(key, userId).then((v) => v ?? undefined);
+
+  let customModels: Awaited<ReturnType<typeof getCustomEndpointLanguageModels>>;
+  try {
+    customModels = await getCustomEndpointLanguageModels(userId);
+  } catch (error) {
+    log.warn("Custom model endpoint metadata unavailable", {
+      error: error instanceof Error ? error.message : String(error),
+      userId,
+    });
+    customModels = [];
+  }
+
+  for (const m of customModels) {
+    const chatProviderId = m.provider;
+    if (!chatProviderId) continue;
+    out.push({
+      id: m.id,
+      label: `${m.name || m.id} (${chatProviderId})`,
+      provider: "llm",
+      chatProviderId,
+    });
+    if (out.length >= MAX_AGGREGATED_MODELS) {
+      return withDefaultModel(out);
+    }
+  }
 
   for (const providerId of providerIds) {
     if (!(await isProviderConfigured(providerId, getSecret))) continue;
@@ -801,14 +909,12 @@ async function listAllToolCapableLanguageModels(
         provider: "llm",
         chatProviderId: providerId,
       });
-      if (out.length >= MAX_AGGREGATED_MODELS) return out;
+      if (out.length >= MAX_AGGREGATED_MODELS) {
+        return withDefaultModel(out);
+      }
     }
   }
-
-  if (out.length > 0) {
-    out[0].isDefault = true;
-  }
-  return out;
+  return withDefaultModel(out);
 }
 
 export class LlmAgentSdkProvider implements AgentSdkProvider {

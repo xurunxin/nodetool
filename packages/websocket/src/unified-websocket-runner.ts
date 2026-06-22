@@ -41,7 +41,6 @@ import type {
   ProviderTool,
   Message as ProviderMessage,
   MessageContent,
-  BaseProvider,
   ProcessingContext,
   ToolCall as ProviderToolCall,
   ImageModel as ProviderImageModel,
@@ -49,9 +48,13 @@ import type {
   TextToImageParams,
   TextToVideoParams,
   ImageToImageParams,
-  ImageToVideoParams
+  ImageToVideoParams,
+  LanguageModel,
+  ProviderId,
+  ProviderStreamItem
 } from "@nodetool-ai/runtime";
 import {
+  BaseProvider,
   ProcessingContext as RuntimeProcessingContext,
   encodeRawRgbaToPng,
   getCostReconciler
@@ -95,10 +98,54 @@ import type { PythonBridge } from "@nodetool-ai/runtime";
 import { appRouter } from "./trpc/router.js";
 import { createCallerFactory } from "./trpc/index.js";
 import type { HttpApiOptions } from "./http-api.js";
+import { resolveNodeToolProvider } from "./custom-provider-resolver.js";
+import { filterProviderIdsForSurface } from "./model-surface.js";
+import {
+  customEndpointProviderId,
+  listEnabledCustomModelEndpoints
+} from "./custom-model-endpoints.js";
 
 const log = createLogger("nodetool.websocket.runner");
 const DATA_URI_PATTERN = /data:([^;,]+)?;base64,[A-Za-z0-9+/=\r\n]+/gi;
 const MAX_ERROR_TEXT_LENGTH = 4000;
+
+type EnabledCustomModelEndpoint = Awaited<
+  ReturnType<typeof listEnabledCustomModelEndpoints>
+>[number];
+
+class CustomEndpointCatalogProvider extends BaseProvider {
+  private readonly models: LanguageModel[];
+
+  constructor(endpoint: EnabledCustomModelEndpoint) {
+    const providerId = customEndpointProviderId(endpoint.id);
+    super(providerId as ProviderId);
+    this.models = endpoint.models.map((model) => ({
+      id: model.id,
+      name: model.name,
+      provider: providerId as ProviderId
+    }));
+  }
+
+  override async hasToolSupport(): Promise<boolean> {
+    return true;
+  }
+
+  override async getAvailableLanguageModels(): Promise<LanguageModel[]> {
+    return this.models;
+  }
+
+  override async generateMessage(
+    _args: Parameters<BaseProvider["generateMessage"]>[0]
+  ): Promise<ProviderMessage> {
+    throw new Error("Custom endpoint catalog providers are for model discovery only");
+  }
+
+  override async *generateMessages(
+    _args: Parameters<BaseProvider["generateMessages"]>[0]
+  ): AsyncGenerator<ProviderStreamItem> {
+    throw new Error("Custom endpoint catalog providers are for model discovery only");
+  }
+}
 
 /**
  * Return `true` when the given http(s) URL appears to point at a public
@@ -936,6 +983,14 @@ export interface UnifiedWebSocketRunnerOptions {
   apiOptions?: HttpApiOptions;
 }
 
+const isUnsetChatProvider = (provider: unknown): boolean =>
+  provider === undefined ||
+  provider === null ||
+  provider === "empty" ||
+  (typeof provider === "string" && provider.trim().length === 0);
+
+const LEGACY_LOCAL_DEFAULT_MODEL = "gpt-oss:20b";
+
 export class UnifiedWebSocketRunner {
   websocket: WebSocketConnection | null = null;
   mode: WebSocketMode = "binary";
@@ -1066,8 +1121,8 @@ export class UnifiedWebSocketRunner {
   constructor(options: UnifiedWebSocketRunnerOptions) {
     this.userId = options.userId ?? null;
     this.authToken = options.authToken ?? null;
-    this.defaultModel = options.defaultModel ?? "gpt-oss:20b";
-    this.defaultProvider = options.defaultProvider ?? "ollama";
+    this.defaultModel = options.defaultModel ?? "gpt-4o";
+    this.defaultProvider = options.defaultProvider ?? "openai";
     this.resolveExecutor = options.resolveExecutor;
     this.resolveNodeType = options.resolveNodeType;
     this.resolveProvider = options.resolveProvider;
@@ -1080,6 +1135,16 @@ export class UnifiedWebSocketRunner {
     this.getPythonBridgeReady = options.getPythonBridgeReady;
     this.apiOptions = options.apiOptions;
     this.getSystemStats = options.getSystemStats ?? createSystemStatsSampler();
+  }
+
+  private installProviderResolver(
+    context: ProcessingContext,
+    userId: string
+  ): void {
+    const resolveProvider = this.resolveProvider ?? resolveNodeToolProvider;
+    context.setProviderResolver((providerId) =>
+      resolveProvider(providerId, userId)
+    );
   }
 
   async connect(
@@ -1645,6 +1710,7 @@ export class UnifiedWebSocketRunner {
       workspaceDir,
       assetOutputMode: this.mode === "text" ? "data_uri" : "temp_url"
     });
+    this.installProviderResolver(context, userId);
 
     // Expose executor/node-type resolution on the context so that
     // sub-workflow nodes (WorkflowNode) can create child runners.
@@ -2323,6 +2389,7 @@ export class UnifiedWebSocketRunner {
       workspaceDir: tmpdir(),
       assetOutputMode: this.mode === "text" ? "data_uri" : "temp_url"
     });
+    this.installProviderResolver(context, userId);
     context.setResolveExecutor((node) => this.resolveExecutor(node));
     if (this.resolveNodeType) {
       const resolverObj =
@@ -2407,8 +2474,13 @@ export class UnifiedWebSocketRunner {
     data.thread_id = threadId;
 
     // Apply defaults — matches Python's handle_chat_message
-    if (!data.model) data.model = this.defaultModel;
-    if (!data.provider) data.provider = this.defaultProvider;
+    const providerWasUnset = isUnsetChatProvider(data.provider);
+    if (!data.model || (providerWasUnset && data.model === LEGACY_LOCAL_DEFAULT_MODEL)) {
+      data.model = this.defaultModel;
+    }
+    if (providerWasUnset) {
+      data.provider = this.defaultProvider;
+    }
 
     const providerId = data.provider as string;
     const model = data.model as string;
@@ -2613,6 +2685,7 @@ export class UnifiedWebSocketRunner {
       userId,
       workspaceDir: chatWorkspaceDir
     });
+    this.installProviderResolver(ctx, userId);
 
     // Prepend system prompt if first message isn't system role — matches Python
     if (chatHistory.length === 0 || chatHistory[0].role !== "system") {
@@ -4155,6 +4228,7 @@ export class UnifiedWebSocketRunner {
         workspaceDir,
         assetOutputMode: this.mode === "text" ? "data_uri" : "temp_url"
       });
+      this.installProviderResolver(context, userId);
 
       // Expose executor/node-type resolution for sub-workflow nodes
       context.setResolveExecutor((node) => this.resolveExecutor(node));
@@ -4386,39 +4460,62 @@ export class UnifiedWebSocketRunner {
 
   /**
    * Build the map of configured BaseProvider instances for the given user.
-   * Cached per user — invalidate by clearing `configuredProvidersCache`.
+   * Runtime providers are cached per user; custom endpoint providers are
+   * refreshed on every call so find_model observes endpoint changes.
    * Used by MCP tools (`find_model`, media generation) that need provider
    * access.
    */
   private async getConfiguredProviders(
     userId: string
   ): Promise<Record<string, BaseProvider>> {
-    const cached = this.configuredProvidersCache.get(userId);
-    if (cached) return cached;
-
-    const providersMod = await import("@nodetool-ai/runtime");
-    const { getSecret: getStoredSecret } = await import(
-      "@nodetool-ai/models"
-    );
-    const getSecret = (key: string) =>
-      getStoredSecret(key, userId).then((v) => v ?? undefined);
-    const ids: string[] = providersMod.listRegisteredProviderIds();
-    const result: Record<string, BaseProvider> = {};
-    await Promise.all(
-      ids.map(async (id) => {
-        try {
-          if (await providersMod.isProviderConfigured(id, getSecret)) {
-            result[id] = await providersMod.getProvider(id, getSecret);
+    const cachedRuntimeProviders = this.configuredProvidersCache.get(userId);
+    let runtimeProviders: Record<string, BaseProvider>;
+    if (cachedRuntimeProviders) {
+      runtimeProviders = cachedRuntimeProviders;
+    } else {
+      const providersMod = await import("@nodetool-ai/runtime");
+      const { getSecret: getStoredSecret } = await import(
+        "@nodetool-ai/models"
+      );
+      const getSecret = (key: string) =>
+        getStoredSecret(key, userId).then((v) => v ?? undefined);
+      const ids = filterProviderIdsForSurface(
+        providersMod.listRegisteredProviderIds()
+      );
+      const discoveredRuntimeProviders: Record<string, BaseProvider> = {};
+      await Promise.all(
+        ids.map(async (id) => {
+          try {
+            if (await providersMod.isProviderConfigured(id, getSecret)) {
+              discoveredRuntimeProviders[id] = await providersMod.getProvider(
+                id,
+                getSecret
+              );
+            }
+          } catch (err) {
+            log.debug("Skipping provider for find_model", {
+              provider: id,
+              error: err instanceof Error ? err.message : String(err)
+            });
           }
-        } catch (err) {
-          log.debug("Skipping provider for find_model", {
-            provider: id,
-            error: err instanceof Error ? err.message : String(err)
-          });
-        }
-      })
-    );
-    this.configuredProvidersCache.set(userId, result);
+        })
+      );
+      runtimeProviders = discoveredRuntimeProviders;
+      this.configuredProvidersCache.set(userId, runtimeProviders);
+    }
+
+    const result: Record<string, BaseProvider> = { ...runtimeProviders };
+    try {
+      const customEndpoints = await listEnabledCustomModelEndpoints(userId);
+      for (const endpoint of customEndpoints) {
+        const providerId = customEndpointProviderId(endpoint.id);
+        result[providerId] = new CustomEndpointCatalogProvider(endpoint);
+      }
+    } catch (err) {
+      log.debug("Skipping custom endpoints for find_model", {
+        error: err instanceof Error ? err.message : String(err)
+      });
+    }
     return result;
   }
 
